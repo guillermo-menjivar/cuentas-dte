@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Simple Docker installation script for Ubuntu
-
 echo "Installing Docker..."
 
 # Update package index
@@ -25,6 +24,7 @@ sudo apt update
 # Install Docker
 sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 sudo apt install -y docker-compose
+sudo apt install -y unzip
 
 # Start and enable Docker
 sudo systemctl start docker
