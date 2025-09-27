@@ -17,20 +17,4 @@ stage_firmador:
 	rm -rf dte-firmador/servicioFirmadoWindows
 	rm -rf dte-firmador/dockerConSSL
 	cp certs/Certificado_06143005061013.crt dte-firmador/dockerSinSSL/docker/temp/
-	cat > dte-firmador/dockerSinSSL/docker/docker-compose.yml << 'EOF'
-version: '3'
-services:
- svfe-api-firmador:
-  image: svfe/svfe-api-firmador:v20230109
-  container_name: svfe-api-firmador
-  ports:
-   - "8113:8113"
-  volumes:
-   - "./temp:/uploads"
-  environment:
-   - JAVA_OPTS=-Xmx512m -Xms256m
-  ulimits:
-    nofile:
-      soft: 65536
-      hard: 65536
-EOF
+	cp build/custom_docker-compose.yml dte-firmador/dockerSinSSL/docker/docker-compose.yml
