@@ -1,3 +1,7 @@
+.PHONY: configure_server
+configure_server:
+	bash build/install_docker.sh
+
 
 .PHONY: clean
 clean:
