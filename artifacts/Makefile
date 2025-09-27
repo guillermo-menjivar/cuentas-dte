@@ -5,7 +5,7 @@ configure_server:
 
 .PHONY: clean
 clean:
-	docker compose -f /home/user/myapp/docker-compose.yml down
+	docker compose -f dte-firmador/dockerSinSSL/docker/docker-compose.yml down
 	rm -rf dte-firmador
 
 .PHONY: stage_firmador
