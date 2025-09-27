@@ -17,4 +17,4 @@ stage_firmador:
 
 .PHONY: run_firmador
 run_firmador: stage_firmador
-	docker-compose -f dte-firmador/dockerSinSSL/docker/docker-compose.yml up -d
+	docker-compose -f dte-firmador/dockerSinSSL/docker/docker-compose.yml up
