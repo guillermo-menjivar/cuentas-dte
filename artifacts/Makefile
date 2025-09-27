@@ -8,3 +8,4 @@ stage_firmador:
 	unzip dte-firmador.zip
 	rm -rf dte-firmador/servicioFirmadoWindows
 	rm -rf dte-firmador/dockerConSSL
+	cp certs/Certificado_06143005061013.crt dte-firmador/dockerSinSSL/docker/temp/
