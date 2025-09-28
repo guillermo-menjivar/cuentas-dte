@@ -6,6 +6,9 @@ import (
 	"os"
 	"strings"
 
+	"cuentas/internal/handlers"
+
+	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -15,6 +18,7 @@ var cfgFile string
 // Config represents the application configuration
 type Config struct {
 	HaciendaURL string `mapstructure:"hacienda_url"`
+	Port        string `mapstructure:"port"`
 }
 
 var config Config
@@ -26,9 +30,42 @@ var rootCmd = &cobra.Command{
 	Long: `Cuentas is a CLI application for managing DTE (Documentos Tributarios Electrónicos)
 for El Salvador's Hacienda system.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Welcome to Cuentas DTE Management System")
+		fmt.Println("Starting Cuentas DTE Management System")
 		fmt.Printf("Hacienda URL: %s\n", config.HaciendaURL)
+		fmt.Printf("Server Port: %s\n", config.Port)
+		startServer()
 	},
+}
+
+// serveCmd represents the serve command
+var serveCmd = &cobra.Command{
+	Use:   "serve",
+	Short: "Start the API server",
+	Long:  `Start the Cuentas API server with all endpoints.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("Starting Cuentas API Server...")
+		fmt.Printf("Server running on port: %s\n", config.Port)
+		startServer()
+	},
+}
+
+func startServer() {
+	// Set Gin mode
+	gin.SetMode(gin.ReleaseMode)
+
+	// Create Gin router
+	r := gin.Default()
+
+	// API v1 routes
+	v1 := r.Group("/v1")
+	{
+		v1.GET("/health", handlers.HealthHandler)
+	}
+
+	// Start server
+	port := ":" + config.Port
+	fmt.Printf("Server starting on http://localhost%s\n", port)
+	log.Fatal(r.Run(port))
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -42,6 +79,9 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
+	// Add subcommands
+	rootCmd.AddCommand(serveCmd)
+
 	// Global flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cuentas.yaml)")
 
@@ -52,6 +92,7 @@ func init() {
 
 	// Set default values
 	viper.SetDefault("hacienda_url", "https://apitest.dtes.mh.gob.sv")
+	viper.SetDefault("port", "8080")
 }
 
 // initConfig reads in config file and ENV variables.
