@@ -1,4 +1,4 @@
 .PHONY: build-cuentas
-build:
+build-cuentas:
 	$(MAKE) -C cuentas build
 	$(MAKE) -C cuentas build-linux
