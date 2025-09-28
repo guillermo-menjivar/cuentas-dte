@@ -37,6 +37,9 @@ services:
       CUENTAS_DATABASE_URL: "postgres://cuentas_user:cuentas_password@postgres:5432/cuentas?sslmode=disable"
       CUENTAS_HACIENDA_URL: "https://apitest.dtes.mh.gob.sv"
       CUENTAS_PORT: "8080"
+      CUENTAS_REDIS_URL: "redis://:redis_password@redis:6379"
+      CUENTAS_VAULT_URL: "http://vault:8200"
+      CUENTAS_VAULT_TOKEN: "vault-root-token"
     volumes:
       - ./config.yaml:/app/config.yaml
     command: ["./cuentas", "serve"]
