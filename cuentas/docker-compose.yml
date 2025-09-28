@@ -1,10 +1,16 @@
 version: '3.8'
 
+networks:
+  cuentas-network:
+    driver: bridge
+
 services:
   postgres:
     image: postgres:15-alpine
     container_name: cuentas-postgres
     restart: unless-stopped
+    networks:
+      - cuentas-network
     environment:
       POSTGRES_DB: cuentas
       POSTGRES_USER: cuentas_user
@@ -24,6 +30,8 @@ services:
     image: redis:7-alpine
     container_name: cuentas-redis-cache
     restart: unless-stopped
+    networks:
+      - cuentas-network
     ports:
       - "6379:6379"
     volumes:
@@ -39,6 +47,8 @@ services:
     image: hashicorp/vault:1.15
     container_name: cuentas-vault
     restart: unless-stopped
+    networks:
+      - cuentas-network
     ports:
       - "8200:8200"
     environment:
@@ -61,6 +71,8 @@ services:
   vault-init:
     image: hashicorp/vault:1.15
     container_name: vault-init
+    networks:
+      - cuentas-network
     depends_on:
       vault:
         condition: service_healthy
@@ -77,6 +89,8 @@ services:
     build: .
     container_name: cuentas-app
     restart: unless-stopped
+    networks:
+      - cuentas-network
     depends_on:
       postgres:
         condition: service_healthy
