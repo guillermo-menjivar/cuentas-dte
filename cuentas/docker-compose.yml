@@ -20,30 +20,6 @@ services:
       timeout: 5s
       retries: 5
 
-  cuentas:
-    build: .
-    container_name: cuentas-app
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      vault:
-        condition: service_healthy
-    ports:
-      - "8080:8080"
-    environment:
-      CUENTAS_DATABASE_URL: "postgres://cuentas_user:cuentas_password@postgres:5432/cuentas?sslmode=disable"
-      CUENTAS_HACIENDA_URL: "https://apitest.dtes.mh.gob.sv"
-      CUENTAS_PORT: "8080"
-      CUENTAS_REDIS_URL: "redis://:redis_password@redis:6379"
-      CUENTAS_VAULT_URL: "http://vault:8200"
-      CUENTAS_VAULT_TOKEN: "vault-root-token"
-    volumes:
-      - ./config.yaml:/app/config.yaml
-    command: ["./cuentas", "serve"]
-
   redis:
     image: redis:7-alpine
     container_name: cuentas-redis
@@ -79,6 +55,46 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  vault-init:
+    image: hashicorp/vault:1.15
+    container_name: vault-init
+    depends_on:
+      vault:
+        condition: service_healthy
+    volumes:
+      - vault_data:/vault/data
+      - ./scripts/init-vault.sh:/init-vault.sh
+    environment:
+      VAULT_ADDR: "http://vault:8200"
+      VAULT_TOKEN: "vault-root-token"
+    command: ["sh", "/init-vault.sh"]
+    restart: "no"
+
+  cuentas:
+    build: .
+    container_name: cuentas-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      vault-init:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+    environment:
+      CUENTAS_DATABASE_URL: "postgres://cuentas_user:cuentas_password@postgres:5432/cuentas?sslmode=disable"
+      CUENTAS_HACIENDA_URL: "https://apitest.dtes.mh.gob.sv"
+      CUENTAS_PORT: "8080"
+      CUENTAS_REDIS_URL: "redis://:redis_password@redis:6379"
+      CUENTAS_VAULT_URL: "http://vault:8200"
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - vault_data:/vault/data
+      - ./scripts/start-app.sh:/start-app.sh
+    command: ["sh", "/start-app.sh"]
 
 volumes:
   postgres_data:
