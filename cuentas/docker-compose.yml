@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: cuentas-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cuentas
+      POSTGRES_USER: cuentas_user
+      POSTGRES_PASSWORD: cuentas_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cuentas_user -d cuentas"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  cuentas:
+    build: .
+    container_name: cuentas-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      CUENTAS_DATABASE_URL: "postgres://cuentas_user:cuentas_password@postgres:5432/cuentas?sslmode=disable"
+      CUENTAS_HACIENDA_URL: "https://apitest.dtes.mh.gob.sv"
+      CUENTAS_PORT: "8080"
+    volumes:
+      - ./config.yaml:/app/config.yaml
+    command: ["./cuentas", "serve"]
+
+volumes:
+  postgres_data:
