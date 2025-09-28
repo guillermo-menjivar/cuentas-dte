@@ -11,3 +11,15 @@ build-linux:
 .PHONY: clean
 clean:
 	rm -rf bin/
+
+.PHONY: migrate-up
+migrate-up:
+	docker-compose exec cuentas ./cuentas migrate up
+
+.PHONY: migrate-down
+migrate-down:
+	docker-compose exec cuentas ./cuentas migrate down
+
+.PHONY: migrate-status
+migrate-status:
+	docker-compose exec cuentas ./cuentas migrate status
