@@ -23,3 +23,7 @@ migrate-down:
 .PHONY: migrate-status
 migrate-status:
 	docker-compose exec cuentas ./cuentas migrate status
+
+.PHONY: docker-up
+docker-up:
+	docker-compose up -d
