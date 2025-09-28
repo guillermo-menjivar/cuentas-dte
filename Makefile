@@ -6,3 +6,4 @@ build-cuentas:
 .PHONY: clean
 clean:
 	$(MAKE) -C cuentas clean
+	$(MAKE) -C artifacts clean
