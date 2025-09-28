@@ -7,3 +7,7 @@ build:
 build-linux:
 	go mod tidy
 	GOOS=linux GOARCH=amd64 go build -o bin/cuentas-linux main.go
+
+.PHONY: clean
+clean:
+	rm -rf bin/
