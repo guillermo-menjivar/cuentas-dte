@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"cuentas/cmd"
 	"cuentas/internal/handlers"
 
 	"github.com/gin-gonic/gin"
@@ -19,6 +20,7 @@ var cfgFile string
 type Config struct {
 	HaciendaURL string `mapstructure:"hacienda_url"`
 	Port        string `mapstructure:"port"`
+	DatabaseURL string `mapstructure:"database_url"`
 }
 
 var config Config
@@ -81,6 +83,7 @@ func init() {
 
 	// Add subcommands
 	rootCmd.AddCommand(serveCmd)
+	rootCmd.AddCommand(cmd.MigrateCmd)
 
 	// Global flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.cuentas.yaml)")
@@ -93,6 +96,7 @@ func init() {
 	// Set default values
 	viper.SetDefault("hacienda_url", "https://apitest.dtes.mh.gob.sv")
 	viper.SetDefault("port", "8080")
+	viper.SetDefault("database_url", "postgres://username:password@localhost:5432/cuentas?sslmode=disable")
 }
 
 // initConfig reads in config file and ENV variables.
