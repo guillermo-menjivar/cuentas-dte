@@ -1,2 +1,3 @@
 hacienda_url: "https://apitest.dtes.mh.gob.sv"
 port: "4000"
+database_url: "postgres://your_username:your_password@localhost:5432/cuentas?sslmode=disable"
