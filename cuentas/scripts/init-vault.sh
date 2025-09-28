@@ -6,35 +6,31 @@ echo "Container hostname: $(hostname)"
 # Test network connectivity
 echo "=== Testing network connectivity ==="
 echo "Can we resolve 'vault'?"
-nslookup vault || echo "DNS resolution failed"
+VAULT_IP=$(nslookup vault | grep 'Address:' | tail -1 | awk '{print $2}')
+echo "Vault IP resolved to: $VAULT_IP"
 
 echo "Testing Vault connectivity..."
 VAULT_ADDR=""
 
-# Try vault:8200
-echo "Testing: http://vault:8200"
-if curl -s --connect-timeout 5 --max-time 10 "http://vault:8200/v1/sys/health" > /dev/null 2>&1; then
-    echo "SUCCESS: vault:8200 is reachable"
-    VAULT_ADDR="http://vault:8200"
-else
-    echo "FAILED: vault:8200 is not reachable"
-fi
+# Try different combinations
+VAULT_URLS="http://vault:8200 http://$VAULT_IP:8200 http://cuentas-vault:8200"
 
-# Try cuentas-vault:8200 if first failed
-if [ -z "$VAULT_ADDR" ]; then
-    echo "Testing: http://cuentas-vault:8200"
-    if curl -s --connect-timeout 5 --max-time 10 "http://cuentas-vault:8200/v1/sys/health" > /dev/null 2>&1; then
-        echo "SUCCESS: cuentas-vault:8200 is reachable"
-        VAULT_ADDR="http://cuentas-vault:8200"
+for url in $VAULT_URLS; do
+    echo "Testing: $url"
+    if curl -s --connect-timeout 5 --max-time 10 "$url/v1/sys/health" > /dev/null 2>&1; then
+        echo "SUCCESS: $url is reachable"
+        VAULT_ADDR="$url"
+        break
     else
-        echo "FAILED: cuentas-vault:8200 is not reachable"
+        echo "FAILED: $url is not reachable"
     fi
-fi
+done
 
 if [ -z "$VAULT_ADDR" ]; then
     echo "ERROR: Could not reach Vault at any URL"
-    echo "Available network interfaces:"
-    ip addr show
+    echo "Let's check what's listening on port 8200..."
+    echo "Testing direct curl with verbose output:"
+    curl -v --connect-timeout 5 "http://$VAULT_IP:8200/v1/sys/health" || echo "Direct IP curl failed"
     exit 1
 fi
 
@@ -52,7 +48,7 @@ APP_TOKEN=$(vault token create -ttl=24h -format=json | jq -r '.auth.client_token
 
 if [ -n "$APP_TOKEN" ] && [ "$APP_TOKEN" != "null" ]; then
     echo "$APP_TOKEN" > /vault/data/app-token
-    echo "Token created successfully: ${APP_TOKEN%${APP_TOKEN#??????????}}..."
+    echo "Token created successfully"
 else
     echo "Failed to create token"
     exit 1
