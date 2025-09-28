@@ -8,7 +8,11 @@ import (
 	"cuentas/internal/services"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var vaultService *services.VaultService
@@ -24,6 +28,11 @@ var ServeCmd = &cobra.Command{
 		// Initialize Vault (required for API server)
 		if err := initializeVault(); err != nil {
 			log.Fatalf("Failed to initialize Vault: %v", err)
+		}
+
+		// Run database migrations automatically
+		if err := runMigrations(); err != nil {
+			log.Fatalf("Failed to run migrations: %v", err)
 		}
 
 		fmt.Printf("Server running on port: %s\n", GlobalConfig.Port)
@@ -48,6 +57,35 @@ func initializeVault() error {
 	vaultService = vs
 	fmt.Println("Successfully connected to Vault")
 
+	return nil
+}
+
+func runMigrations() error {
+	fmt.Println("Running database migrations...")
+
+	databaseURL := viper.GetString("database_url")
+	if databaseURL == "" {
+		return fmt.Errorf("database_url is not set")
+	}
+
+	m, err := migrate.New(
+		"file://migrations",
+		databaseURL,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to initialize migrate: %v", err)
+	}
+	defer m.Close()
+
+	if err := m.Up(); err != nil {
+		if err == migrate.ErrNoChange {
+			fmt.Println("No migrations to run")
+			return nil
+		}
+		return fmt.Errorf("failed to run migrations: %v", err)
+	}
+
+	fmt.Println("Database migrations completed successfully")
 	return nil
 }
 
