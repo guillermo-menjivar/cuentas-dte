@@ -7,3 +7,7 @@ build-cuentas:
 clean:
 	$(MAKE) -C cuentas clean
 	$(MAKE) -C artifacts clean
+
+.PHONY: run-firmador
+run-firmador:
+	$(MAKE) -C artifacts run_firmador
