@@ -31,7 +31,7 @@ var ServeCmd = &cobra.Command{
 		}
 
 		// Run database migrations automatically
-		if err := runMigrations(); err != nil {
+		if err := runDatabaseMigrations(); err != nil {
 			log.Fatalf("Failed to run migrations: %v", err)
 		}
 
@@ -60,7 +60,7 @@ func initializeVault() error {
 	return nil
 }
 
-func runMigrations() error {
+func runDatabaseMigrations() error {
 	fmt.Println("Running database migrations...")
 
 	databaseURL := viper.GetString("database_url")
