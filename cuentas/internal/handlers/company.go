@@ -80,6 +80,16 @@ func CreateCompanyHandler(c *gin.Context) {
 func GetCompanyHandler(c *gin.Context) {
 	companyID := c.Param("id")
 
+	dbInterface, exists := c.Get("db")
+	if !exists {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "database connection not available",
+			Code:  "internal_error",
+		})
+		return
+	}
+	db := dbInterface.(*sql.DB)
+
 	// Get Vault service from context
 	vaultServiceInterface, exists := c.Get("vaultService")
 	if !exists {
@@ -92,7 +102,14 @@ func GetCompanyHandler(c *gin.Context) {
 	vaultService := vaultServiceInterface.(*services.VaultService)
 
 	// Create company service
-	companyService := services.NewCompanyService(vaultService)
+	companyService, err := services.NewCompanyService(db, vaultService)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "vault service not available",
+			Code:  "internal_error",
+		})
+		return
+	}
 
 	// Get company
 	company, err := companyService.GetCompanyByID(c.Request.Context(), companyID)
