@@ -106,6 +106,8 @@ func startServer() {
 	v1 := r.Group("/v1")
 	{
 		v1.GET("/health", handlers.HealthHandler)
+		v1.POST("/companies", handlers.CreateCompanyHandler)
+		v1.GET("/companies/:id", handlers.GetCompanyHandler)
 	}
 
 	// Start server
