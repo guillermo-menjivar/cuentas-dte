@@ -26,7 +26,7 @@ docker-build:
 
 .PHONY: docker-up
 docker-up:
-	docker-compose up --no-cache --rmi all --remove-orphans
+	docker-compose up --no-cache --rmi
 
 .PHONY: docker-down
 docker-down:
