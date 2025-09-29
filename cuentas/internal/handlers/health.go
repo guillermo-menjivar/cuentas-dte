@@ -1,11 +1,14 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 )
 
@@ -27,7 +30,6 @@ func HealthHandler(c *gin.Context) {
 	// Check Vault status
 	vaultService, exists := c.Get("vaultService")
 	if exists && vaultService != nil {
-		// Vault service exists, assume it's healthy since we got this far
 		response.Services["vault"] = "healthy"
 	} else {
 		response.Services["vault"] = "unavailable"
@@ -43,8 +45,6 @@ func HealthHandler(c *gin.Context) {
 			response.Status = "degraded"
 		} else {
 			defer db.Close()
-
-			// Test the connection with a simple ping
 			if err := db.Ping(); err != nil {
 				response.Services["postgres"] = "ping_failed"
 				response.Status = "degraded"
@@ -55,6 +55,24 @@ func HealthHandler(c *gin.Context) {
 	} else {
 		response.Services["postgres"] = "not_configured"
 		response.Status = "degraded"
+	}
+
+	// Check Redis status
+	redisInterface, exists := c.Get("redis")
+	if !exists || redisInterface == nil {
+		response.Services["redis"] = "unavailable"
+		response.Status = "degraded"
+	} else {
+		redisClient := redisInterface.(*redis.Client)
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		if err := redisClient.Ping(ctx).Err(); err != nil {
+			response.Services["redis"] = "ping_failed"
+			response.Status = "degraded"
+		} else {
+			response.Services["redis"] = "healthy"
+		}
 	}
 
 	// Set HTTP status code based on overall health
