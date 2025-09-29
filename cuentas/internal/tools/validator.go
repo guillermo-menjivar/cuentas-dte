@@ -75,3 +75,34 @@ func FormatNRC(ncr string) string {
 	// Split at last digit
 	return fmt.Sprintf("%s-%s", ncr[0:len(ncr)-1], ncr[len(ncr)-1:])
 }
+
+func ValidateDUI(dui string) bool {
+	if dui == "" {
+		return false
+	}
+	pattern := `^\d{8}-\d$`
+	matched, err := regexp.MatchString(pattern, dui)
+	if err != nil {
+		return false
+	}
+	return matched
+}
+
+// StripDUI removes dashes from DUI and returns as integer string
+// Input: "12345678-9" -> Output: "123456789"
+func StripDUI(dui string) string {
+	return strings.ReplaceAll(dui, "-", "")
+}
+
+// FormatDUI formats a DUI number with dashes
+// Input: "123456789" or 123456789 -> Output: "12345678-9"
+func FormatDUI(dui string) string {
+	// Remove any existing dashes first
+	dui = strings.ReplaceAll(dui, "-", "")
+
+	if len(dui) != 9 {
+		return dui // Return as-is if invalid length
+	}
+
+	return fmt.Sprintf("%s-%s", dui[0:8], dui[8:9])
+}
