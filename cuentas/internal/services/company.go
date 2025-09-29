@@ -4,18 +4,19 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strconv"
 
 	"cuentas/internal/models"
+	"cuentas/internal/tools"
 
 	"github.com/google/uuid"
 )
 
 type CompanyService struct {
-	db           *sql.DB // Add database connection
+	db           *sql.DB
 	vaultService *VaultService
 }
 
-// Fixed constructor - now accepts DB
 func NewCompanyService(db *sql.DB, vaultService *VaultService) (*CompanyService, error) {
 	if db == nil {
 		return nil, fmt.Errorf("database connection is required")
@@ -35,6 +36,20 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req *models.CreateCo
 	// Generate UUID
 	companyID := uuid.New().String()
 
+	// Strip dashes from NIT and NCR, convert to int64
+	nitStripped := tools.StripNIT(req.NIT)
+	ncrStripped := tools.StripNRC(req.NCR)
+
+	nitInt, err := strconv.ParseInt(nitStripped, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse NIT: %v", err)
+	}
+
+	ncrInt, err := strconv.ParseInt(ncrStripped, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse NCR: %v", err)
+	}
+
 	// Store password in Vault FIRST
 	vaultRef, err := s.vaultService.StoreCompanyPassword(companyID, req.HCPassword)
 	if err != nil {
@@ -42,11 +57,10 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req *models.CreateCo
 	}
 
 	// Insert into database
-	company, err := s.insertCompany(ctx, companyID, req, vaultRef)
+	company, err := s.insertCompany(ctx, companyID, req, nitInt, ncrInt, vaultRef)
 	if err != nil {
 		// Cleanup: delete from Vault if DB insert fails
 		if delErr := s.vaultService.DeleteCompanyPassword(vaultRef); delErr != nil {
-			// Log but don't fail - the DB error is more important
 			fmt.Printf("Warning: failed to cleanup vault entry: %v\n", delErr)
 		}
 		return nil, fmt.Errorf("failed to insert company: %v", err)
@@ -64,7 +78,6 @@ func (s *CompanyService) GetCompanyByID(ctx context.Context, id string) (*models
                 WHERE id = $1
         `
 
-	// Use s.db instead of database.DB
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&company.ID,
 		&company.Name,
@@ -86,12 +99,15 @@ func (s *CompanyService) GetCompanyByID(ctx context.Context, id string) (*models
 		return nil, fmt.Errorf("failed to query company: %v", err)
 	}
 
+	// Format NIT and NCR for JSON response
+	company.NITFormatted = tools.FormatNIT(fmt.Sprintf("%d", company.NIT))
+	company.NCRFormatted = tools.FormatNRC(fmt.Sprintf("%d", company.NCR))
+
 	return &company, nil
 }
 
 // insertCompany inserts a company into the database
-func (s *CompanyService) insertCompany(ctx context.Context, companyID string, req *models.CreateCompanyRequest, vaultRef string) (*models.Company, error) {
-	// Use s.db instead of database.DB
+func (s *CompanyService) insertCompany(ctx context.Context, companyID string, req *models.CreateCompanyRequest, nitInt, ncrInt int64, vaultRef string) (*models.Company, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %v", err)
@@ -108,8 +124,8 @@ func (s *CompanyService) insertCompany(ctx context.Context, companyID string, re
 	err = tx.QueryRowContext(ctx, query,
 		companyID,
 		req.Name,
-		req.NIT,
-		req.NCR,
+		nitInt,
+		ncrInt,
 		req.HCUsername,
 		vaultRef,
 		req.Email,
@@ -134,6 +150,10 @@ func (s *CompanyService) insertCompany(ctx context.Context, companyID string, re
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %v", err)
 	}
+
+	// Format NIT and NCR for JSON response
+	company.NITFormatted = tools.FormatNIT(fmt.Sprintf("%d", company.NIT))
+	company.NCRFormatted = tools.FormatNRC(fmt.Sprintf("%d", company.NCR))
 
 	return &company, nil
 }
