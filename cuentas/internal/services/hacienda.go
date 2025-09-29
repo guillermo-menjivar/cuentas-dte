@@ -10,11 +10,14 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type HaciendaService struct {
 	db           *sql.DB
 	vaultService *VaultService
+	redisClient  *redis.Client
 	httpClient   *http.Client
 }
 
@@ -38,36 +41,108 @@ type Role struct {
 	Descripcion *string `json:"descripcion"`
 }
 
+const (
+	tokenTTL       = 12 * time.Hour
+	redisKeyPrefix = "hacienda:token:"
+)
+
 // NewHaciendaService creates a new Hacienda service instance
-func NewHaciendaService(db *sql.DB, vaultService *VaultService) (*HaciendaService, error) {
+func NewHaciendaService(db *sql.DB, vaultService *VaultService, redisClient *redis.Client) (*HaciendaService, error) {
 	if db == nil {
 		return nil, fmt.Errorf("database connection is required")
 	}
 	if vaultService == nil {
 		return nil, fmt.Errorf("vault service is required")
 	}
+	if redisClient == nil {
+		return nil, fmt.Errorf("redis client is required")
+	}
 
 	return &HaciendaService{
 		db:           db,
 		vaultService: vaultService,
+		redisClient:  redisClient,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
 	}, nil
 }
 
+// getRedisKey generates the Redis key for a company's token
+func (h *HaciendaService) getRedisKey(companyID string) string {
+	return fmt.Sprintf("%s%s", redisKeyPrefix, companyID)
+}
+
+// GetCachedToken retrieves a token from Redis cache
+func (h *HaciendaService) GetCachedToken(ctx context.Context, companyID string) (*HaciendaAuthResponse, error) {
+	key := h.getRedisKey(companyID)
+
+	val, err := h.redisClient.Get(ctx, key).Result()
+	if err == redis.Nil {
+		return nil, nil // Cache miss
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get token from cache: %v", err)
+	}
+
+	var authResponse HaciendaAuthResponse
+	if err := json.Unmarshal([]byte(val), &authResponse); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal cached token: %v", err)
+	}
+
+	return &authResponse, nil
+}
+
+// CacheToken stores a token in Redis with 12-hour TTL
+func (h *HaciendaService) CacheToken(ctx context.Context, companyID string, authResponse *HaciendaAuthResponse) error {
+	key := h.getRedisKey(companyID)
+
+	data, err := json.Marshal(authResponse)
+	if err != nil {
+		return fmt.Errorf("failed to marshal token for caching: %v", err)
+	}
+
+	if err := h.redisClient.Set(ctx, key, data, tokenTTL).Err(); err != nil {
+		return fmt.Errorf("failed to cache token: %v", err)
+	}
+
+	return nil
+}
+
+// InvalidateToken removes a company's token from Redis cache
+func (h *HaciendaService) InvalidateToken(ctx context.Context, companyID string) error {
+	key := h.getRedisKey(companyID)
+
+	if err := h.redisClient.Del(ctx, key).Err(); err != nil {
+		return fmt.Errorf("failed to invalidate token: %v", err)
+	}
+
+	return nil
+}
+
 // AuthenticateCompany authenticates a company with the Hacienda API
-// Returns the complete authentication response
+// Checks Redis cache first, then authenticates with Hacienda if needed
 func (h *HaciendaService) AuthenticateCompany(ctx context.Context, companyID string) (*HaciendaAuthResponse, error) {
+	// Check Redis cache first
+	cachedToken, err := h.GetCachedToken(ctx, companyID)
+	if err != nil {
+		// Log error but continue to fetch new token
+		fmt.Printf("Warning: failed to get cached token: %v\n", err)
+	}
+	if cachedToken != nil {
+		return cachedToken, nil
+	}
+
+	// Cache miss - authenticate with Hacienda
 	// Retrieve company credentials from database
 	var username, passwordRef string
 	query := `
-                SELECT hc_username, hc_password_ref 
-                FROM companies 
+                SELECT hc_username, hc_password_ref
+                FROM companies
                 WHERE id = $1 AND active = true
         `
 
-	err := h.db.QueryRowContext(ctx, query, companyID).Scan(&username, &passwordRef)
+	err = h.db.QueryRowContext(ctx, query, companyID).Scan(&username, &passwordRef)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("company not found or inactive")
 	}
@@ -85,6 +160,12 @@ func (h *HaciendaService) AuthenticateCompany(ctx context.Context, companyID str
 	authResponse, err := h.authenticateWithHacienda(username, password)
 	if err != nil {
 		return nil, fmt.Errorf("hacienda authentication failed: %v", err)
+	}
+
+	// Cache the token in Redis
+	if err := h.CacheToken(ctx, companyID, authResponse); err != nil {
+		// Log error but don't fail the request
+		fmt.Printf("Warning: failed to cache token: %v\n", err)
 	}
 
 	return authResponse, nil
@@ -146,8 +227,8 @@ func (h *HaciendaService) authenticateWithHacienda(username, password string) (*
 // UpdateLastActivity updates the last_activity_at timestamp for a company
 func (h *HaciendaService) UpdateLastActivity(ctx context.Context, companyID string) error {
 	query := `
-                UPDATE companies 
-                SET last_activity_at = CURRENT_TIMESTAMP 
+                UPDATE companies
+                SET last_activity_at = CURRENT_TIMESTAMP
                 WHERE id = $1
         `
 
