@@ -32,6 +32,12 @@ var ServeCmd = &cobra.Command{
 		}
 		defer database.CloseDB()
 
+		// Initialize Redis connection
+		if err := initializeRedis(); err != nil {
+			log.Fatalf("Failed to initialize Redis: %v", err)
+		}
+		defer database.CloseRedis()
+
 		// Initialize Vault (required for API server)
 		if err := initializeVault(); err != nil {
 			log.Fatalf("Failed to initialize Vault: %v", err)
@@ -60,6 +66,17 @@ func initializeDatabase() error {
 	}
 
 	fmt.Println("Successfully connected to database")
+	return nil
+}
+
+func initializeRedis() error {
+	fmt.Println("Connecting to Redis...")
+
+	if err := database.InitRedis(); err != nil {
+		return fmt.Errorf("failed to connect to Redis: %v", err)
+	}
+
+	fmt.Println("Successfully connected to Redis")
 	return nil
 }
 
@@ -119,10 +136,11 @@ func startServer() {
 	// Create Gin router
 	r := gin.Default()
 
-	// Add middleware to inject database and Vault service
+	// Add middleware to inject database, Redis, and Vault service
 	r.Use(func(c *gin.Context) {
-		c.Set("db", database.DB)            // Inject database connection
-		c.Set("vaultService", vaultService) // Inject Vault service
+		c.Set("db", database.DB)             // Inject database connection
+		c.Set("redis", database.RedisClient) // Inject Redis client
+		c.Set("vaultService", vaultService)  // Inject Vault service
 		c.Next()
 	})
 
