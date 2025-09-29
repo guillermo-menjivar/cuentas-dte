@@ -2,8 +2,11 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 
 	"cuentas/internal/models"
 	"cuentas/internal/services"
@@ -11,12 +14,44 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// parseJSONError converts technical JSON errors to user-friendly messages
+func parseJSONError(err error) string {
+	errMsg := err.Error()
+
+	// Handle type mismatch errors
+	if strings.Contains(errMsg, "cannot unmarshal number") && strings.Contains(errMsg, "nit") {
+		return "nit must be a text value with dashes (e.g., \"0614-123456-001-2\")"
+	}
+	if strings.Contains(errMsg, "cannot unmarshal number") && strings.Contains(errMsg, "ncr") {
+		return "ncr must be a text value with dashes (e.g., \"12345-6\")"
+	}
+
+	// Handle missing required fields
+	if strings.Contains(errMsg, "required") {
+		return "missing required fields in request"
+	}
+	print(errMsg)
+
+	// Generic fallback
+	return "invalid request format - please check your input"
+}
+
 func CreateCompanyHandler(c *gin.Context) {
-	// Parse request body
-	var req models.CreateCompanyRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	// Read the body first to provide better error messages
+	bodyBytes, err := io.ReadAll(c.Request.Body)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
-			Error: fmt.Sprintf("invalid request body: %v", err),
+			Error: "failed to read request body",
+			Code:  "invalid_request",
+		})
+		return
+	}
+
+	// Parse request body with custom error handling
+	var req models.CreateCompanyRequest
+	if err := json.Unmarshal(bodyBytes, &req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error: parseJSONError(err),
 			Code:  "invalid_request",
 		})
 		return
