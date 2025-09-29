@@ -18,6 +18,8 @@ import (
 func parseJSONError(err error) string {
 	errMsg := err.Error()
 
+	print(errMsg)
+
 	// Handle type mismatch errors
 	if strings.Contains(errMsg, "cannot unmarshal number") && strings.Contains(errMsg, "nit") {
 		return "nit must be a text value with dashes (e.g., \"0614-123456-001-2\")"
@@ -30,7 +32,6 @@ func parseJSONError(err error) string {
 	if strings.Contains(errMsg, "required") {
 		return "missing required fields in request"
 	}
-	print(errMsg)
 
 	// Generic fallback
 	return "invalid request format - please check your input"
@@ -50,6 +51,7 @@ func CreateCompanyHandler(c *gin.Context) {
 	// Parse request body with custom error handling
 	var req models.CreateCompanyRequest
 	if err := json.Unmarshal(bodyBytes, &req); err != nil {
+		fmt.Println(err)
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error: parseJSONError(err),
 			Code:  "invalid_request",
