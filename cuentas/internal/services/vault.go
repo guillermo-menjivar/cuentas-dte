@@ -80,7 +80,8 @@ func (vs *VaultService) ensureKVEngine() error {
 // StoreCompanyPassword stores a company's password in Vault
 // Returns the Vault reference path to store in the database
 func (vs *VaultService) StoreCompanyPassword(companyID string, password string) (string, error) {
-	path := fmt.Sprintf("secret/companies/%s/password", companyID)
+	// KV v2 requires /data/ in the path for writes
+	path := fmt.Sprintf("secret/data/companies/%s/password", companyID)
 
 	secretData := map[string]interface{}{
 		"data": map[string]interface{}{
@@ -93,14 +94,18 @@ func (vs *VaultService) StoreCompanyPassword(companyID string, password string) 
 		return "", fmt.Errorf("failed to store password for company %s: %v", companyID, err)
 	}
 
-	// Return the path to store as reference in database
+	// Return the reference path (without /data/) to store as reference in database
 	vaultRef := fmt.Sprintf("secret/companies/%s/password", companyID)
 	return vaultRef, nil
 }
 
 // GetCompanyPassword retrieves a company's password from Vault using the reference path
 func (vs *VaultService) GetCompanyPassword(vaultRef string) (string, error) {
-	secret, err := vs.client.Logical().Read(vaultRef)
+	// KV v2 requires /data/ in the path for reads
+	// Convert reference path to actual path
+	readPath := fmt.Sprintf("secret/data/%s", vaultRef[7:]) // Remove "secret/" prefix and add back with /data/
+
+	secret, err := vs.client.Logical().Read(readPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read secret from %s: %v", vaultRef, err)
 	}
@@ -125,13 +130,16 @@ func (vs *VaultService) GetCompanyPassword(vaultRef string) (string, error) {
 
 // UpdateCompanyPassword updates an existing company password in Vault
 func (vs *VaultService) UpdateCompanyPassword(vaultRef string, newPassword string) error {
+	// KV v2 requires /data/ in the path
+	writePath := fmt.Sprintf("secret/data/%s", vaultRef[7:])
+
 	secretData := map[string]interface{}{
 		"data": map[string]interface{}{
 			"password": newPassword,
 		},
 	}
 
-	_, err := vs.client.Logical().Write(vaultRef, secretData)
+	_, err := vs.client.Logical().Write(writePath, secretData)
 	if err != nil {
 		return fmt.Errorf("failed to update password at %s: %v", vaultRef, err)
 	}
@@ -141,7 +149,10 @@ func (vs *VaultService) UpdateCompanyPassword(vaultRef string, newPassword strin
 
 // DeleteCompanyPassword removes a company's password from Vault
 func (vs *VaultService) DeleteCompanyPassword(vaultRef string) error {
-	_, err := vs.client.Logical().Delete(vaultRef)
+	// KV v2 uses /data/ for delete as well
+	deletePath := fmt.Sprintf("secret/data/%s", vaultRef[7:])
+
+	_, err := vs.client.Logical().Delete(deletePath)
 	if err != nil {
 		return fmt.Errorf("failed to delete secret at %s: %v", vaultRef, err)
 	}
