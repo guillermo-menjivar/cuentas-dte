@@ -1,6 +1,7 @@
 package models
 
 import (
+	"cuentas/internal/tools"
 	"fmt"
 	"regexp"
 	"time"
@@ -10,8 +11,10 @@ import (
 type Company struct {
 	ID             string    `json:"id"`
 	Name           string    `json:"name"`
-	NIT            int64     `json:"nit"`
-	NCR            int64     `json:"ncr"`
+	NIT            int64     `json:"-"`   // Store as int, don't expose directly
+	NITFormatted   string    `json:"nit"` // Expose formatted version
+	NCR            int64     `json:"-"`   // Store as int, don't expose directly
+	NCRFormatted   string    `json:"ncr"` // Expose formatted version
 	HCUsername     string    `json:"hc_username"`
 	HCPasswordRef  string    `json:"-"` // Never expose in JSON
 	LastActivityAt time.Time `json:"last_activity_at"`
@@ -24,8 +27,8 @@ type Company struct {
 // CreateCompanyRequest represents the request to create a company
 type CreateCompanyRequest struct {
 	Name       string `json:"name" binding:"required"`
-	NIT        int64  `json:"nit" binding:"required"`
-	NCR        int64  `json:"ncr" binding:"required"`
+	NIT        string `json:"nit" binding:"required"` // Accept as string with dashes
+	NCR        string `json:"ncr" binding:"required"` // Accept as string with dashes
 	HCUsername string `json:"hc_username" binding:"required"`
 	HCPassword string `json:"hc_password" binding:"required"`
 	Email      string `json:"email" binding:"required"`
@@ -38,17 +41,26 @@ func (r *CreateCompanyRequest) Validate() error {
 		return fmt.Errorf("name is required")
 	}
 
-	// Validate NIT (must be positive)
-	if r.NIT <= 0 {
-		return fmt.Errorf("nit must be a positive number")
+	// Validate NIT format
+	if r.NIT == "" {
+		return fmt.Errorf("nit is required")
+	}
+	if !tools.ValidateNIT(r.NIT) {
+		return fmt.Errorf("nit must be in format XXXX-XXXXXX-XXX-X (e.g., 0614-123456-001-2)")
 	}
 
-	// Validate NCR (must be positive)
-	if r.NCR <= 0 {
-		return fmt.Errorf("ncr must be a positive number")
+	// Validate NCR format
+	if r.NCR == "" {
+		return fmt.Errorf("ncr is required")
+	}
+	if !tools.ValidateNRC(r.NCR) {
+		return fmt.Errorf("ncr must be in format XXXXX-X or XXXXXX-X (e.g., 12345-6)")
 	}
 
 	// Validate email format
+	if r.Email == "" {
+		return fmt.Errorf("email is required")
+	}
 	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 	if !emailRegex.MatchString(r.Email) {
 		return fmt.Errorf("email format is invalid")
