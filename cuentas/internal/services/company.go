@@ -5,20 +5,29 @@ import (
 	"database/sql"
 	"fmt"
 
-	"cuentas/internal/database"
 	"cuentas/internal/models"
 
 	"github.com/google/uuid"
 )
 
 type CompanyService struct {
+	db           *sql.DB // Add database connection
 	vaultService *VaultService
 }
 
-func NewCompanyService(vaultService *VaultService) *CompanyService {
-	return &CompanyService{
-		vaultService: vaultService,
+// Fixed constructor - now accepts DB
+func NewCompanyService(db *sql.DB, vaultService *VaultService) (*CompanyService, error) {
+	if db == nil {
+		return nil, fmt.Errorf("database connection is required")
 	}
+	if vaultService == nil {
+		return nil, fmt.Errorf("vault service is required")
+	}
+
+	return &CompanyService{
+		db:           db,
+		vaultService: vaultService,
+	}, nil
 }
 
 // CreateCompany handles the complete company creation flow
@@ -35,6 +44,11 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req *models.CreateCo
 	// Insert into database
 	company, err := s.insertCompany(ctx, companyID, req, vaultRef)
 	if err != nil {
+		// Cleanup: delete from Vault if DB insert fails
+		if delErr := s.vaultService.DeleteCompanyPassword(vaultRef); delErr != nil {
+			// Log but don't fail - the DB error is more important
+			fmt.Printf("Warning: failed to cleanup vault entry: %v\n", delErr)
+		}
 		return nil, fmt.Errorf("failed to insert company: %v", err)
 	}
 
@@ -45,12 +59,13 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req *models.CreateCo
 func (s *CompanyService) GetCompanyByID(ctx context.Context, id string) (*models.Company, error) {
 	var company models.Company
 	query := `
-		SELECT id, name, nit, ncr, hc_username, hc_password_ref, last_activity_at, email, active, created_at, updated_at
-		FROM companies
-		WHERE id = $1
-	`
+                SELECT id, name, nit, ncr, hc_username, hc_password_ref, last_activity_at, email, active, created_at, updated_at
+                FROM companies
+                WHERE id = $1
+        `
 
-	err := database.DB.QueryRowContext(ctx, query, id).Scan(
+	// Use s.db instead of database.DB
+	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&company.ID,
 		&company.Name,
 		&company.NIT,
@@ -76,7 +91,8 @@ func (s *CompanyService) GetCompanyByID(ctx context.Context, id string) (*models
 
 // insertCompany inserts a company into the database
 func (s *CompanyService) insertCompany(ctx context.Context, companyID string, req *models.CreateCompanyRequest, vaultRef string) (*models.Company, error) {
-	tx, err := database.DB.BeginTx(ctx, nil)
+	// Use s.db instead of database.DB
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %v", err)
 	}
@@ -84,10 +100,10 @@ func (s *CompanyService) insertCompany(ctx context.Context, companyID string, re
 
 	var company models.Company
 	query := `
-		INSERT INTO companies (id, name, nit, ncr, hc_username, hc_password_ref, email)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id, name, nit, ncr, hc_username, hc_password_ref, last_activity_at, email, active, created_at, updated_at
-	`
+                INSERT INTO companies (id, name, nit, ncr, hc_username, hc_password_ref, email)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                RETURNING id, name, nit, ncr, hc_username, hc_password_ref, last_activity_at, email, active, created_at, updated_at
+        `
 
 	err = tx.QueryRowContext(ctx, query,
 		companyID,
