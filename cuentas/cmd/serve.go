@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 
+	"cuentas/internal/database"
 	"cuentas/internal/handlers"
 	"cuentas/internal/services"
 
@@ -25,6 +26,12 @@ var ServeCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Starting Cuentas API Server...")
 
+		// Initialize database connection
+		if err := initializeDatabase(); err != nil {
+			log.Fatalf("Failed to initialize database: %v", err)
+		}
+		defer database.Close()
+
 		// Initialize Vault (required for API server)
 		if err := initializeVault(); err != nil {
 			log.Fatalf("Failed to initialize Vault: %v", err)
@@ -38,6 +45,22 @@ var ServeCmd = &cobra.Command{
 		fmt.Printf("Server running on port: %s\n", GlobalConfig.Port)
 		startServer()
 	},
+}
+
+func initializeDatabase() error {
+	fmt.Println("Connecting to database...")
+
+	if err := database.Connect(); err != nil {
+		return fmt.Errorf("failed to connect to database: %v", err)
+	}
+
+	// Test the connection
+	if err := database.DB.Ping(); err != nil {
+		return fmt.Errorf("failed to ping database: %v", err)
+	}
+
+	fmt.Println("Successfully connected to database")
+	return nil
 }
 
 func initializeVault() error {
@@ -96,9 +119,10 @@ func startServer() {
 	// Create Gin router
 	r := gin.Default()
 
-	// Add middleware to inject Vault service
+	// Add middleware to inject database and Vault service
 	r.Use(func(c *gin.Context) {
-		c.Set("vaultService", vaultService)
+		c.Set("db", database.DB)            // Inject database connection
+		c.Set("vaultService", vaultService) // Inject Vault service
 		c.Next()
 	})
 
