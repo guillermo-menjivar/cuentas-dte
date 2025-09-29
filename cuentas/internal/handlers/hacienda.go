@@ -47,7 +47,7 @@ func AuthenticateCompanyHandler(c *gin.Context) {
 	}
 
 	// Authenticate with Hacienda
-	token, err := haciendaService.AuthenticateCompany(c.Request.Context(), companyID)
+	authResponse, err := haciendaService.AuthenticateCompany(c.Request.Context(), companyID)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
 			Error: err.Error(),
@@ -63,7 +63,7 @@ func AuthenticateCompanyHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"token":      token,
-		"company_id": companyID,
+		"company_id":     companyID,
+		"authentication": authResponse,
 	})
 }
