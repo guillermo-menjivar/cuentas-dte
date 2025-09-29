@@ -30,7 +30,7 @@ var ServeCmd = &cobra.Command{
 		if err := initializeDatabase(); err != nil {
 			log.Fatalf("Failed to initialize database: %v", err)
 		}
-		defer database.Close()
+		defer database.CloseDB()
 
 		// Initialize Vault (required for API server)
 		if err := initializeVault(); err != nil {
@@ -50,7 +50,7 @@ var ServeCmd = &cobra.Command{
 func initializeDatabase() error {
 	fmt.Println("Connecting to database...")
 
-	if err := database.Connect(); err != nil {
+	if err := database.InitDB(); err != nil {
 		return fmt.Errorf("failed to connect to database: %v", err)
 	}
 
