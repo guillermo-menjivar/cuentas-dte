@@ -7,4 +7,4 @@ curl -X POST http://localhost:8080/v1/companies \
     "hc_username": "acme_user",
     "hc_password": "super_secret_password_123",
     "email": "contact@acme.com"
-  }' 
+  }'  | jq .
