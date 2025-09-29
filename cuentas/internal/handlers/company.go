@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 
@@ -10,7 +11,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// CreateCompanyHandler handles POST /v1/companies
 func CreateCompanyHandler(c *gin.Context) {
 	// Parse request body
 	var req models.CreateCompanyRequest
@@ -31,6 +31,17 @@ func CreateCompanyHandler(c *gin.Context) {
 		return
 	}
 
+	// Get database from context
+	dbInterface, exists := c.Get("db")
+	if !exists {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "database connection not available",
+			Code:  "internal_error",
+		})
+		return
+	}
+	db := dbInterface.(*sql.DB)
+
 	// Get Vault service from context
 	vaultServiceInterface, exists := c.Get("vaultService")
 	if !exists {
@@ -42,8 +53,15 @@ func CreateCompanyHandler(c *gin.Context) {
 	}
 	vaultService := vaultServiceInterface.(*services.VaultService)
 
-	// Create company service
-	companyService := services.NewCompanyService(vaultService)
+	// Create company service with BOTH db and vaultService
+	companyService, err := services.NewCompanyService(db, vaultService)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: fmt.Sprintf("failed to initialize service: %v", err),
+			Code:  "internal_error",
+		})
+		return
+	}
 
 	// Create company
 	company, err := companyService.CreateCompany(c.Request.Context(), &req)
