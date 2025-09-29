@@ -26,7 +26,8 @@ docker-build:
 
 .PHONY: docker-up
 docker-up:
-	docker-compose up --no-cache
+	docker-compose build --no-cache
+	docker-compose up
 
 .PHONY: docker-down
 docker-down:
