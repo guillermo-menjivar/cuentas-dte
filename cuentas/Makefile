@@ -26,7 +26,7 @@ docker-build:
 
 .PHONY: docker-up
 docker-up:
-	docker-compose up
+	docker-compose up --no-cache --rmi all --remove-orphans
 
 .PHONY: docker-down
 docker-down:
@@ -77,5 +77,5 @@ setup-all: docker-up vault-init migrate-up
 .PHONY: clean
 clean:
 	rm -rf bin/
-	docker-compose down -v
+	docker-compose down -v --rmi all --remove-orphans
 	docker system prune -f
