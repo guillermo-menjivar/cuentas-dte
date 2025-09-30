@@ -1,4 +1,4 @@
-package codigo
+package models
 
 import "strings"
 
@@ -12,12 +12,14 @@ type IVARetentionType struct {
 const (
 	IVARetention1Percent  = "22"
 	IVARetention13Percent = "C4"
+	IVARetentionSpecial   = "C9"
 )
 
 // IVARetentionTypes is a map of all IVA retention types
 var IVARetentionTypes = map[string]string{
 	IVARetention1Percent:  "Retención IVA 1%",
 	IVARetention13Percent: "Retención IVA 13%",
+	IVARetentionSpecial:   "Otras retenciones IVA casos especiales",
 }
 
 // GetIVARetentionTypeName returns the name of an IVA retention type by code
