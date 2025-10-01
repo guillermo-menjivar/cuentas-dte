@@ -218,6 +218,9 @@ func (s *ClientService) UpdateClient(ctx context.Context, companyID, clientID st
 		duiInt = &dui
 	}
 
+	// Construct full municipality code with dot notation: "06.23"
+	fullMunicipalityCode := fmt.Sprintf("%s.%s", req.DepartmentCode, req.MunicipalityCode)
+
 	query := `
 		UPDATE clients SET
 			ncr = $3, nit = $4, dui = $5,
@@ -234,7 +237,7 @@ func (s *ClientService) UpdateClient(ctx context.Context, companyID, clientID st
 	err := s.db.QueryRowContext(ctx, query,
 		clientID, companyID, ncrInt, nitInt, duiInt,
 		req.BusinessName, req.LegalBusinessName, req.Giro, req.TipoContribuyente,
-		req.FullAddress, req.CountryCode, req.DepartmentCode, req.MunicipalityCode,
+		req.FullAddress, req.CountryCode, req.DepartmentCode, fullMunicipalityCode,
 	).Scan(
 		&client.ID, &client.CompanyID, &client.NCR, &client.NIT, &client.DUI,
 		&client.BusinessName, &client.LegalBusinessName, &client.Giro, &client.TipoContribuyente,
