@@ -116,11 +116,20 @@ func (r *CreateClientRequest) Validate() error {
 		return fmt.Errorf("country_code must be 2 characters")
 	}
 
-	// Validate country code (should be 2 characters)
-	if len(r.CountryCode) != 2 {
-		return fmt.Errorf("country_code must be 2 characters")
+	// Validate that country code is valid
+	if !codigos.IsValidCountry(r.CountryCode) {
+		return fmt.Errorf("invalid country_code: %s", r.CountryCode)
 	}
 
+	// Validate department code (should be 2 characters)
+	if len(r.DepartmentCode) != 2 {
+		return fmt.Errorf("department_code must be 2 characters")
+	}
+
+	// Validate that department code is valid
+	if !codigos.IsValidDepartment(r.DepartmentCode) {
+		return fmt.Errorf("invalid department_code: %s", r.DepartmentCode)
+	}
 	// Validate department code (should be 2 characters)
 	if len(r.DepartmentCode) != 2 {
 		return fmt.Errorf("department_code must be 2 characters")
