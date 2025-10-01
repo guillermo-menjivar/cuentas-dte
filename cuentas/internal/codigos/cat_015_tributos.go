@@ -4,72 +4,73 @@ import "strings"
 
 // TributoType represents a type of tax/tribute
 type TributoType struct {
-	Code  string
-	Value string
+	Code    string
+	Value   string
+	Section string // Section 1, 2, or 3
 }
 
 // Tributo codes - Section 1: Applied by items reflected in DTE summary
 const (
-	TributoIVA13              = "20"
-	TributoIVAExportaciones   = "C3"
-	TributoTurismoAlojamiento = "59"
-	TributoTurismoSalida      = "71"
-	TributoFOVIAL             = "D1"
-	TributoCOTRANS            = "C8"
-	TributoOtrasTasas         = "D5"
-	TributoOtrosImpuestos     = "D4"
+	TributoIVA13              = "S1.20"
+	TributoIVAExportaciones   = "S1.C3"
+	TributoTurismoAlojamiento = "S1.59"
+	TributoTurismoSalida      = "S1.71"
+	TributoFOVIAL             = "S1.D1"
+	TributoCOTRANS            = "S1.C8"
+	TributoOtrasTasas         = "S1.D5"
+	TributoOtrosImpuestos     = "S1.D4"
 )
 
 // Tributo codes - Section 2: Applied by items reflected in document body
 const (
-	TributoEspecialCombustible = "A8"
-	TributoIndustriaCemento    = "57"
-	TributoEspecialMatricula   = "90"
-	TributoOtrosImpuestosD4    = "D4"
-	TributoOtrasTasasD5        = "D5"
-	TributoAdValoremArmas      = "A6"
+	TributoEspecialCombustible = "S2.A8"
+	TributoIndustriaCemento    = "S2.57"
+	TributoEspecialMatricula   = "S2.90"
+	TributoOtrosImpuestosD4    = "S2.D4"
+	TributoOtrasTasasD5        = "S2.D5"
+	TributoAdValoremArmas      = "S2.A6"
 )
 
 // Tributo codes - Section 3: Ad-Valorem taxes applied by informative use item
 const (
-	TributoAdValoremBebidas            = "C5"
-	TributoAdValoremTabacoCigarrillos  = "C6"
-	TributoAdValoremTabacoCigarros     = "C7"
-	TributoFabricanteBebidas           = "19"
-	TributoImportadorBebidas           = "28"
-	TributoDetallistaBebidas           = "31"
-	TributoFabricanteCerveza           = "32"
-	TributoImportadorCerveza           = "33"
-	TributoFabricanteTabaco            = "34"
-	TributoImportadorTabaco            = "35"
-	TributoFabricanteArmas             = "36"
-	TributoImportadorArmas             = "37"
-	TributoFabricanteExplosivos        = "38"
-	TributoImportadorExplosivos        = "39"
-	TributoFabricantePirotecnicos      = "42"
-	TributoImportadorPirotecnicos      = "43"
-	TributoProductorTabaco             = "44"
-	TributoDistribuidorBebidas         = "50"
-	TributoBebAlcoholicas              = "51"
-	TributoCerveza                     = "52"
-	TributoProductosTabaco             = "53"
-	TributoBebidasCarbonatadasGaseosas = "54"
-	TributoOtrosEspecificos            = "55"
-	TributoAlcohol                     = "58"
-	TributoImportadorJugos             = "77"
-	TributoDistribuidorJugos           = "78"
-	TributoLlamadasTelefonicas         = "79"
-	TributoDetallistaJugos             = "85"
-	TributoFabricantePreparaciones     = "86"
-	TributoFabricanteJugos             = "91"
-	TributoImportadorPreparaciones     = "92"
-	TributoEspecificosAdValorem        = "A1"
-	TributoBebidasGaseosas             = "A5"
-	TributoAlcoholEtilico              = "A7"
-	TributoSacosSinteticos             = "A9"
+	TributoAdValoremBebidas            = "S3.C5"
+	TributoAdValoremTabacoCigarrillos  = "S3.C6"
+	TributoAdValoremTabacoCigarros     = "S3.C7"
+	TributoFabricanteBebidas           = "S3.19"
+	TributoImportadorBebidas           = "S3.28"
+	TributoDetallistaBebidas           = "S3.31"
+	TributoFabricanteCerveza           = "S3.32"
+	TributoImportadorCerveza           = "S3.33"
+	TributoFabricanteTabaco            = "S3.34"
+	TributoImportadorTabaco            = "S3.35"
+	TributoFabricanteArmas             = "S3.36"
+	TributoImportadorArmas             = "S3.37"
+	TributoFabricanteExplosivos        = "S3.38"
+	TributoImportadorExplosivos        = "S3.39"
+	TributoFabricantePirotecnicos      = "S3.42"
+	TributoImportadorPirotecnicos      = "S3.43"
+	TributoProductorTabaco             = "S3.44"
+	TributoDistribuidorBebidas         = "S3.50"
+	TributoBebAlcoholicas              = "S3.51"
+	TributoCerveza                     = "S3.52"
+	TributoProductosTabaco             = "S3.53"
+	TributoBebidasCarbonatadasGaseosas = "S3.54"
+	TributoOtrosEspecificos            = "S3.55"
+	TributoAlcohol                     = "S3.58"
+	TributoImportadorJugos             = "S3.77"
+	TributoDistribuidorJugos           = "S3.78"
+	TributoLlamadasTelefonicas         = "S3.79"
+	TributoDetallistaJugos             = "S3.85"
+	TributoFabricantePreparaciones     = "S3.86"
+	TributoFabricanteJugos             = "S3.91"
+	TributoImportadorPreparaciones     = "S3.92"
+	TributoEspecificosAdValorem        = "S3.A1"
+	TributoBebidasGaseosas             = "S3.A5"
+	TributoAlcoholEtilico              = "S3.A7"
+	TributoSacosSinteticos             = "S3.A9"
 )
 
-// Tributos is a map of all tributos
+// Tributos is a map of all tributos with section prefix
 var Tributos = map[string]string{
 	// Section 1
 	TributoIVA13:              "Impuesto al Valor Agregado 13%",
@@ -149,9 +150,12 @@ func GetTributoCode(name string) (string, bool) {
 func GetAllTributos() []TributoType {
 	tributos := make([]TributoType, 0, len(Tributos))
 	for code, value := range Tributos {
+		// Extract section from code (S1, S2, or S3)
+		section := strings.Split(code, ".")[0]
 		tributos = append(tributos, TributoType{
-			Code:  code,
-			Value: value,
+			Code:    code,
+			Value:   value,
+			Section: section,
 		})
 	}
 	return tributos
@@ -161,4 +165,21 @@ func GetAllTributos() []TributoType {
 func IsValidTributo(code string) bool {
 	_, exists := Tributos[code]
 	return exists
+}
+
+// GetTributosBySection returns all tributos for a specific section
+func GetTributosBySection(section string) []TributoType {
+	tributos := make([]TributoType, 0)
+	prefix := strings.ToUpper(section) + "."
+
+	for code, value := range Tributos {
+		if strings.HasPrefix(code, prefix) {
+			tributos = append(tributos, TributoType{
+				Code:    code,
+				Value:   value,
+				Section: section,
+			})
+		}
+	}
+	return tributos
 }
