@@ -151,6 +151,13 @@ func startServer() {
 		v1.POST("/companies", handlers.CreateCompanyHandler)
 		v1.GET("/companies/:id", handlers.GetCompanyHandler)
 		v1.POST("/companies/:id/authenticate", handlers.AuthenticateCompanyHandler)
+
+		v1.POST("/clients", handlers.CreateClientHandler)
+		v1.GET("/clients/:id", handlers.GetClientHandler)
+		v1.GET("/clients", handlers.ListClientsHandler)
+		v1.PUT("/clients/:id", handlers.UpdateClientHandler)
+		v1.DELETE("/clients/:id", handlers.DeleteClientHandler)
+
 	}
 
 	// Start server
