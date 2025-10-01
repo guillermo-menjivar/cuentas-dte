@@ -1,4 +1,4 @@
-package codigoss
+package codigos
 
 import "strings"
 
