@@ -56,28 +56,30 @@ func (s *ClientService) CreateClient(ctx context.Context, companyID string, req 
 
 	// Insert into database
 	query := `
-		INSERT INTO clients (
-			company_id, ncr, nit, dui,
-			business_name, legal_business_name, giro, tipo_contribuyente,
-			full_address, country_code, department_code, municipality_code
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-		RETURNING id, company_id, ncr, nit, dui, 
-				  business_name, legal_business_name, giro, tipo_contribuyente,
-				  full_address, country_code, department_code, municipality_code,
-				  active, created_at, updated_at
-	`
+	INSERT INTO clients (
+		company_id, ncr, nit, dui,
+		business_name, legal_business_name, giro, tipo_contribuyente, tipo_persona,
+		full_address, country_code, department_code, municipality_code
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+	RETURNING id, company_id, ncr, nit, dui, 
+			  business_name, legal_business_name, giro, tipo_contribuyente, tipo_persona,
+			  full_address, country_code, department_code, municipality_code,
+			  active, created_at, updated_at
+`
 
 	var client models.Client
+	// Update the QueryRowContext parameters:
 	err := s.db.QueryRowContext(ctx, query,
 		companyID, ncrInt, nitInt, duiInt,
-		req.BusinessName, req.LegalBusinessName, req.Giro, req.TipoContribuyente,
+		req.BusinessName, req.LegalBusinessName, req.Giro, req.TipoContribuyente, req.TipoPersona,
 		req.FullAddress, req.CountryCode, req.DepartmentCode, fullMunicipalityCode,
 	).Scan(
 		&client.ID, &client.CompanyID, &client.NCR, &client.NIT, &client.DUI,
-		&client.BusinessName, &client.LegalBusinessName, &client.Giro, &client.TipoContribuyente,
+		&client.BusinessName, &client.LegalBusinessName, &client.Giro, &client.TipoContribuyente, &client.TipoPersona,
 		&client.FullAddress, &client.CountryCode, &client.DepartmentCode, &client.MunicipalityCode,
 		&client.Active, &client.CreatedAt, &client.UpdatedAt,
 	)
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to create client: %w", err)
 	}
