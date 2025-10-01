@@ -25,6 +25,7 @@ type Client struct {
 	CountryCode       string    `json:"country_code"`
 	DepartmentCode    string    `json:"department_code"`
 	MunicipalityCode  string    `json:"municipality_code"`
+	TipoPersona       string    `json:"tipo_persona"`
 	Active            bool      `json:"active"`
 	CreatedAt         time.Time `json:"created_at"`
 	UpdatedAt         time.Time `json:"updated_at"`
@@ -42,6 +43,7 @@ type CreateClientRequest struct {
 	FullAddress       string `json:"full_address" binding:"required"`
 	CountryCode       string `json:"country_code" binding:"required"`
 	DepartmentCode    string `json:"department_code" binding:"required"`
+	TipoPersona       string `json:"tipo_persona" binding:"required"`
 	MunicipalityCode  string `json:"municipality_code" binding:"required"` // Just 2 digits like "23"
 }
 
