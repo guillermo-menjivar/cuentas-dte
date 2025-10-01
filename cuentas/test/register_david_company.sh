@@ -7,4 +7,4 @@ curl -X POST http://localhost:8080/v1/companies \
     "hc_username": "06143005061013",
     "hc_password": "MF7HwttFuZ.*3RY",
     "email": "contact@paredes.com"
-  }'
+  }' | jq .
