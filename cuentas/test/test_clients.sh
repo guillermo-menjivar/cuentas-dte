@@ -34,6 +34,7 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "tipo_contribuyente": "Gran Contribuyente",
     "full_address": "Av. La Revolucion, Edificio Torre Futura, Piso 5, San Salvador",
     "country_code": "SV",
+    "tipo_persona": "2",
     "department_code": "06",
     "municipality_code": "23"
   }' | jq '.'
@@ -54,6 +55,7 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "tipo_contribuyente": "Mediano Contribuyente",
     "full_address": "Boulevard del Hipodromo #450, Colonia San Benito, San Salvador",
     "country_code": "SV",
+    "tipo_persona": "1",
     "department_code": "06",
     "municipality_code": "22"
   }' | jq '.'
@@ -73,6 +75,7 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "tipo_contribuyente": "Pequeño Contribuyente",
     "full_address": "Colonia Escalon, Calle Los Bambues #234, San Salvador",
     "country_code": "SV",
+    "tipo_persona": "2",
     "department_code": "06",
     "municipality_code": "20"
   }' | jq '.'
@@ -93,6 +96,7 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "full_address": "Mercado Central, Local 45, San Salvador",
     "country_code": "SV",
     "department_code": "06",
+    "tipo_persona": "1",
     "municipality_code": "24"
   }' | jq '.'
 
@@ -113,6 +117,7 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "tipo_contribuyente": "Mediano Contribuyente",
     "full_address": "Centro Comercial Galerias, Local 102, Santa Tecla",
     "country_code": "SV",
+    "tipo_persona": "1",
     "department_code": "05",
     "municipality_code": "26"
   }' | jq '.'
@@ -132,6 +137,7 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "tipo_contribuyente": "Pequeño Contribuyente",
     "full_address": "Calle Principal, Santa Ana",
     "country_code": "SV",
+    "tipo_persona": "2",
     "department_code": "02",
     "municipality_code": "15"
   }' | jq '.'
@@ -152,6 +158,7 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "tipo_contribuyente": "Gran Contribuyente",
     "full_address": "Carretera Principal, Usulután",
     "country_code": "SV",
+    "tipo_persona": "2",
     "department_code": "11",
     "municipality_code": "24"
   }' | jq '.'
@@ -171,6 +178,7 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "tipo_contribuyente": "Test",
     "full_address": "Test Address",
     "country_code": "SV",
+    "tipo_persona": "1",
     "department_code": "06",
     "municipality_code": "23"
   }' | jq '.'
@@ -190,6 +198,7 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "tipo_contribuyente": "Test",
     "full_address": "Test Address",
     "country_code": "SV",
+    "tipo_persona": "1",
     "department_code": "06",
     "municipality_code": "23"
   }' | jq '.'
