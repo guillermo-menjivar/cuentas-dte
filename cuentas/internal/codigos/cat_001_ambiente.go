@@ -1,4 +1,4 @@
-package codigo
+package codigos
 
 const (
 	MODE_PRUEBA     = 00
