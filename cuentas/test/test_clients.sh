@@ -21,7 +21,7 @@ echo -e "${BLUE}=== Client Creation Tests ===${NC}"
 echo -e "Company ID: ${COMPANY_ID}\n"
 
 # Test 1: Create client with NIT and NCR (business entity)
-echo -e "${GREEN}Test 1: Creating client with NIT and NCR${NC}"
+echo -e "${GREEN}Test 1: Creating client with NIT and NCR - San Salvador Centro${NC}"
 curl -X POST "${BASE_URL}/v1/clients" \
   -H "Content-Type: application/json" \
   -H "X-Company-ID: ${COMPANY_ID}" \
@@ -35,13 +35,13 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "full_address": "Av. La Revolucion, Edificio Torre Futura, Piso 5, San Salvador",
     "country_code": "SV",
     "department_code": "06",
-    "municipality_code": "0614"
+    "municipality_code": "23"
   }' | jq '.'
 
 echo -e "\n---\n"
 
 # Test 2: Create another client with NIT and NCR (different business)
-echo -e "${GREEN}Test 2: Creating another client with NIT and NCR${NC}"
+echo -e "${GREEN}Test 2: Creating another client with NIT and NCR - San Salvador Este${NC}"
 curl -X POST "${BASE_URL}/v1/clients" \
   -H "Content-Type: application/json" \
   -H "X-Company-ID: ${COMPANY_ID}" \
@@ -55,13 +55,13 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "full_address": "Boulevard del Hipodromo #450, Colonia San Benito, San Salvador",
     "country_code": "SV",
     "department_code": "06",
-    "municipality_code": "0614"
+    "municipality_code": "22"
   }' | jq '.'
 
 echo -e "\n---\n"
 
 # Test 3: Create client with DUI only (individual person)
-echo -e "${GREEN}Test 3: Creating client with DUI only${NC}"
+echo -e "${GREEN}Test 3: Creating client with DUI only - San Salvador Norte${NC}"
 curl -X POST "${BASE_URL}/v1/clients" \
   -H "Content-Type: application/json" \
   -H "X-Company-ID: ${COMPANY_ID}" \
@@ -74,13 +74,13 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "full_address": "Colonia Escalon, Calle Los Bambues #234, San Salvador",
     "country_code": "SV",
     "department_code": "06",
-    "municipality_code": "0614"
+    "municipality_code": "20"
   }' | jq '.'
 
 echo -e "\n---\n"
 
 # Test 4: Create another client with DUI only
-echo -e "${GREEN}Test 4: Creating another client with DUI only${NC}"
+echo -e "${GREEN}Test 4: Creating another client with DUI only - San Salvador Sur${NC}"
 curl -X POST "${BASE_URL}/v1/clients" \
   -H "Content-Type: application/json" \
   -H "X-Company-ID: ${COMPANY_ID}" \
@@ -93,13 +93,13 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "full_address": "Mercado Central, Local 45, San Salvador",
     "country_code": "SV",
     "department_code": "06",
-    "municipality_code": "0614"
+    "municipality_code": "24"
   }' | jq '.'
 
 echo -e "\n---\n"
 
 # Test 5: Create client with all three IDs (DUI, NIT, and NCR)
-echo -e "${GREEN}Test 5: Creating client with DUI, NIT, and NCR${NC}"
+echo -e "${GREEN}Test 5: Creating client with DUI, NIT, and NCR - La Libertad Este${NC}"
 curl -X POST "${BASE_URL}/v1/clients" \
   -H "Content-Type: application/json" \
   -H "X-Company-ID: ${COMPANY_ID}" \
@@ -111,16 +111,16 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "legal_business_name": "Roberto Antonio Alvarez Consultores",
     "giro": "Servicios de contabilidad y auditoria",
     "tipo_contribuyente": "Mediano Contribuyente",
-    "full_address": "Centro Comercial Galerias, Local 102, San Salvador",
+    "full_address": "Centro Comercial Galerias, Local 102, Santa Tecla",
     "country_code": "SV",
-    "department_code": "06",
-    "municipality_code": "0614"
+    "department_code": "05",
+    "municipality_code": "26"
   }' | jq '.'
 
 echo -e "\n---\n"
 
 # Test 6: Create client with DUI only (another individual)
-echo -e "${GREEN}Test 6: Creating client with DUI only${NC}"
+echo -e "${GREEN}Test 6: Creating client with DUI only - Santa Ana Centro${NC}"
 curl -X POST "${BASE_URL}/v1/clients" \
   -H "Content-Type: application/json" \
   -H "X-Company-ID: ${COMPANY_ID}" \
@@ -130,16 +130,16 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "legal_business_name": "Ana Sofia Hernandez Melendez",
     "giro": "Servicios de peluqueria y tratamientos de belleza",
     "tipo_contribuyente": "Pequeño Contribuyente",
-    "full_address": "Colonia Miramonte, Pasaje 3, Casa #12, San Salvador",
+    "full_address": "Calle Principal, Santa Ana",
     "country_code": "SV",
-    "department_code": "06",
-    "municipality_code": "0614"
+    "department_code": "02",
+    "municipality_code": "15"
   }' | jq '.'
 
 echo -e "\n---\n"
 
-# Test 7: Create large corporation with NIT and NCR
-echo -e "${GREEN}Test 7: Creating large corporation with NIT and NCR${NC}"
+# Test 7: Create large corporation with NIT and NCR - Usulután
+echo -e "${GREEN}Test 7: Creating large corporation with NIT and NCR - Usulután Norte${NC}"
 curl -X POST "${BASE_URL}/v1/clients" \
   -H "Content-Type: application/json" \
   -H "X-Company-ID: ${COMPANY_ID}" \
@@ -150,10 +150,10 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "legal_business_name": "Distribuidora Nacional Sociedad Anonima de Capital Variable",
     "giro": "Distribucion de productos farmaceuticos",
     "tipo_contribuyente": "Gran Contribuyente",
-    "full_address": "Km 10 1/2 Carretera al Puerto de La Libertad, Antiguo Cuscatlan",
+    "full_address": "Carretera Principal, Usulután",
     "country_code": "SV",
     "department_code": "11",
-    "municipality_code": "1101"
+    "municipality_code": "24"
   }' | jq '.'
 
 echo -e "\n${BLUE}=== Error Case Tests ===${NC}\n"
@@ -172,7 +172,7 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "full_address": "Test Address",
     "country_code": "SV",
     "department_code": "06",
-    "municipality_code": "0614"
+    "municipality_code": "23"
   }' | jq '.'
 
 echo -e "\n---\n"
@@ -191,7 +191,7 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "full_address": "Test Address",
     "country_code": "SV",
     "department_code": "06",
-    "municipality_code": "0614"
+    "municipality_code": "23"
   }' | jq '.'
 
 echo -e "\n---\n"
@@ -209,7 +209,7 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "full_address": "Test Address",
     "country_code": "SV",
     "department_code": "06",
-    "municipality_code": "0614"
+    "municipality_code": "23"
   }' | jq '.'
 
 echo -e "\n---\n"
@@ -228,7 +228,7 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "full_address": "Test Address",
     "country_code": "SV",
     "department_code": "06",
-    "municipality_code": "0614"
+    "municipality_code": "23"
   }' | jq '.'
 
 echo -e "\n---\n"
@@ -248,7 +248,83 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "full_address": "Test Address",
     "country_code": "SV",
     "department_code": "06",
-    "municipality_code": "0614"
+    "municipality_code": "23"
+  }' | jq '.'
+
+echo -e "\n---\n"
+
+# Test 13: Error - Municipality doesn't belong to department (should fail)
+echo -e "${RED}Test 13: Error case - San Salvador municipality (23) in Santa Ana department (02) (should fail)${NC}"
+curl -X POST "${BASE_URL}/v1/clients" \
+  -H "Content-Type: application/json" \
+  -H "X-Company-ID: ${COMPANY_ID}" \
+  -d '{
+    "dui": "07890123-4",
+    "business_name": "Test Business",
+    "legal_business_name": "Test Business Legal Name",
+    "giro": "Test giro",
+    "tipo_contribuyente": "Test",
+    "full_address": "Test Address",
+    "country_code": "SV",
+    "department_code": "02",
+    "municipality_code": "23"
+  }' | jq '.'
+
+echo -e "\n---\n"
+
+# Test 14: Error - La Libertad municipality in San Salvador department (should fail)
+echo -e "${RED}Test 14: Error case - La Libertad Centro (24) in San Salvador department (06) (should fail)${NC}"
+curl -X POST "${BASE_URL}/v1/clients" \
+  -H "Content-Type: application/json" \
+  -H "X-Company-ID: ${COMPANY_ID}" \
+  -d '{
+    "dui": "08901234-5",
+    "business_name": "Test Business 2",
+    "legal_business_name": "Test Business Legal Name 2",
+    "giro": "Test giro",
+    "tipo_contribuyente": "Test",
+    "full_address": "Test Address",
+    "country_code": "SV",
+    "department_code": "06",
+    "municipality_code": "25"
+  }' | jq '.'
+
+echo -e "\n---\n"
+
+# Test 15: Error - Invalid municipality code (should fail)
+echo -e "${RED}Test 15: Error case - Invalid municipality code (99) (should fail)${NC}"
+curl -X POST "${BASE_URL}/v1/clients" \
+  -H "Content-Type: application/json" \
+  -H "X-Company-ID: ${COMPANY_ID}" \
+  -d '{
+    "dui": "09012345-6",
+    "business_name": "Test Business 3",
+    "legal_business_name": "Test Business Legal Name 3",
+    "giro": "Test giro",
+    "tipo_contribuyente": "Test",
+    "full_address": "Test Address",
+    "country_code": "SV",
+    "department_code": "06",
+    "municipality_code": "99"
+  }' | jq '.'
+
+echo -e "\n---\n"
+
+# Test 16: Error - Invalid department code (should fail)
+echo -e "${RED}Test 16: Error case - Invalid department code (99) (should fail)${NC}"
+curl -X POST "${BASE_URL}/v1/clients" \
+  -H "Content-Type: application/json" \
+  -H "X-Company-ID: ${COMPANY_ID}" \
+  -d '{
+    "dui": "01234567-8",
+    "business_name": "Test Business 4",
+    "legal_business_name": "Test Business Legal Name 4",
+    "giro": "Test giro",
+    "tipo_contribuyente": "Test",
+    "full_address": "Test Address",
+    "country_code": "SV",
+    "department_code": "99",
+    "municipality_code": "23"
   }' | jq '.'
 
 echo -e "\n${BLUE}=== Tests Complete ===${NC}\n"
