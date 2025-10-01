@@ -19,25 +19,36 @@ func NewClientService(db *sql.DB) *ClientService {
 }
 
 func (s *ClientService) CreateClient(ctx context.Context, companyID string, req *models.CreateClientRequest) (*models.Client, error) {
-	// Strip formatting and convert to integers for storage
-	ncrStripped := tools.StripNRC(req.NCR)
-	nitStripped := tools.StripNIT(req.NIT)
-	duiStripped := tools.StripDUI(req.DUI)
+	var ncrInt, nitInt, duiInt *int64
 
-	// Convert to int64
-	ncrInt, err := strconv.ParseInt(ncrStripped, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid NCR format: %w", err)
+	// Process NCR if provided
+	if req.NCR != "" {
+		ncrStripped := tools.StripNRC(req.NCR)
+		ncr, err := strconv.ParseInt(ncrStripped, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid NCR format: %w", err)
+		}
+		ncrInt = &ncr
 	}
 
-	nitInt, err := strconv.ParseInt(nitStripped, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid NIT format: %w", err)
+	// Process NIT if provided
+	if req.NIT != "" {
+		nitStripped := tools.StripNIT(req.NIT)
+		nit, err := strconv.ParseInt(nitStripped, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid NIT format: %w", err)
+		}
+		nitInt = &nit
 	}
 
-	duiInt, err := strconv.ParseInt(duiStripped, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid DUI format: %w", err)
+	// Process DUI if provided
+	if req.DUI != "" {
+		duiStripped := tools.StripDUI(req.DUI)
+		dui, err := strconv.ParseInt(duiStripped, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid DUI format: %w", err)
+		}
+		duiInt = &dui
 	}
 
 	// Insert into database
@@ -54,7 +65,7 @@ func (s *ClientService) CreateClient(ctx context.Context, companyID string, req 
 	`
 
 	var client models.Client
-	err = s.db.QueryRowContext(ctx, query,
+	err := s.db.QueryRowContext(ctx, query,
 		companyID, ncrInt, nitInt, duiInt,
 		req.BusinessName, req.LegalBusinessName, req.Giro, req.TipoContribuyente,
 		req.FullAddress, req.CountryCode, req.DepartmentCode, req.MunicipalityCode,
@@ -68,10 +79,16 @@ func (s *ClientService) CreateClient(ctx context.Context, companyID string, req 
 		return nil, fmt.Errorf("failed to create client: %w", err)
 	}
 
-	// Format the numbers for JSON output
-	client.NCRFormatted = tools.FormatNRC(fmt.Sprintf("%d", client.NCR))
-	client.NITFormatted = tools.FormatNIT(fmt.Sprintf("%d", client.NIT))
-	client.DUIFormatted = tools.FormatDUI(fmt.Sprintf("%d", client.DUI))
+	// Format the numbers for JSON output (only if they exist)
+	if client.NCR != nil {
+		client.NCRFormatted = tools.FormatNRC(fmt.Sprintf("%d", *client.NCR))
+	}
+	if client.NIT != nil {
+		client.NITFormatted = tools.FormatNIT(fmt.Sprintf("%d", *client.NIT))
+	}
+	if client.DUI != nil {
+		client.DUIFormatted = tools.FormatDUI(fmt.Sprintf("%d", *client.DUI))
+	}
 
 	return &client, nil
 }
@@ -97,10 +114,16 @@ func (s *ClientService) GetClientByID(ctx context.Context, companyID, clientID s
 		return nil, err
 	}
 
-	// Format the numbers for JSON output
-	client.NCRFormatted = tools.FormatNRC(fmt.Sprintf("%d", client.NCR))
-	client.NITFormatted = tools.FormatNIT(fmt.Sprintf("%d", client.NIT))
-	client.DUIFormatted = tools.FormatDUI(fmt.Sprintf("%d", client.DUI))
+	// Format the numbers for JSON output (only if they exist)
+	if client.NCR != nil {
+		client.NCRFormatted = tools.FormatNRC(fmt.Sprintf("%d", *client.NCR))
+	}
+	if client.NIT != nil {
+		client.NITFormatted = tools.FormatNIT(fmt.Sprintf("%d", *client.NIT))
+	}
+	if client.DUI != nil {
+		client.DUIFormatted = tools.FormatDUI(fmt.Sprintf("%d", *client.DUI))
+	}
 
 	return &client, nil
 }
@@ -142,10 +165,16 @@ func (s *ClientService) ListClients(ctx context.Context, companyID string, activ
 			return nil, fmt.Errorf("failed to scan client: %w", err)
 		}
 
-		// Format the numbers for JSON output
-		client.NCRFormatted = tools.FormatNRC(fmt.Sprintf("%d", client.NCR))
-		client.NITFormatted = tools.FormatNIT(fmt.Sprintf("%d", client.NIT))
-		client.DUIFormatted = tools.FormatDUI(fmt.Sprintf("%d", client.DUI))
+		// Format the numbers for JSON output (only if they exist)
+		if client.NCR != nil {
+			client.NCRFormatted = tools.FormatNRC(fmt.Sprintf("%d", *client.NCR))
+		}
+		if client.NIT != nil {
+			client.NITFormatted = tools.FormatNIT(fmt.Sprintf("%d", *client.NIT))
+		}
+		if client.DUI != nil {
+			client.DUIFormatted = tools.FormatDUI(fmt.Sprintf("%d", *client.DUI))
+		}
 
 		clients = append(clients, client)
 	}
@@ -154,24 +183,36 @@ func (s *ClientService) ListClients(ctx context.Context, companyID string, activ
 }
 
 func (s *ClientService) UpdateClient(ctx context.Context, companyID, clientID string, req *models.CreateClientRequest) (*models.Client, error) {
-	// Strip formatting and convert to integers
-	ncrStripped := tools.StripNRC(req.NCR)
-	nitStripped := tools.StripNIT(req.NIT)
-	duiStripped := tools.StripDUI(req.DUI)
+	var ncrInt, nitInt, duiInt *int64
 
-	ncrInt, err := strconv.ParseInt(ncrStripped, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid NCR format: %w", err)
+	// Process NCR if provided
+	if req.NCR != "" {
+		ncrStripped := tools.StripNRC(req.NCR)
+		ncr, err := strconv.ParseInt(ncrStripped, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid NCR format: %w", err)
+		}
+		ncrInt = &ncr
 	}
 
-	nitInt, err := strconv.ParseInt(nitStripped, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid NIT format: %w", err)
+	// Process NIT if provided
+	if req.NIT != "" {
+		nitStripped := tools.StripNIT(req.NIT)
+		nit, err := strconv.ParseInt(nitStripped, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid NIT format: %w", err)
+		}
+		nitInt = &nit
 	}
 
-	duiInt, err := strconv.ParseInt(duiStripped, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("invalid DUI format: %w", err)
+	// Process DUI if provided
+	if req.DUI != "" {
+		duiStripped := tools.StripDUI(req.DUI)
+		dui, err := strconv.ParseInt(duiStripped, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid DUI format: %w", err)
+		}
+		duiInt = &dui
 	}
 
 	query := `
@@ -187,7 +228,7 @@ func (s *ClientService) UpdateClient(ctx context.Context, companyID, clientID st
 	`
 
 	var client models.Client
-	err = s.db.QueryRowContext(ctx, query,
+	err := s.db.QueryRowContext(ctx, query,
 		clientID, companyID, ncrInt, nitInt, duiInt,
 		req.BusinessName, req.LegalBusinessName, req.Giro, req.TipoContribuyente,
 		req.FullAddress, req.CountryCode, req.DepartmentCode, req.MunicipalityCode,
@@ -201,10 +242,16 @@ func (s *ClientService) UpdateClient(ctx context.Context, companyID, clientID st
 		return nil, err
 	}
 
-	// Format the numbers for JSON output
-	client.NCRFormatted = tools.FormatNRC(fmt.Sprintf("%d", client.NCR))
-	client.NITFormatted = tools.FormatNIT(fmt.Sprintf("%d", client.NIT))
-	client.DUIFormatted = tools.FormatDUI(fmt.Sprintf("%d", client.DUI))
+	// Format the numbers for JSON output (only if they exist)
+	if client.NCR != nil {
+		client.NCRFormatted = tools.FormatNRC(fmt.Sprintf("%d", *client.NCR))
+	}
+	if client.NIT != nil {
+		client.NITFormatted = tools.FormatNIT(fmt.Sprintf("%d", *client.NIT))
+	}
+	if client.DUI != nil {
+		client.DUIFormatted = tools.FormatDUI(fmt.Sprintf("%d", *client.DUI))
+	}
 
 	return &client, nil
 }
