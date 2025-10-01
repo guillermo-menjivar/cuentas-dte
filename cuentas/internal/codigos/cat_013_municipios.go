@@ -8,84 +8,84 @@ type Municipality struct {
 	Value string
 }
 
-// Municipality codes
+// Municipality codes with dot notation (department.municipality)
 const (
-	MunicipalityOtro = "00"
+	MunicipalityOtro = "00.00"
 
-	// Ahuachapán
-	MunicipalityAhuachapanNorte  = "13"
-	MunicipalityAhuachapanCentro = "14"
-	MunicipalityAhuachapanSur    = "15"
+	// Ahuachapán (01)
+	MunicipalityAhuachapanNorte  = "01.13"
+	MunicipalityAhuachapanCentro = "01.14"
+	MunicipalityAhuachapanSur    = "01.15"
 
-	// Santa Ana
-	MunicipalitySantaAnaNorte  = "14"
-	MunicipalitySantaAnaCentro = "15"
-	MunicipalitySantaAnaEste   = "16"
-	MunicipalitySantaAnaOeste  = "17"
+	// Santa Ana (02)
+	MunicipalitySantaAnaNorte  = "02.14"
+	MunicipalitySantaAnaCentro = "02.15"
+	MunicipalitySantaAnaEste   = "02.16"
+	MunicipalitySantaAnaOeste  = "02.17"
 
-	// Sonsonate
-	MunicipalitySonsonateNorte  = "17"
-	MunicipalitySonsonateCentro = "18"
-	MunicipalitySonsonateEste   = "19"
-	MunicipalitySonsonateOeste  = "20"
+	// Sonsonate (03)
+	MunicipalitySonsonateNorte  = "03.17"
+	MunicipalitySonsonateCentro = "03.18"
+	MunicipalitySonsonateEste   = "03.19"
+	MunicipalitySonsonateOeste  = "03.20"
 
-	// Chalatenango
-	MunicipalityChalatenangoNorte  = "34"
-	MunicipalityChalatanangoCentro = "35"
-	MunicipalityChalatenangoSur    = "36"
+	// Chalatenango (04)
+	MunicipalityChalatenangoNorte  = "04.34"
+	MunicipalityChalatanangoCentro = "04.35"
+	MunicipalityChalatenangoSur    = "04.36"
 
-	// La Libertad
-	MunicipalityLaLibertadNorte  = "23"
-	MunicipalityLaLibertadCentro = "24"
-	MunicipalityLaLibertadOeste  = "25"
-	MunicipalityLaLibertadEste   = "26"
-	MunicipalityLaLibertadCosta  = "27"
-	MunicipalityLaLibertadSur    = "28"
+	// La Libertad (05)
+	MunicipalityLaLibertadNorte  = "05.23"
+	MunicipalityLaLibertadCentro = "05.24"
+	MunicipalityLaLibertadOeste  = "05.25"
+	MunicipalityLaLibertadEste   = "05.26"
+	MunicipalityLaLibertadCosta  = "05.27"
+	MunicipalityLaLibertadSur    = "05.28"
 
-	// San Salvador
-	MunicipalitySanSalvadorNorte  = "20"
-	MunicipalitySanSalvadorOeste  = "21"
-	MunicipalitySanSalvadorEste   = "22"
-	MunicipalitySanSalvadorCentro = "23"
-	MunicipalitySanSalvadorSur    = "24"
+	// San Salvador (06)
+	MunicipalitySanSalvadorNorte  = "06.20"
+	MunicipalitySanSalvadorOeste  = "06.21"
+	MunicipalitySanSalvadorEste   = "06.22"
+	MunicipalitySanSalvadorCentro = "06.23"
+	MunicipalitySanSalvadorSur    = "06.24"
 
-	// Cuscatlán
-	MunicipalityCuscatlanNorte = "17"
-	MunicipalityCuscatlanSur   = "18"
+	// Cuscatlán (07)
+	MunicipalityCuscatlanNorte = "07.17"
+	MunicipalityCuscatlanSur   = "07.18"
 
-	// La Paz
-	MunicipalityLaPazOeste  = "23"
-	MunicipalityLaPazCentro = "24"
-	MunicipalityLaPazEste   = "25"
+	// La Paz (08)
+	MunicipalityLaPazOeste  = "08.23"
+	MunicipalityLaPazCentro = "08.24"
+	MunicipalityLaPazEste   = "08.25"
 
-	// Cabañas
-	MunicipalityCabanasOeste = "10"
-	MunicipalityCabanasEste  = "11"
+	// Cabañas (09)
+	MunicipalityCabanasOeste = "09.10"
+	MunicipalityCabanasEste  = "09.11"
 
-	// San Vicente
-	MunicipalitySanVicenteNorte = "14"
-	MunicipalitySanVicenteSur   = "15"
+	// San Vicente (10)
+	MunicipalitySanVicenteNorte = "10.14"
+	MunicipalitySanVicenteSur   = "10.15"
 
-	// Usulután
-	MunicipalityUsulatanNorte = "24"
-	MunicipalityUsulatanEste  = "25"
-	MunicipalityUsulatanOeste = "26"
+	// Usulután (11)
+	MunicipalityUsulatanNorte = "11.24"
+	MunicipalityUsulatanEste  = "11.25"
+	MunicipalityUsulatanOeste = "11.26"
 
-	// San Miguel
-	MunicipalitySanMiguelNorte  = "21"
-	MunicipalitySanMiguelCentro = "22"
-	MunicipalitySanMiguelOeste  = "23"
+	// San Miguel (12)
+	MunicipalitySanMiguelNorte  = "12.21"
+	MunicipalitySanMiguelCentro = "12.22"
+	MunicipalitySanMiguelOeste  = "12.23"
 
-	// Morazán
-	MunicipalityMorazanNorte = "27"
-	MunicipalityMorazanSur   = "28"
+	// Morazán (13)
+	MunicipalityMorazanNorte = "13.27"
+	MunicipalityMorazanSur   = "13.28"
 
-	// La Unión
-	MunicipalityLaUnionNorte = "19"
-	MunicipalityLaUnionSur   = "20"
+	// La Unión (14)
+	MunicipalityLaUnionNorte = "14.19"
+	MunicipalityLaUnionSur   = "14.20"
 )
 
-// Municipalities is a map of all municipalities
+// Municipalities is a map of all municipalities using dot notation
 var Municipalities = map[string]string{
 	MunicipalityOtro: "Otro (Para extranjeros)",
 
@@ -163,6 +163,7 @@ var Municipalities = map[string]string{
 }
 
 // MunicipalitiesByDepartment maps department names to their municipalities
+// Note: The Code field here contains only the 2-digit municipality part
 var MunicipalitiesByDepartment = map[string][]Municipality{
 	"ahuachapán": {
 		{Code: "13", Value: "AHUACHAPAN NORTE"},
@@ -245,13 +246,13 @@ func GetMunicipalitiesByDepartment(departmentName string) ([]Municipality, bool)
 	return municipalities, exists
 }
 
-// GetMunicipalityName returns the name of a municipality by code
+// GetMunicipalityName returns the name of a municipality by full code (DD.MM)
 func GetMunicipalityName(code string) (string, bool) {
 	name, exists := Municipalities[code]
 	return name, exists
 }
 
-// GetMunicipalityCode returns the code for a municipality by name (case-insensitive)
+// GetMunicipalityCode returns the full code (DD.MM) for a municipality by name (case-insensitive)
 func GetMunicipalityCode(name string) (string, bool) {
 	nameLower := strings.ToLower(strings.TrimSpace(name))
 
@@ -263,7 +264,7 @@ func GetMunicipalityCode(name string) (string, bool) {
 	return "", false
 }
 
-// GetAllMunicipalities returns a slice of all municipalities
+// GetAllMunicipalities returns a slice of all municipalities with full codes
 func GetAllMunicipalities() []Municipality {
 	municipalities := make([]Municipality, 0, len(Municipalities))
 	for code, value := range Municipalities {
@@ -275,8 +276,14 @@ func GetAllMunicipalities() []Municipality {
 	return municipalities
 }
 
-// IsValidMunicipality checks if a municipality code is valid
+// IsValidMunicipality checks if a municipality code (full DD.MM format) is valid
 func IsValidMunicipality(code string) bool {
 	_, exists := Municipalities[code]
 	return exists
+}
+
+// IsValidMunicipalityInDepartment checks if a 2-digit municipality code is valid for a specific department
+func IsValidMunicipalityInDepartment(departmentCode, municipalityCode string) bool {
+	fullCode := departmentCode + "." + municipalityCode
+	return IsValidMunicipality(fullCode)
 }
