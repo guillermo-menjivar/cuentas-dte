@@ -51,6 +51,9 @@ func (s *ClientService) CreateClient(ctx context.Context, companyID string, req 
 		duiInt = &dui
 	}
 
+	// Construct full municipality code with dot notation: "06.23"
+	fullMunicipalityCode := fmt.Sprintf("%s.%s", req.DepartmentCode, req.MunicipalityCode)
+
 	// Insert into database
 	query := `
 		INSERT INTO clients (
@@ -68,7 +71,7 @@ func (s *ClientService) CreateClient(ctx context.Context, companyID string, req 
 	err := s.db.QueryRowContext(ctx, query,
 		companyID, ncrInt, nitInt, duiInt,
 		req.BusinessName, req.LegalBusinessName, req.Giro, req.TipoContribuyente,
-		req.FullAddress, req.CountryCode, req.DepartmentCode, req.MunicipalityCode,
+		req.FullAddress, req.CountryCode, req.DepartmentCode, fullMunicipalityCode,
 	).Scan(
 		&client.ID, &client.CompanyID, &client.NCR, &client.NIT, &client.DUI,
 		&client.BusinessName, &client.LegalBusinessName, &client.Giro, &client.TipoContribuyente,
