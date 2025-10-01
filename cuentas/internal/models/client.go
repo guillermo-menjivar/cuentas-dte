@@ -2,6 +2,7 @@ package models
 
 import (
 	"cuentas/internal/codigos"
+	"cuentas/internal/tools"
 	"fmt"
 	"time"
 )
@@ -46,7 +47,74 @@ type CreateClientRequest struct {
 
 // Validate validates the create client request
 func (r *CreateClientRequest) Validate() error {
-	// ... (previous validation code for IDs, business name, etc.)
+	hasDUI := r.DUI != ""
+	hasNIT := r.NIT != ""
+	hasNCR := r.NCR != ""
+
+	if !hasDUI && !hasNIT && !hasNCR {
+		return fmt.Errorf("at least one of dui, nit, or ncr must be provided")
+	}
+
+	// If NIT is provided, NCR must also be provided
+	if hasNIT && !hasNCR {
+		return fmt.Errorf("ncr is required when nit is provided")
+	}
+
+	// If NCR is provided without NIT, that's an error
+	if hasNCR && !hasNIT {
+		return fmt.Errorf("nit is required when ncr is provided")
+	}
+
+	// Validate NCR format if provided
+	if hasNCR {
+		if !tools.ValidateNRC(r.NCR) {
+			return fmt.Errorf("ncr must be in format XXXXX-X or XXXXXX-X (e.g., 12345-6)")
+		}
+	}
+
+	// Validate NIT format if provided
+	if hasNIT {
+		if !tools.ValidateNIT(r.NIT) {
+			return fmt.Errorf("nit must be in format XXXX-XXXXXX-XXX-X (e.g., 0614-123456-001-2)")
+		}
+	}
+
+	// Validate DUI format if provided
+	if hasDUI {
+		if !tools.ValidateDUI(r.DUI) {
+			return fmt.Errorf("dui must be in format XXXXXXXX-X (e.g., 12345678-9)")
+		}
+	}
+
+	// Validate business name
+	if r.BusinessName == "" {
+		return fmt.Errorf("business_name is required")
+	}
+
+	// Validate legal business name
+	if r.LegalBusinessName == "" {
+		return fmt.Errorf("legal_business_name is required")
+	}
+
+	// Validate giro
+	if r.Giro == "" {
+		return fmt.Errorf("giro is required")
+	}
+
+	// Validate tipo contribuyente
+	if r.TipoContribuyente == "" {
+		return fmt.Errorf("tipo_contribuyente is required")
+	}
+
+	// Validate address
+	if r.FullAddress == "" {
+		return fmt.Errorf("full_address is required")
+	}
+
+	// Validate country code (should be 2 characters)
+	if len(r.CountryCode) != 2 {
+		return fmt.Errorf("country_code must be 2 characters")
+	}
 
 	// Validate country code (should be 2 characters)
 	if len(r.CountryCode) != 2 {
