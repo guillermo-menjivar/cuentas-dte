@@ -108,6 +108,16 @@ func (r *CreateClientRequest) Validate() error {
 		return fmt.Errorf("tipo_contribuyente is required")
 	}
 
+	// Validate tipo persona
+	if r.TipoPersona == "" {
+		return fmt.Errorf("tipo_persona is required")
+	}
+
+	// Validate that tipo_persona is valid
+	if !codigos.IsValidPersonType(r.TipoPersona) {
+		return fmt.Errorf("invalid tipo_persona: %s (must be 1 for Persona Natural or 2 for Persona Jurídica)", r.TipoPersona)
+	}
+
 	// Validate address
 	if r.FullAddress == "" {
 		return fmt.Errorf("full_address is required")
