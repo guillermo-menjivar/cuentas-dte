@@ -6,6 +6,7 @@ import (
 
 	"cuentas/internal/database"
 	"cuentas/internal/handlers"
+	"cuentas/internal/middleware"
 	"cuentas/internal/services"
 
 	"github.com/gin-gonic/gin"
@@ -143,6 +144,8 @@ func startServer() {
 		c.Set("vaultService", vaultService)  // Inject Vault service
 		c.Next()
 	})
+
+	r.Use(middleware.CompanyIDMiddleware())
 
 	// API v1 routes
 	v1 := r.Group("/v1")
