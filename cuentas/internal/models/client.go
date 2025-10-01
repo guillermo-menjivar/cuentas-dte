@@ -68,11 +68,6 @@ func (r *CreateClientRequest) Validate() error {
 		return fmt.Errorf("municipality_code must be 2 characters")
 	}
 
-	// Validate that municipality code is valid
-	if !codigos.IsValidMunicipality(r.MunicipalityCode) {
-		return fmt.Errorf("invalid municipality_code: %s", r.MunicipalityCode)
-	}
-
 	// Validate that municipality belongs to the specified department
 	departmentName, ok := codigos.GetDepartmentName(r.DepartmentCode)
 	if !ok {
