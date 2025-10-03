@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 
+	"cuentas/internal/codigos"
 	"cuentas/internal/models"
-	"cuentas/pkg/codigos"
 )
 
 type InventoryService struct {
