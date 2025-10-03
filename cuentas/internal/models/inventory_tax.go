@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"cuentas/pkg/codigos"
+	"cuentas/internal/codigos"
 )
 
 // InventoryItemTax represents a tax associated with an inventory item
