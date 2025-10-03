@@ -12,7 +12,7 @@ type InventoryItem struct {
 	ID           string  `json:"id"`
 	CompanyID    string  `json:"company_id"`
 	TipoItem     string  `json:"tipo_item"` // 1=Bienes, 2=Servicios
-	SKU          string  `json:"sku"`
+	SKU          *string `json:"sku"`
 	CodigoBarras *string `json:"codigo_barras,omitempty"`
 
 	Name         string  `json:"name"`
@@ -89,6 +89,7 @@ func (r *CreateInventoryItemRequest) Validate() error {
 	if !skuPattern.MatchString(r.SKU) {
 		return fmt.Errorf("sku must be 3-50 alphanumeric characters with dashes, starting and ending with alphanumeric (e.g., PROD-001)")
 	}
+	r.SKU = &normalized
 
 	// Validate name
 	if strings.TrimSpace(r.Name) == "" {
