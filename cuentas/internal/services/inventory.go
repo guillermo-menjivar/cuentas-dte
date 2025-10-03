@@ -17,8 +17,28 @@ func NewInventoryService(db *sql.DB) *InventoryService {
 	return &InventoryService{db: db}
 }
 
-// CreateItem creates a new inventory item with its taxes
 func (s *InventoryService) CreateItem(ctx context.Context, companyID string, req *models.CreateInventoryItemRequest) (*models.InventoryItem, error) {
+	// Generate SKU if not provided
+	sku := ""
+	if req.SKU != nil {
+		sku = *req.SKU
+	} else {
+		var err error
+		sku, err = s.generateSKU(ctx, companyID, req.TipoItem)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate SKU: %w", err)
+		}
+	}
+
+	// Generate barcode if not provided (only for goods)
+	var barcode *string
+	if req.CodigoBarras != nil {
+		barcode = req.CodigoBarras
+	} else if req.TipoItem == "1" { // Only for Bienes
+		generated := s.generateBarcode()
+		barcode = &generated
+	}
+
 	// Start a transaction
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -41,7 +61,7 @@ func (s *InventoryService) CreateItem(ctx context.Context, companyID string, req
 
 	var item models.InventoryItem
 	err = tx.QueryRowContext(ctx, query,
-		companyID, req.TipoItem, req.SKU, req.CodigoBarras,
+		companyID, req.TipoItem, sku, barcode, // ← Use generated values
 		req.Name, req.Description, req.Manufacturer, req.ImageURL,
 		req.CostPrice, req.UnitPrice, req.UnitOfMeasure, req.Color,
 	).Scan(
