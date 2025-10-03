@@ -38,7 +38,7 @@ type InventoryItem struct {
 // CreateInventoryItemRequest represents the request to create an inventory item
 type CreateInventoryItemRequest struct {
 	TipoItem     string  `json:"tipo_item" binding:"required"`
-	SKU          string  `json:"sku" binding:"required"`
+	SKU          string  `json:"sku"`
 	CodigoBarras *string `json:"codigo_barras"`
 
 	Name         string  `json:"name" binding:"required"`
