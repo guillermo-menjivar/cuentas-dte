@@ -2,9 +2,10 @@ package services
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/binary"
 	"fmt"
-	"math/rand"
 	"time"
 
 	"cuentas/internal/codigos"
@@ -19,6 +20,7 @@ func NewInventoryService(db *sql.DB) *InventoryService {
 	return &InventoryService{db: db}
 }
 
+// CreateItem creates a new inventory item with its taxes
 func (s *InventoryService) CreateItem(ctx context.Context, companyID string, req *models.CreateInventoryItemRequest) (*models.InventoryItem, error) {
 	// Generate SKU if not provided
 	sku := ""
@@ -63,7 +65,7 @@ func (s *InventoryService) CreateItem(ctx context.Context, companyID string, req
 
 	var item models.InventoryItem
 	err = tx.QueryRowContext(ctx, query,
-		companyID, req.TipoItem, sku, barcode, // ← Use generated values
+		companyID, req.TipoItem, sku, barcode,
 		req.Name, req.Description, req.Manufacturer, req.ImageURL,
 		req.CostPrice, req.UnitPrice, req.UnitOfMeasure, req.Color,
 	).Scan(
@@ -395,6 +397,7 @@ func getDefaultTaxes(tipoItem string) []models.AddItemTaxRequest {
 	}
 }
 
+// generateSKU creates a unique SKU for the company
 func (s *InventoryService) generateSKU(ctx context.Context, companyID, tipoItem string) (string, error) {
 	prefix := "PROD"
 	if tipoItem == "2" {
@@ -402,12 +405,18 @@ func (s *InventoryService) generateSKU(ctx context.Context, companyID, tipoItem 
 	}
 
 	for attempts := 0; attempts < 10; attempts++ {
-		// Generate: PROD-YYYYMMDD-XXXX
 		timestamp := time.Now().Format("20060102")
-		random := rand.Intn(10000)
+
+		// Generate cryptographically secure random number
+		var randomBytes [4]byte
+		_, err := rand.Read(randomBytes[:])
+		if err != nil {
+			return "", fmt.Errorf("failed to generate random number: %w", err)
+		}
+		random := binary.BigEndian.Uint32(randomBytes[:]) % 10000
+
 		sku := fmt.Sprintf("%s-%s-%04d", prefix, timestamp, random)
 
-		// Check if exists
 		exists, err := s.skuExists(ctx, companyID, sku)
 		if err != nil {
 			return "", err
@@ -430,6 +439,8 @@ func (s *InventoryService) skuExists(ctx context.Context, companyID, sku string)
 
 // generateBarcode creates an EAN-13 style barcode
 func (s *InventoryService) generateBarcode() string {
-	// Generate 13-digit barcode starting with 20 (internal use)
-	return fmt.Sprintf("20%011d", rand.Int63n(100000000000))
+	var randomBytes [8]byte
+	rand.Read(randomBytes[:])
+	random := binary.BigEndian.Uint64(randomBytes[:]) % 100000000000
+	return fmt.Sprintf("20%011d", random)
 }
