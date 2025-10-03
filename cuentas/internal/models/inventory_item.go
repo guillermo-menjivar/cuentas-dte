@@ -27,11 +27,6 @@ type InventoryItem struct {
 
 	Color *string `json:"color,omitempty"`
 
-	// Inventory tracking
-	TrackInventory bool    `json:"track_inventory"`
-	CurrentStock   float64 `json:"current_stock"`
-	MinimumStock   float64 `json:"minimum_stock"`
-
 	Active    bool      `json:"active"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
@@ -56,11 +51,21 @@ type CreateInventoryItemRequest struct {
 	UnitOfMeasure string   `json:"unit_of_measure" binding:"required"`
 	Color         *string  `json:"color"`
 
-	TrackInventory bool    `json:"track_inventory"`
-	MinimumStock   float64 `json:"minimum_stock"`
-
-	// Taxes to associate with the item
+	// Taxes to associate with the item (optional - will use defaults if empty)
 	Taxes []AddItemTaxRequest `json:"taxes"`
+}
+
+// UpdateInventoryItemRequest represents the request to update an inventory item
+type UpdateInventoryItemRequest struct {
+	Name         *string `json:"name"`
+	Description  *string `json:"description"`
+	Manufacturer *string `json:"manufacturer"`
+	ImageURL     *string `json:"image_url"`
+
+	CostPrice     *float64 `json:"cost_price"`
+	UnitPrice     *float64 `json:"unit_price"`
+	UnitOfMeasure *string  `json:"unit_of_measure"`
+	Color         *string  `json:"color"`
 }
 
 // Valid units of measure
@@ -96,11 +101,6 @@ func (r *CreateInventoryItemRequest) Validate() error {
 		return fmt.Errorf("invalid unit_of_measure: must be one of %v", validUnitsOfMeasure)
 	}
 
-	// Services (tipo 2) cannot track inventory
-	if r.TipoItem == "2" && r.TrackInventory {
-		return fmt.Errorf("services (tipo_item 2) cannot track inventory")
-	}
-
 	// Validate prices
 	if r.UnitPrice < 0 {
 		return fmt.Errorf("unit_price cannot be negative")
@@ -109,16 +109,33 @@ func (r *CreateInventoryItemRequest) Validate() error {
 		return fmt.Errorf("cost_price cannot be negative")
 	}
 
-	// Validate minimum stock
-	if r.MinimumStock < 0 {
-		return fmt.Errorf("minimum_stock cannot be negative")
-	}
-
-	// Validate taxes
+	// Validate taxes if provided
 	for i, tax := range r.Taxes {
 		if err := tax.Validate(); err != nil {
 			return fmt.Errorf("tax %d: %w", i+1, err)
 		}
+	}
+
+	return nil
+}
+
+// Validate validates the update inventory item request
+func (r *UpdateInventoryItemRequest) Validate() error {
+	// Validate unit_of_measure if provided
+	if r.UnitOfMeasure != nil {
+		normalized := strings.ToLower(strings.TrimSpace(*r.UnitOfMeasure))
+		if !contains(validUnitsOfMeasure, normalized) {
+			return fmt.Errorf("invalid unit_of_measure: must be one of %v", validUnitsOfMeasure)
+		}
+		r.UnitOfMeasure = &normalized
+	}
+
+	// Validate prices if provided
+	if r.UnitPrice != nil && *r.UnitPrice < 0 {
+		return fmt.Errorf("unit_price cannot be negative")
+	}
+	if r.CostPrice != nil && *r.CostPrice < 0 {
+		return fmt.Errorf("cost_price cannot be negative")
 	}
 
 	return nil
