@@ -1,0 +1,135 @@
+package models
+
+import (
+	"fmt"
+	"regexp"
+	"strings"
+	"time"
+)
+
+// InventoryItem represents an inventory item (product or service)
+type InventoryItem struct {
+	ID           string  `json:"id"`
+	CompanyID    string  `json:"company_id"`
+	TipoItem     string  `json:"tipo_item"` // 1=Bienes, 2=Servicios
+	SKU          string  `json:"sku"`
+	CodigoBarras *string `json:"codigo_barras,omitempty"`
+
+	Name         string  `json:"name"`
+	Description  *string `json:"description,omitempty"`
+	Manufacturer *string `json:"manufacturer,omitempty"`
+	ImageURL     *string `json:"image_url,omitempty"`
+
+	// Pricing (tax-exclusive)
+	CostPrice     *float64 `json:"cost_price,omitempty"`
+	UnitPrice     float64  `json:"unit_price"`
+	UnitOfMeasure string   `json:"unit_of_measure"`
+
+	Color *string `json:"color,omitempty"`
+
+	// Inventory tracking
+	TrackInventory bool    `json:"track_inventory"`
+	CurrentStock   float64 `json:"current_stock"`
+	MinimumStock   float64 `json:"minimum_stock"`
+
+	Active    bool      `json:"active"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+
+	// Relationships (loaded separately)
+	Taxes []InventoryItemTax `json:"taxes,omitempty"`
+}
+
+// CreateInventoryItemRequest represents the request to create an inventory item
+type CreateInventoryItemRequest struct {
+	TipoItem     string  `json:"tipo_item" binding:"required"`
+	SKU          string  `json:"sku" binding:"required"`
+	CodigoBarras *string `json:"codigo_barras"`
+
+	Name         string  `json:"name" binding:"required"`
+	Description  *string `json:"description"`
+	Manufacturer *string `json:"manufacturer"`
+	ImageURL     *string `json:"image_url"`
+
+	CostPrice     *float64 `json:"cost_price"`
+	UnitPrice     float64  `json:"unit_price" binding:"required"`
+	UnitOfMeasure string   `json:"unit_of_measure" binding:"required"`
+	Color         *string  `json:"color"`
+
+	TrackInventory bool    `json:"track_inventory"`
+	MinimumStock   float64 `json:"minimum_stock"`
+
+	// Taxes to associate with the item
+	Taxes []AddItemTaxRequest `json:"taxes"`
+}
+
+// Valid units of measure
+var validUnitsOfMeasure = []string{
+	"unidad", "servicio", "hora", "kilogramo", "gramo",
+	"litro", "mililitro", "metro", "centimetro", "caja",
+}
+
+// SKU validation pattern: alphanumeric with dashes, 3-50 chars
+var skuPattern = regexp.MustCompile(`^[A-Z0-9][A-Z0-9-]{1,48}[A-Z0-9]$`)
+
+// Validate validates the create inventory item request
+func (r *CreateInventoryItemRequest) Validate() error {
+	// Validate tipo_item (only 1 and 2 for now)
+	if r.TipoItem != "1" && r.TipoItem != "2" {
+		return fmt.Errorf("tipo_item must be 1 (Bienes) or 2 (Servicios)")
+	}
+
+	// Validate and normalize SKU
+	r.SKU = strings.ToUpper(strings.TrimSpace(r.SKU))
+	if !skuPattern.MatchString(r.SKU) {
+		return fmt.Errorf("sku must be 3-50 alphanumeric characters with dashes, starting and ending with alphanumeric (e.g., PROD-001)")
+	}
+
+	// Validate name
+	if strings.TrimSpace(r.Name) == "" {
+		return fmt.Errorf("name is required")
+	}
+
+	// Validate unit_of_measure
+	r.UnitOfMeasure = strings.ToLower(strings.TrimSpace(r.UnitOfMeasure))
+	if !contains(validUnitsOfMeasure, r.UnitOfMeasure) {
+		return fmt.Errorf("invalid unit_of_measure: must be one of %v", validUnitsOfMeasure)
+	}
+
+	// Services (tipo 2) cannot track inventory
+	if r.TipoItem == "2" && r.TrackInventory {
+		return fmt.Errorf("services (tipo_item 2) cannot track inventory")
+	}
+
+	// Validate prices
+	if r.UnitPrice < 0 {
+		return fmt.Errorf("unit_price cannot be negative")
+	}
+	if r.CostPrice != nil && *r.CostPrice < 0 {
+		return fmt.Errorf("cost_price cannot be negative")
+	}
+
+	// Validate minimum stock
+	if r.MinimumStock < 0 {
+		return fmt.Errorf("minimum_stock cannot be negative")
+	}
+
+	// Validate taxes
+	for i, tax := range r.Taxes {
+		if err := tax.Validate(); err != nil {
+			return fmt.Errorf("tax %d: %w", i+1, err)
+		}
+	}
+
+	return nil
+}
+
+// Helper function
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
