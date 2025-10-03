@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math/rand"
+	"time"
 
 	"cuentas/internal/codigos"
 	"cuentas/internal/models"
@@ -391,4 +393,43 @@ func getDefaultTaxes(tipoItem string) []models.AddItemTaxRequest {
 	default:
 		return []models.AddItemTaxRequest{}
 	}
+}
+
+func (s *InventoryService) generateSKU(ctx context.Context, companyID, tipoItem string) (string, error) {
+	prefix := "PROD"
+	if tipoItem == "2" {
+		prefix = "SRV"
+	}
+
+	for attempts := 0; attempts < 10; attempts++ {
+		// Generate: PROD-YYYYMMDD-XXXX
+		timestamp := time.Now().Format("20060102")
+		random := rand.Intn(10000)
+		sku := fmt.Sprintf("%s-%s-%04d", prefix, timestamp, random)
+
+		// Check if exists
+		exists, err := s.skuExists(ctx, companyID, sku)
+		if err != nil {
+			return "", err
+		}
+		if !exists {
+			return sku, nil
+		}
+	}
+
+	return "", fmt.Errorf("failed to generate unique SKU after 10 attempts")
+}
+
+// skuExists checks if a SKU already exists for the company
+func (s *InventoryService) skuExists(ctx context.Context, companyID, sku string) (bool, error) {
+	var exists bool
+	query := `SELECT EXISTS(SELECT 1 FROM inventory_items WHERE company_id = $1 AND sku = $2)`
+	err := s.db.QueryRowContext(ctx, query, companyID, sku).Scan(&exists)
+	return exists, err
+}
+
+// generateBarcode creates an EAN-13 style barcode
+func (s *InventoryService) generateBarcode() string {
+	// Generate 13-digit barcode starting with 20 (internal use)
+	return fmt.Sprintf("20%011d", rand.Int63n(100000000000))
 }
