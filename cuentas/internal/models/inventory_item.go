@@ -12,7 +12,7 @@ type InventoryItem struct {
 	ID           string  `json:"id"`
 	CompanyID    string  `json:"company_id"`
 	TipoItem     string  `json:"tipo_item"` // 1=Bienes, 2=Servicios
-	SKU          *string `json:"sku"`
+	SKU          string  `json:"sku"`       // ← Always has value (not pointer)
 	CodigoBarras *string `json:"codigo_barras,omitempty"`
 
 	Name         string  `json:"name"`
@@ -38,7 +38,7 @@ type InventoryItem struct {
 // CreateInventoryItemRequest represents the request to create an inventory item
 type CreateInventoryItemRequest struct {
 	TipoItem     string  `json:"tipo_item" binding:"required"`
-	SKU          string  `json:"sku"`
+	SKU          *string `json:"sku"` // ← Optional (pointer)
 	CodigoBarras *string `json:"codigo_barras"`
 
 	Name         string  `json:"name" binding:"required"`
@@ -77,6 +77,7 @@ var validUnitsOfMeasure = []string{
 // SKU validation pattern: alphanumeric with dashes, 3-50 chars
 var skuPattern = regexp.MustCompile(`^[A-Z0-9][A-Z0-9-]{1,48}[A-Z0-9]$`)
 
+// Validate validates the create inventory item request
 func (r *CreateInventoryItemRequest) Validate() error {
 	// Validate tipo_item (only 1 and 2 for now)
 	if r.TipoItem != "1" && r.TipoItem != "2" {
@@ -122,6 +123,28 @@ func (r *CreateInventoryItemRequest) Validate() error {
 		if err := tax.Validate(); err != nil {
 			return fmt.Errorf("tax %d: %w", i+1, err)
 		}
+	}
+
+	return nil
+}
+
+// Validate validates the update inventory item request
+func (r *UpdateInventoryItemRequest) Validate() error {
+	// Validate unit_of_measure if provided
+	if r.UnitOfMeasure != nil {
+		normalized := strings.ToLower(strings.TrimSpace(*r.UnitOfMeasure))
+		if !contains(validUnitsOfMeasure, normalized) {
+			return fmt.Errorf("invalid unit_of_measure: must be one of %v", validUnitsOfMeasure)
+		}
+		r.UnitOfMeasure = &normalized
+	}
+
+	// Validate prices if provided
+	if r.UnitPrice != nil && *r.UnitPrice < 0 {
+		return fmt.Errorf("unit_price cannot be negative")
+	}
+	if r.CostPrice != nil && *r.CostPrice < 0 {
+		return fmt.Errorf("cost_price cannot be negative")
 	}
 
 	return nil
