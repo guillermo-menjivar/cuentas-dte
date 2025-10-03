@@ -161,6 +161,17 @@ func startServer() {
 		v1.PUT("/clients/:id", handlers.UpdateClientHandler)
 		v1.DELETE("/clients/:id", handlers.DeleteClientHandler)
 
+		// Inventory item routes
+		v1.POST("/inventory/items", handlers.CreateInventoryItemHandler)
+		v1.GET("/inventory/items/:id", handlers.GetInventoryItemHandler)
+		v1.GET("/inventory/items", handlers.ListInventoryItemsHandler)
+		v1.PUT("/inventory/items/:id", handlers.UpdateInventoryItemHandler)
+		v1.DELETE("/inventory/items/:id", handlers.DeleteInventoryItemHandler)
+
+		// Inventory tax routes
+		v1.GET("/inventory/items/:id/taxes", handlers.GetItemTaxesHandler)
+		v1.POST("/inventory/items/:id/taxes", handlers.AddItemTaxHandler)
+		v1.DELETE("/inventory/items/:id/taxes/:code", handlers.RemoveItemTaxHandler)
 	}
 
 	// Start server
