@@ -77,19 +77,26 @@ var validUnitsOfMeasure = []string{
 // SKU validation pattern: alphanumeric with dashes, 3-50 chars
 var skuPattern = regexp.MustCompile(`^[A-Z0-9][A-Z0-9-]{1,48}[A-Z0-9]$`)
 
-// Validate validates the create inventory item request
 func (r *CreateInventoryItemRequest) Validate() error {
 	// Validate tipo_item (only 1 and 2 for now)
 	if r.TipoItem != "1" && r.TipoItem != "2" {
 		return fmt.Errorf("tipo_item must be 1 (Bienes) or 2 (Servicios)")
 	}
 
-	// Validate and normalize SKU
-	r.SKU = strings.ToUpper(strings.TrimSpace(r.SKU))
-	if !skuPattern.MatchString(r.SKU) {
-		return fmt.Errorf("sku must be 3-50 alphanumeric characters with dashes, starting and ending with alphanumeric (e.g., PROD-001)")
+	// Validate and normalize SKU if provided
+	if r.SKU != nil {
+		normalized := strings.ToUpper(strings.TrimSpace(*r.SKU))
+		if normalized != "" {
+			if !skuPattern.MatchString(normalized) {
+				return fmt.Errorf("sku must be 3-50 alphanumeric characters with dashes, starting and ending with alphanumeric (e.g., PROD-001)")
+			}
+			r.SKU = &normalized
+		} else {
+			// Empty string provided, treat as nil
+			r.SKU = nil
+		}
 	}
-	r.SKU = &normalized
+	// If r.SKU is nil, service will auto-generate it
 
 	// Validate name
 	if strings.TrimSpace(r.Name) == "" {
@@ -115,28 +122,6 @@ func (r *CreateInventoryItemRequest) Validate() error {
 		if err := tax.Validate(); err != nil {
 			return fmt.Errorf("tax %d: %w", i+1, err)
 		}
-	}
-
-	return nil
-}
-
-// Validate validates the update inventory item request
-func (r *UpdateInventoryItemRequest) Validate() error {
-	// Validate unit_of_measure if provided
-	if r.UnitOfMeasure != nil {
-		normalized := strings.ToLower(strings.TrimSpace(*r.UnitOfMeasure))
-		if !contains(validUnitsOfMeasure, normalized) {
-			return fmt.Errorf("invalid unit_of_measure: must be one of %v", validUnitsOfMeasure)
-		}
-		r.UnitOfMeasure = &normalized
-	}
-
-	// Validate prices if provided
-	if r.UnitPrice != nil && *r.UnitPrice < 0 {
-		return fmt.Errorf("unit_price cannot be negative")
-	}
-	if r.CostPrice != nil && *r.CostPrice < 0 {
-		return fmt.Errorf("cost_price cannot be negative")
 	}
 
 	return nil
