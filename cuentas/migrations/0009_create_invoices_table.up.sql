@@ -59,7 +59,6 @@ CREATE TABLE IF NOT EXISTS invoices (
     
     -- Constraints
     CONSTRAINT unique_invoice_number UNIQUE (company_id, invoice_number),
-    CONSTRAINT unique_dte_codigo UNIQUE (dte_codigo_generacion) WHERE dte_codigo_generacion IS NOT NULL,
     CONSTRAINT check_invoice_type CHECK (invoice_type IN ('sale', 'credit_note', 'debit_note')),
     CONSTRAINT check_status CHECK (status IN ('draft', 'finalized', 'void')),
     CONSTRAINT check_payment_status CHECK (payment_status IN ('unpaid', 'partial', 'paid', 'overdue')),
