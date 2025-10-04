@@ -146,7 +146,7 @@ type ClientSnapshot struct {
 // snapshotClient retrieves and snapshots client data
 func (s *InvoiceService) snapshotClient(ctx context.Context, tx *sql.Tx, companyID, clientID string) (*ClientSnapshot, error) {
 	query := `
-		SELECT 
+		SELECT
 			business_name,
 			legal_business_name,
 			nit,
@@ -186,10 +186,10 @@ func (s *InvoiceService) generateInvoiceNumber(ctx context.Context, tx *sql.Tx, 
 	// Get the last invoice number for this company
 	var lastNumber sql.NullString
 	query := `
-		SELECT invoice_number 
-		FROM invoices 
-		WHERE company_id = $1 
-		ORDER BY created_at DESC 
+		SELECT invoice_number
+		FROM invoices
+		WHERE company_id = $1
+		ORDER BY created_at DESC
 		LIMIT 1
 	`
 	err := tx.QueryRowContext(ctx, query, companyID).Scan(&lastNumber)
@@ -212,4 +212,254 @@ func (s *InvoiceService) generateInvoiceNumber(ctx context.Context, tx *sql.Tx, 
 	invoiceNumber := fmt.Sprintf("INV-%d-%05d", currentYear, sequence)
 
 	return invoiceNumber, nil
+}
+
+// processLineItems processes all line items, snapshots data, and calculates totals
+func (s *InvoiceService) processLineItems(ctx context.Context, tx *sql.Tx, companyID string, reqItems []models.CreateInvoiceLineItemRequest) ([]models.InvoiceLineItem, float64, float64, float64, error) {
+	var lineItems []models.InvoiceLineItem
+	var subtotal, totalDiscount, totalTaxes float64
+
+	for _, reqItem := range reqItems {
+		// 1. Snapshot inventory item
+		item, err := s.snapshotInventoryItem(ctx, tx, companyID, reqItem.ItemID)
+		if err != nil {
+			return nil, 0, 0, 0, err
+		}
+
+		// 2. Calculate line amounts
+		lineSubtotal := item.UnitPrice * reqItem.Quantity
+		discountAmount := lineSubtotal * (reqItem.DiscountPercentage / 100)
+		taxableAmount := lineSubtotal - discountAmount
+
+		// 3. Get taxes for this item
+		taxes, lineTaxTotal, err := s.snapshotItemTaxes(ctx, tx, reqItem.ItemID, taxableAmount)
+		if err != nil {
+			return nil, 0, 0, 0, err
+		}
+
+		lineTotal := taxableAmount + lineTaxTotal
+
+		// 4. Create line item
+		lineItem := models.InvoiceLineItem{
+			ItemID:             &reqItem.ItemID,
+			ItemSku:            item.SKU,
+			ItemName:           item.Name,
+			ItemDescription:    item.Description,
+			ItemTipoItem:       item.TipoItem,
+			UnitOfMeasure:      item.UnitOfMeasure,
+			UnitPrice:          item.UnitPrice,
+			Quantity:           reqItem.Quantity,
+			LineSubtotal:       lineSubtotal,
+			DiscountPercentage: reqItem.DiscountPercentage,
+			DiscountAmount:     discountAmount,
+			TaxableAmount:      taxableAmount,
+			TotalTaxes:         lineTaxTotal,
+			LineTotal:          lineTotal,
+			Taxes:              taxes,
+			CreatedAt:          time.Now(),
+		}
+
+		lineItems = append(lineItems, lineItem)
+
+		// 5. Accumulate totals
+		subtotal += lineSubtotal
+		totalDiscount += discountAmount
+		totalTaxes += lineTaxTotal
+	}
+
+	return lineItems, subtotal, totalDiscount, totalTaxes, nil
+}
+
+// ItemSnapshot represents the snapshot of inventory item at transaction time
+type ItemSnapshot struct {
+	SKU           string
+	Name          string
+	Description   *string
+	TipoItem      string
+	UnitOfMeasure string
+	UnitPrice     float64
+}
+
+// snapshotInventoryItem retrieves and snapshots inventory item data
+func (s *InvoiceService) snapshotInventoryItem(ctx context.Context, tx *sql.Tx, companyID, itemID string) (*ItemSnapshot, error) {
+	query := `
+		SELECT
+			sku,
+			name,
+			description,
+			tipo_item,
+			unit_of_measure,
+			unit_price
+		FROM inventory_items
+		WHERE id = $1 AND company_id = $2 AND active = true
+	`
+
+	var snapshot ItemSnapshot
+	err := tx.QueryRowContext(ctx, query, itemID, companyID).Scan(
+		&snapshot.SKU,
+		&snapshot.Name,
+		&snapshot.Description,
+		&snapshot.TipoItem,
+		&snapshot.UnitOfMeasure,
+		&snapshot.UnitPrice,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, ErrInventoryItemNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to query inventory item: %w", err)
+	}
+
+	return &snapshot, nil
+}
+
+// snapshotItemTaxes retrieves taxes for an item and calculates tax amounts
+func (s *InvoiceService) snapshotItemTaxes(ctx context.Context, tx *sql.Tx, itemID string, taxableBase float64) ([]models.InvoiceLineItemTax, float64, error) {
+	query := `
+		SELECT
+			iit.tributo_code,
+			t.descripcion,
+			t.porcentaje
+		FROM inventory_item_taxes iit
+		JOIN codigos.tributos t ON iit.tributo_code = t.codigo
+		WHERE iit.item_id = $1
+	`
+
+	rows, err := tx.QueryContext(ctx, query, itemID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to query item taxes: %w", err)
+	}
+	defer rows.Close()
+
+	var taxes []models.InvoiceLineItemTax
+	var totalTax float64
+
+	for rows.Next() {
+		var tributoCode, tributoName string
+		var taxRatePercent float64
+
+		if err := rows.Scan(&tributoCode, &tributoName, &taxRatePercent); err != nil {
+			return nil, 0, fmt.Errorf("failed to scan tax: %w", err)
+		}
+
+		// Convert percentage to decimal (13% -> 0.13)
+		taxRate := taxRatePercent / 100
+		taxAmount := taxableBase * taxRate
+
+		tax := models.InvoiceLineItemTax{
+			TributoCode: tributoCode,
+			TributoName: tributoName,
+			TaxRate:     taxRate,
+			TaxableBase: taxableBase,
+			TaxAmount:   taxAmount,
+			CreatedAt:   time.Now(),
+		}
+
+		taxes = append(taxes, tax)
+		totalTax += taxAmount
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("error iterating taxes: %w", err)
+	}
+
+	return taxes, totalTax, nil
+}
+
+// insertInvoice inserts the invoice header and returns the ID
+func (s *InvoiceService) insertInvoice(ctx context.Context, tx *sql.Tx, invoice *models.Invoice) (string, error) {
+	query := `
+		INSERT INTO invoices (
+			company_id, client_id, invoice_number, invoice_type,
+			client_name, client_legal_name, client_nit, client_ncr, client_dui,
+			client_address, client_tipo_contribuyente, client_tipo_persona,
+			subtotal, total_discount, total_taxes, total,
+			currency, payment_terms, payment_status, amount_paid, balance_due, due_date,
+			status, notes, contact_email, contact_whatsapp, created_at
+		) VALUES (
+			$1, $2, $3, $4,
+			$5, $6, $7, $8, $9,
+			$10, $11, $12,
+			$13, $14, $15, $16,
+			$17, $18, $19, $20, $21, $22,
+			$23, $24, $25, $26, $27
+		) RETURNING id
+	`
+
+	var id string
+	err := tx.QueryRowContext(ctx, query,
+		invoice.CompanyID, invoice.ClientID, invoice.InvoiceNumber, invoice.InvoiceType,
+		invoice.ClientName, invoice.ClientLegalName, invoice.ClientNit, invoice.ClientNcr, invoice.ClientDui,
+		invoice.ClientAddress, invoice.ClientTipoContribuyente, invoice.ClientTipoPersona,
+		invoice.Subtotal, invoice.TotalDiscount, invoice.TotalTaxes, invoice.Total,
+		invoice.Currency, invoice.PaymentTerms, invoice.PaymentStatus, invoice.AmountPaid, invoice.BalanceDue, invoice.DueDate,
+		invoice.Status, invoice.Notes, invoice.ContactEmail, invoice.ContactWhatsapp, invoice.CreatedAt,
+	).Scan(&id)
+
+	if err != nil {
+		return "", err
+	}
+
+	return id, nil
+}
+
+// insertLineItem inserts a line item and returns the ID
+func (s *InvoiceService) insertLineItem(ctx context.Context, tx *sql.Tx, lineItem *models.InvoiceLineItem) (string, error) {
+	query := `
+		INSERT INTO invoice_line_items (
+			invoice_id, line_number, item_id,
+			item_sku, item_name, item_description, item_tipo_item, unit_of_measure,
+			unit_price, quantity, line_subtotal,
+			discount_percentage, discount_amount,
+			taxable_amount, total_taxes, line_total,
+			created_at
+		) VALUES (
+			$1, $2, $3,
+			$4, $5, $6, $7, $8,
+			$9, $10, $11,
+			$12, $13,
+			$14, $15, $16,
+			$17
+		) RETURNING id
+	`
+
+	var id string
+	err := tx.QueryRowContext(ctx, query,
+		lineItem.InvoiceID, lineItem.LineNumber, lineItem.ItemID,
+		lineItem.ItemSku, lineItem.ItemName, lineItem.ItemDescription, lineItem.ItemTipoItem, lineItem.UnitOfMeasure,
+		lineItem.UnitPrice, lineItem.Quantity, lineItem.LineSubtotal,
+		lineItem.DiscountPercentage, lineItem.DiscountAmount,
+		lineItem.TaxableAmount, lineItem.TotalTaxes, lineItem.LineTotal,
+		lineItem.CreatedAt,
+	).Scan(&id)
+
+	if err != nil {
+		return "", err
+	}
+
+	return id, nil
+}
+
+// insertLineItemTax inserts a tax record for a line item
+func (s *InvoiceService) insertLineItemTax(ctx context.Context, tx *sql.Tx, tax *models.InvoiceLineItemTax) error {
+	query := `
+		INSERT INTO invoice_line_item_taxes (
+			line_item_id, tributo_code, tributo_name,
+			tax_rate, taxable_base, tax_amount,
+			created_at
+		) VALUES (
+			$1, $2, $3,
+			$4, $5, $6,
+			$7
+		)
+	`
+
+	_, err := tx.ExecContext(ctx, query,
+		tax.LineItemID, tax.TributoCode, tax.TributoName,
+		tax.TaxRate, tax.TaxableBase, tax.TaxAmount,
+		tax.CreatedAt,
+	)
+
+	return err
 }
