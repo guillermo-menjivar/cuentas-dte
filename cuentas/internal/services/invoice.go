@@ -463,3 +463,252 @@ func (s *InvoiceService) insertLineItemTax(ctx context.Context, tx *sql.Tx, tax 
 
 	return err
 }
+
+// GetInvoice retrieves a complete invoice with line items and taxes
+func (s *InvoiceService) GetInvoice(ctx context.Context, companyID, invoiceID string) (*models.Invoice, error) {
+	// Get invoice header
+	invoice, err := s.getInvoiceHeader(ctx, companyID, invoiceID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get line items
+	lineItems, err := s.getLineItems(ctx, invoiceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get line items: %w", err)
+	}
+
+	// Get taxes for each line item
+	for i := range lineItems {
+		taxes, err := s.getLineItemTaxes(ctx, lineItems[i].ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get taxes for line item: %w", err)
+		}
+		lineItems[i].Taxes = taxes
+	}
+
+	invoice.LineItems = lineItems
+
+	return invoice, nil
+}
+
+// getInvoiceHeader retrieves just the invoice header
+func (s *InvoiceService) getInvoiceHeader(ctx context.Context, companyID, invoiceID string) (*models.Invoice, error) {
+	query := `
+		SELECT
+			id, company_id, client_id,
+			invoice_number, invoice_type,
+			references_invoice_id, void_reason,
+			client_name, client_legal_name, client_nit, client_ncr, client_dui,
+			client_address, client_tipo_contribuyente, client_tipo_persona,
+			subtotal, total_discount, total_taxes, total,
+			currency,
+			payment_terms, payment_status, amount_paid, balance_due, due_date,
+			status,
+			dte_codigo_generacion, dte_numero_control, dte_status, dte_hacienda_response, dte_submitted_at,
+			created_at, finalized_at, voided_at,
+			created_by, voided_by, notes,
+			contact_email, contact_whatsapp
+		FROM invoices
+		WHERE id = $1 AND company_id = $2
+	`
+
+	invoice := &models.Invoice{}
+	err := database.DB.QueryRowContext(ctx, query, invoiceID, companyID).Scan(
+		&invoice.ID, &invoice.CompanyID, &invoice.ClientID,
+		&invoice.InvoiceNumber, &invoice.InvoiceType,
+		&invoice.ReferencesInvoiceID, &invoice.VoidReason,
+		&invoice.ClientName, &invoice.ClientLegalName, &invoice.ClientNit, &invoice.ClientNcr, &invoice.ClientDui,
+		&invoice.ClientAddress, &invoice.ClientTipoContribuyente, &invoice.ClientTipoPersona,
+		&invoice.Subtotal, &invoice.TotalDiscount, &invoice.TotalTaxes, &invoice.Total,
+		&invoice.Currency,
+		&invoice.PaymentTerms, &invoice.PaymentStatus, &invoice.AmountPaid, &invoice.BalanceDue, &invoice.DueDate,
+		&invoice.Status,
+		&invoice.DteCodigoGeneracion, &invoice.DteNumeroControl, &invoice.DteStatus, &invoice.DteHaciendaResponse, &invoice.DteSubmittedAt,
+		&invoice.CreatedAt, &invoice.FinalizedAt, &invoice.VoidedAt,
+		&invoice.CreatedBy, &invoice.VoidedBy, &invoice.Notes,
+		&invoice.ContactEmail, &invoice.ContactWhatsapp,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, ErrInvoiceNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to query invoice: %w", err)
+	}
+
+	return invoice, nil
+}
+
+// getLineItems retrieves all line items for an invoice
+func (s *InvoiceService) getLineItems(ctx context.Context, invoiceID string) ([]models.InvoiceLineItem, error) {
+	query := `
+		SELECT
+			id, invoice_id, line_number, item_id,
+			item_sku, item_name, item_description, item_tipo_item, unit_of_measure,
+			unit_price, quantity, line_subtotal,
+			discount_percentage, discount_amount,
+			taxable_amount, total_taxes, line_total,
+			created_at
+		FROM invoice_line_items
+		WHERE invoice_id = $1
+		ORDER BY line_number
+	`
+
+	rows, err := database.DB.QueryContext(ctx, query, invoiceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var lineItems []models.InvoiceLineItem
+	for rows.Next() {
+		var item models.InvoiceLineItem
+		err := rows.Scan(
+			&item.ID, &item.InvoiceID, &item.LineNumber, &item.ItemID,
+			&item.ItemSku, &item.ItemName, &item.ItemDescription, &item.ItemTipoItem, &item.UnitOfMeasure,
+			&item.UnitPrice, &item.Quantity, &item.LineSubtotal,
+			&item.DiscountPercentage, &item.DiscountAmount,
+			&item.TaxableAmount, &item.TotalTaxes, &item.LineTotal,
+			&item.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		lineItems = append(lineItems, item)
+	}
+
+	return lineItems, rows.Err()
+}
+
+// getLineItemTaxes retrieves all taxes for a line item
+func (s *InvoiceService) getLineItemTaxes(ctx context.Context, lineItemID string) ([]models.InvoiceLineItemTax, error) {
+	query := `
+		SELECT
+			id, line_item_id, tributo_code, tributo_name,
+			tax_rate, taxable_base, tax_amount,
+			created_at
+		FROM invoice_line_item_taxes
+		WHERE line_item_id = $1
+	`
+
+	rows, err := database.DB.QueryContext(ctx, query, lineItemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var taxes []models.InvoiceLineItemTax
+	for rows.Next() {
+		var tax models.InvoiceLineItemTax
+		err := rows.Scan(
+			&tax.ID, &tax.LineItemID, &tax.TributoCode, &tax.TributoName,
+			&tax.TaxRate, &tax.TaxableBase, &tax.TaxAmount,
+			&tax.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		taxes = append(taxes, tax)
+	}
+
+	return taxes, rows.Err()
+}
+
+// ListInvoices retrieves invoices with filters
+func (s *InvoiceService) ListInvoices(ctx context.Context, companyID string, filters map[string]interface{}) ([]models.Invoice, error) {
+	query := `
+		SELECT
+			id, company_id, client_id,
+			invoice_number, invoice_type,
+			client_name, client_legal_name,
+			subtotal, total_discount, total_taxes, total,
+			payment_terms, payment_status, amount_paid, balance_due, due_date,
+			status,
+			created_at, finalized_at,
+			notes
+		FROM invoices
+		WHERE company_id = $1
+	`
+
+	args := []interface{}{companyID}
+	argCount := 1
+
+	// Add filters
+	if status, ok := filters["status"].(string); ok && status != "" {
+		argCount++
+		query += fmt.Sprintf(" AND status = $%d", argCount)
+		args = append(args, status)
+	}
+
+	if clientID, ok := filters["client_id"].(string); ok && clientID != "" {
+		argCount++
+		query += fmt.Sprintf(" AND client_id = $%d", argCount)
+		args = append(args, clientID)
+	}
+
+	if paymentStatus, ok := filters["payment_status"].(string); ok && paymentStatus != "" {
+		argCount++
+		query += fmt.Sprintf(" AND payment_status = $%d", argCount)
+		args = append(args, paymentStatus)
+	}
+
+	query += " ORDER BY created_at DESC"
+
+	rows, err := database.DB.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var invoices []models.Invoice
+	for rows.Next() {
+		var inv models.Invoice
+		err := rows.Scan(
+			&inv.ID, &inv.CompanyID, &inv.ClientID,
+			&inv.InvoiceNumber, &inv.InvoiceType,
+			&inv.ClientName, &inv.ClientLegalName,
+			&inv.Subtotal, &inv.TotalDiscount, &inv.TotalTaxes, &inv.Total,
+			&inv.PaymentTerms, &inv.PaymentStatus, &inv.AmountPaid, &inv.BalanceDue, &inv.DueDate,
+			&inv.Status,
+			&inv.CreatedAt, &inv.FinalizedAt,
+			&inv.Notes,
+		)
+		if err != nil {
+			return nil, err
+		}
+		invoices = append(invoices, inv)
+	}
+
+	return invoices, rows.Err()
+}
+
+// DeleteDraftInvoice deletes a draft invoice (only drafts can be deleted)
+func (s *InvoiceService) DeleteDraftInvoice(ctx context.Context, companyID, invoiceID string) error {
+	// Verify it's a draft
+	invoice, err := s.getInvoiceHeader(ctx, companyID, invoiceID)
+	if err != nil {
+		return err
+	}
+
+	if invoice.Status != "draft" {
+		return ErrInvoiceNotDraft
+	}
+
+	// Delete (cascade will handle line items and taxes)
+	query := `DELETE FROM invoices WHERE id = $1 AND company_id = $2`
+	result, err := database.DB.ExecContext(ctx, query, invoiceID, companyID)
+	if err != nil {
+		return fmt.Errorf("failed to delete invoice: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return ErrInvoiceNotFound
+	}
+
+	return nil
+}
