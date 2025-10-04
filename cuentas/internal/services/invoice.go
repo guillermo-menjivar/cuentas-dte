@@ -105,7 +105,7 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 		lineItem.InvoiceID = invoiceID
 		lineItem.LineNumber = i + 1
 
-		lineItemID, err := s.insertLineItem(ctx, tx, lineItem)
+		lineItemID, err := s.insertLineItem(ctx, tx, &lineItem)
 		if err != nil {
 			return nil, fmt.Errorf("failed to insert line item %d: %w", i+1, err)
 		}
@@ -114,7 +114,7 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 		// Insert taxes for this line item
 		for _, tax := range lineItem.Taxes {
 			tax.LineItemID = lineItemID
-			if err := s.insertLineItemTax(ctx, tx, tax); err != nil {
+			if err := s.insertLineItemTax(ctx, tx, &tax); err != nil {
 				return nil, fmt.Errorf("failed to insert tax for line item %d: %w", i+1, err)
 			}
 		}
