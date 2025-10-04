@@ -2,6 +2,7 @@
 INSERT INTO clients (
     company_id,
     nit,
+    ncr,
     business_name,
     legal_business_name,
     giro,
@@ -15,7 +16,8 @@ INSERT INTO clients (
 )
 SELECT 
     id as company_id,
-    9999999999999 as nit,
+    '9999999999999' as nit,
+    '999999' as ncr,  -- Added NCR
     'Consumidor Final' as business_name,
     'Consumidor Final' as legal_business_name,
     'Consumidor Final' as giro,
@@ -24,7 +26,7 @@ SELECT
     'N/A' as full_address,
     'SV' as country_code,
     '06' as department_code,
-    '0623' as municipality_code,
+    '01' as municipality_code,
     true as active
 FROM companies
 ON CONFLICT DO NOTHING;
@@ -36,6 +38,7 @@ BEGIN
     INSERT INTO clients (
         company_id,
         nit,
+        ncr,
         business_name,
         legal_business_name,
         giro,
@@ -48,7 +51,8 @@ BEGIN
         active
     ) VALUES (
         NEW.id,
-        9999999999999,
+        '9999999999999',
+        '999999',  -- Added NCR
         'Consumidor Final',
         'Consumidor Final',
         'Consumidor Final',
@@ -57,7 +61,7 @@ BEGIN
         'N/A',
         'SV',
         '06',
-        '0623',
+        '01',
         true
     );
     RETURN NEW;
