@@ -74,11 +74,13 @@ type Invoice struct {
 
 // CreateInvoiceRequest represents the request to create an invoice
 type CreateInvoiceRequest struct {
-	ClientID     string                         `json:"client_id" binding:"required"`
-	PaymentTerms string                         `json:"payment_terms"`
-	DueDate      *time.Time                     `json:"due_date"`
-	Notes        *string                        `json:"notes"`
-	LineItems    []CreateInvoiceLineItemRequest `json:"line_items" binding:"required,min=1"`
+	ClientID        string                         `json:"client_id" binding:"required"`
+	PaymentTerms    string                         `json:"payment_terms"`
+	DueDate         *time.Time                     `json:"due_date"`
+	Notes           *string                        `json:"notes"`
+	ContactEmail    *string                        `json:"contact_email"`
+	ContactWhatsapp *string                        `json:"contact_whatsapp"`
+	LineItems       []CreateInvoiceLineItemRequest `json:"line_items" binding:"required,min=1"`
 }
 
 // Validate validates the create invoice request
