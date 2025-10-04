@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS invoices (
     client_address TEXT NOT NULL,
     client_tipo_contribuyente VARCHAR(50),
     client_tipo_persona VARCHAR(1),
+    contact_email VARCHAR(255),
+    contact_whatsapp VARCHAR(20),
     
     -- Financial totals
     subtotal DECIMAL(15,2) NOT NULL,
