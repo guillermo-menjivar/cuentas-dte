@@ -26,6 +26,8 @@ type Invoice struct {
 	ClientNit               *string `json:"client_nit,omitempty"`
 	ClientNcr               *string `json:"client_ncr,omitempty"`
 	ClientDui               *string `json:"client_dui,omitempty"`
+	ContactEmail            *string `json:"contact_email,omitempty"`
+	ContactWhatsapp         *string `json:"contact_whatsapp,omitempty"`
 	ClientAddress           string  `json:"client_address"`
 	ClientTipoContribuyente *string `json:"client_tipo_contribuyente,omitempty"`
 	ClientTipoPersona       *string `json:"client_tipo_persona,omitempty"`
