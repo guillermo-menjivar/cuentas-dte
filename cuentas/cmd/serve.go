@@ -172,6 +172,12 @@ func startServer() {
 		v1.GET("/inventory/items/:id/taxes", handlers.GetItemTaxesHandler)
 		v1.POST("/inventory/items/:id/taxes", handlers.AddItemTaxHandler)
 		v1.DELETE("/inventory/items/:id/taxes/:code", handlers.RemoveItemTaxHandler)
+
+		// Invoice routes
+		v1.POST("/invoices", invoiceHandler.CreateInvoice)
+		v1.GET("/invoices", invoiceHandler.ListInvoices)
+		v1.GET("/invoices/:id", invoiceHandler.GetInvoice)
+		v1.DELETE("/invoices/:id", invoiceHandler.DeleteInvoice)
 	}
 
 	// Start server
