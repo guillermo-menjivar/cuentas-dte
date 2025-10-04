@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS invoices (
     CONSTRAINT check_status CHECK (status IN ('draft', 'finalized', 'void')),
     CONSTRAINT check_payment_status CHECK (payment_status IN ('unpaid', 'partial', 'paid', 'overdue')),
     CONSTRAINT check_finalized_has_dte CHECK (
-        (status = 'draft') OR 
+        (status = 'draft') OR
         (status IN ('finalized', 'void') AND dte_codigo_generacion IS NOT NULL)
     )
 );
@@ -76,7 +76,9 @@ CREATE INDEX idx_invoices_finalized ON invoices(finalized_at);
 CREATE INDEX idx_invoices_number ON invoices(company_id, invoice_number);
 CREATE INDEX idx_invoices_status ON invoices(status);
 CREATE INDEX idx_invoices_payment_status ON invoices(payment_status);
-CREATE INDEX idx_invoices_dte_codigo ON invoices(dte_codigo_generacion) WHERE dte_codigo_generacion IS NOT NULL;
+
+-- Partial unique index for DTE codigo (only when NOT NULL)
+CREATE UNIQUE INDEX idx_invoices_dte_codigo_unique ON invoices(dte_codigo_generacion) WHERE dte_codigo_generacion IS NOT NULL;
 
 -- Comments
 COMMENT ON TABLE invoices IS 'Invoice transactions with complete snapshots';
