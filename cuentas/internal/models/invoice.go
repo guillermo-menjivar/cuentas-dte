@@ -116,13 +116,3 @@ func (r *CreateInvoiceRequest) Validate() error {
 
 	return nil
 }
-
-// Helper function
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}
