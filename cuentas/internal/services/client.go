@@ -101,7 +101,7 @@ func (s *ClientService) CreateClient(ctx context.Context, companyID string, req 
 func (s *ClientService) GetClientByID(ctx context.Context, companyID, clientID string) (*models.Client, error) {
 	query := `
 		SELECT id, company_id, ncr, nit, dui,
-			   business_name, legal_business_name, giro, tipo_contribuyente,
+			   business_name, legal_business_name, giro, tipo_contribuyente, tipo_persona,
 			   full_address, country_code, department_code, municipality_code,
 			   active, created_at, updated_at
 		FROM clients
@@ -111,7 +111,7 @@ func (s *ClientService) GetClientByID(ctx context.Context, companyID, clientID s
 	var client models.Client
 	err := s.db.QueryRowContext(ctx, query, clientID, companyID).Scan(
 		&client.ID, &client.CompanyID, &client.NCR, &client.NIT, &client.DUI,
-		&client.BusinessName, &client.LegalBusinessName, &client.Giro, &client.TipoContribuyente,
+		&client.BusinessName, &client.LegalBusinessName, &client.Giro, &client.TipoContribuyente, &client.TipoPersona,
 		&client.FullAddress, &client.CountryCode, &client.DepartmentCode, &client.MunicipalityCode,
 		&client.Active, &client.CreatedAt, &client.UpdatedAt,
 	)
