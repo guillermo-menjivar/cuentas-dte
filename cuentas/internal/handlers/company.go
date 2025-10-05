@@ -7,7 +7,9 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
+	"cuentas/internal/database"
 	"cuentas/internal/models"
 	"cuentas/internal/services"
 
@@ -159,4 +161,52 @@ func GetCompanyHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, company)
+}
+
+func ListCompaniesHandler(c *gin.Context) {
+	query := `
+		SELECT id, name, nit, ncr, email, active, created_at, updated_at
+		FROM companies
+		ORDER BY created_at DESC
+	`
+
+	rows, err := database.DB.QueryContext(c.Request.Context(), query)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to query companies"})
+		return
+	}
+	defer rows.Close()
+
+	var companies []map[string]interface{}
+	for rows.Next() {
+		var id, name, nit, ncr, email string
+		var active bool
+		var createdAt, updatedAt time.Time
+
+		if err := rows.Scan(&id, &name, &nit, &ncr, &email, &active, &createdAt, &updatedAt); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to scan company"})
+			return
+		}
+
+		companies = append(companies, map[string]interface{}{
+			"id":         id,
+			"name":       name,
+			"nit":        nit,
+			"ncr":        ncr,
+			"email":      email,
+			"active":     active,
+			"created_at": createdAt,
+			"updated_at": updatedAt,
+		})
+	}
+
+	if err := rows.Err(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "error iterating companies"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"companies": companies,
+		"count":     len(companies),
+	})
 }
