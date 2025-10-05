@@ -362,6 +362,75 @@ const (
 	ActEcon45302 = "45302"
 	ActEcon45401 = "45401"
 	ActEcon45402 = "45402"
+
+	// Add these constants after ActEcon45402:
+
+	ActEcon45403 = "45403"
+
+	// COMERCIO AL POR MAYOR, EXCEPTO EL COMERCIO DE VEHÍCULOS AUTOMOTORES Y MOTOCICLETAS (Parte 1)
+	ActEcon46100 = "46100"
+	ActEcon46201 = "46201"
+	ActEcon46202 = "46202"
+	ActEcon46203 = "46203"
+	ActEcon46211 = "46211"
+	ActEcon46291 = "46291"
+	ActEcon46292 = "46292"
+	ActEcon46293 = "46293"
+	ActEcon46294 = "46294"
+	ActEcon46295 = "46295"
+	ActEcon46296 = "46296"
+	ActEcon46297 = "46297"
+	ActEcon46298 = "46298"
+	ActEcon46299 = "46299"
+	ActEcon46301 = "46301"
+	ActEcon46302 = "46302"
+	ActEcon46303 = "46303"
+	ActEcon46371 = "46371"
+	ActEcon46372 = "46372"
+	ActEcon46373 = "46373"
+	ActEcon46374 = "46374"
+	ActEcon46375 = "46375"
+	ActEcon46376 = "46376"
+	ActEcon46377 = "46377"
+	ActEcon46378 = "46378"
+	ActEcon46379 = "46379"
+	ActEcon46391 = "46391"
+	ActEcon46392 = "46392"
+	ActEcon46393 = "46393"
+	ActEcon46394 = "46394"
+	ActEcon46395 = "46395"
+	ActEcon46396 = "46396"
+	ActEcon46411 = "46411"
+	ActEcon46412 = "46412"
+	ActEcon46413 = "46413"
+	ActEcon46414 = "46414"
+	ActEcon46415 = "46415"
+	ActEcon46416 = "46416"
+	ActEcon46417 = "46417"
+	ActEcon46418 = "46418"
+	ActEcon46419 = "46419"
+	ActEcon46471 = "46471"
+	ActEcon46472 = "46472"
+	ActEcon46473 = "46473"
+	ActEcon46474 = "46474"
+	ActEcon46475 = "46475"
+	ActEcon46482 = "46482"
+	ActEcon46483 = "46483"
+	ActEcon46484 = "46484"
+	ActEcon46491 = "46491"
+	ActEcon46492 = "46492"
+	ActEcon46493 = "46493"
+	ActEcon46494 = "46494"
+	ActEcon46495 = "46495"
+	ActEcon46496 = "46496"
+	ActEcon46497 = "46497"
+	ActEcon46498 = "46498"
+	ActEcon46499 = "46499"
+	ActEcon46500 = "46500"
+	ActEcon46510 = "46510"
+	ActEcon46520 = "46520"
+	ActEcon46530 = "46530"
+	ActEcon46590 = "46590"
 )
 
 // EconomicActivities is a map of all economic activity codes
@@ -653,6 +722,73 @@ var EconomicActivities = map[string]string{
 	ActEcon45302: "Venta de partes, piezas y accesorios usados para vehículos automotores",
 	ActEcon45401: "Venta de motocicletas",
 	ActEcon45402: "Venta de repuestos, piezas y accesorios de motocicletas",
+
+	// Add these entries to the EconomicActivities map:
+
+	ActEcon45403: "Mantenimiento y reparación de motocicletas",
+	ActEcon46100: "Venta al por mayor a cambio de retribución o por contrata",
+	ActEcon46201: "Venta al por mayor de materias primas agrícolas",
+	ActEcon46202: "Venta al por mayor de productos de la silvicultura",
+	ActEcon46203: "Venta al por mayor de productos pecuarios y de granja",
+	ActEcon46211: "Venta de productos para uso agropecuario",
+	ActEcon46291: "Venta al por mayor de granos básicos (cereales, leguminosas)",
+	ActEcon46292: "Venta al por mayor de semillas mejoradas para cultivo",
+	ActEcon46293: "Venta al por mayor de café oro y uva",
+	ActEcon46294: "Venta al por mayor de caña de azúcar",
+	ActEcon46295: "Venta al por mayor de flores, plantas y otros productos naturales",
+	ActEcon46296: "Venta al por mayor de productos agrícolas",
+	ActEcon46297: "Venta al por mayor de ganado bovino (vivo)",
+	ActEcon46298: "Venta al por mayor de animales porcinos, ovinos, caprino, canículas, apícolas, avícolas vivos",
+	ActEcon46299: "Venta de otras especies vivas del reino animal",
+	ActEcon46301: "Venta al por mayor de alimentos",
+	ActEcon46302: "Venta al por mayor de bebidas",
+	ActEcon46303: "Venta al por mayor de tabaco",
+	ActEcon46371: "Venta al por mayor de frutas, hortalizas (verduras), legumbres y tubérculos",
+	ActEcon46372: "Venta al por mayor de pollos, gallinas destazadas, pavos y otras aves",
+	ActEcon46373: "Venta al por mayor de carne bovina y porcina, productos de carne y embutidos",
+	ActEcon46374: "Venta al por mayor de huevos",
+	ActEcon46375: "Venta al por mayor de productos lácteos",
+	ActEcon46376: "Venta al por mayor de productos farináceos de panadería (pan dulce, cakes, respostería, etc.)",
+	ActEcon46377: "Venta al por mayor de pastas alimenticias, aceites y grasas comestibles vegetal y animal",
+	ActEcon46378: "Venta al por mayor de sal comestible",
+	ActEcon46379: "Venta al por mayor de azúcar",
+	ActEcon46391: "Venta al por mayor de abarrotes (vinos, licores, productos alimenticios envasados, etc.)",
+	ActEcon46392: "Venta al por mayor de aguas gaseosas",
+	ActEcon46393: "Venta al por mayor de agua purificada",
+	ActEcon46394: "Venta al por mayor de refrescos y otras bebidas, líquidas o en polvo",
+	ActEcon46395: "Venta al por mayor de cerveza y licores",
+	ActEcon46396: "Venta al por mayor de hielo",
+	ActEcon46411: "Venta al por mayor de hilados, tejidos y productos textiles de mercería",
+	ActEcon46412: "Venta al por mayor de artículos textiles excepto confecciones para el hogar",
+	ActEcon46413: "Venta al por mayor de confecciones textiles para el hogar",
+	ActEcon46414: "Venta al por mayor de prendas de vestir y accesorios de vestir",
+	ActEcon46415: "Venta al por mayor de ropa usada",
+	ActEcon46416: "Venta al por mayor de calzado",
+	ActEcon46417: "Venta al por mayor de artículos de marroquinería y talabartería",
+	ActEcon46418: "Venta al por mayor de artículos de peletería",
+	ActEcon46419: "Venta al por mayor de otros artículos textiles n.c.p.",
+	ActEcon46471: "Venta al por mayor de instrumentos musicales",
+	ActEcon46472: "Venta al por mayor de colchones, almohadas, cojines, etc.",
+	ActEcon46473: "Venta al por mayor de artículos de aluminio para el hogar y para otros usos",
+	ActEcon46474: "Venta al por mayor de depósitos y otros artículos plásticos para el hogar y otros usos, incluyendo los desechables de durapax y no desechables",
+	ActEcon46475: "Venta al por mayor de cámaras fotográficas, accesorios y materiales",
+	ActEcon46482: "Venta al por mayor de medicamentos, artículos y otros productos de uso veterinario",
+	ActEcon46483: "Venta al por mayor de productos y artículos de belleza y de uso personal",
+	ActEcon46484: "Venta de productos farmacéuticos y medicinales",
+	ActEcon46491: "Venta al por mayor de productos medicinales, cosméticos, perfumería y productos de limpieza",
+	ActEcon46492: "Venta al por mayor de relojes y artículos de joyería",
+	ActEcon46493: "Venta al por mayor de electrodomésticos y artículos del hogar excepto bazar; artículos de iluminación",
+	ActEcon46494: "Venta al por mayor de artículos de bazar y similares",
+	ActEcon46495: "Venta al por mayor de artículos de óptica",
+	ActEcon46496: "Venta al por mayor de revistas, periódicos, libros, artículos de librería y artículos de papel y cartón en general",
+	ActEcon46497: "Venta de artículos deportivos, juguetes y rodados",
+	ActEcon46498: "Venta al por mayor de productos usados para el hogar o el uso personal",
+	ActEcon46499: "Venta al por mayor de enseres domésticos y de uso personal n.c.p.",
+	ActEcon46500: "Venta al por mayor de bicicletas, partes, accesorios y otros",
+	ActEcon46510: "Venta al por mayor de computadoras, equipo periférico y programas informáticos",
+	ActEcon46520: "Venta al por mayor de equipos de comunicación",
+	ActEcon46530: "Venta al por mayor de maquinaria y equipo agropecuario, accesorios, partes y suministros",
+	ActEcon46590: "Venta de equipos e instrumentos de uso profesional y científico y aparatos de medida y control",
 }
 
 // GetEconomicActivityName returns the name of an economic activity by code
