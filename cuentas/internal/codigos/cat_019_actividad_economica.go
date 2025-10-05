@@ -495,6 +495,68 @@ const (
 	ActEcon47225 = "47225"
 	ActEcon47230 = "47230"
 	ActEcon47300 = "47300"
+
+	// Add these constants after ActEcon47300:
+
+	ActEcon47411 = "47411"
+	ActEcon47412 = "47412"
+	ActEcon47420 = "47420"
+	ActEcon47510 = "47510"
+	ActEcon47521 = "47521"
+	ActEcon47522 = "47522"
+	ActEcon47523 = "47523"
+	ActEcon47524 = "47524"
+	ActEcon47529 = "47529"
+	ActEcon47530 = "47530"
+	ActEcon47591 = "47591"
+	ActEcon47592 = "47592"
+	ActEcon47593 = "47593"
+	ActEcon47594 = "47594"
+	ActEcon47598 = "47598"
+	ActEcon47610 = "47610"
+	ActEcon47620 = "47620"
+	ActEcon47630 = "47630"
+	ActEcon47631 = "47631"
+	ActEcon47640 = "47640"
+	ActEcon47711 = "47711"
+	ActEcon47712 = "47712"
+	ActEcon47713 = "47713"
+	ActEcon47721 = "47721"
+	ActEcon47722 = "47722"
+	ActEcon47731 = "47731"
+	ActEcon47732 = "47732"
+	ActEcon47733 = "47733"
+	ActEcon47734 = "47734"
+	ActEcon47735 = "47735"
+	ActEcon47736 = "47736"
+	ActEcon47737 = "47737"
+	ActEcon47738 = "47738"
+	ActEcon47739 = "47739"
+	ActEcon47741 = "47741"
+	ActEcon47742 = "47742"
+	ActEcon47743 = "47743"
+	ActEcon47749 = "47749"
+	ActEcon47811 = "47811"
+	ActEcon47814 = "47814"
+	ActEcon47815 = "47815"
+	ActEcon47816 = "47816"
+	ActEcon47818 = "47818"
+	ActEcon47821 = "47821"
+	ActEcon47822 = "47822"
+	ActEcon47823 = "47823"
+	ActEcon47824 = "47824"
+	ActEcon47825 = "47825"
+	ActEcon47826 = "47826"
+	ActEcon47827 = "47827"
+	ActEcon47829 = "47829"
+	ActEcon47891 = "47891"
+	ActEcon47892 = "47892"
+	ActEcon47893 = "47893"
+	ActEcon47894 = "47894"
+	ActEcon47895 = "47895"
+	ActEcon47896 = "47896"
+	ActEcon47899 = "47899"
+	ActEcon47910 = "47910"
 )
 
 // EconomicActivities is a map of all economic activity codes
@@ -913,6 +975,68 @@ var EconomicActivities = map[string]string{
 	ActEcon47225: "Venta de bebidas alcohólicas para su consumo dentro del establecimiento",
 	ActEcon47230: "Venta al por menor de tabaco",
 	ActEcon47300: "Venta de combustibles, lubricantes y otros (gasolineras)",
+
+	// Add these entries to the EconomicActivities map:
+
+	ActEcon47411: "Venta al por menor de computadoras y equipo periférico",
+	ActEcon47412: "Venta de equipo y accesorios de telecomunicación",
+	ActEcon47420: "Venta al por menor de equipo de audio y video",
+	ActEcon47510: "Venta al por menor de hilados, tejidos y productos textiles de mercería; confecciones para el hogar y textiles n.c.p.",
+	ActEcon47521: "Venta al por menor de productos de madera",
+	ActEcon47522: "Venta al por menor de artículos de ferretería",
+	ActEcon47523: "Venta al por menor de productos de pinturerías",
+	ActEcon47524: "Venta al por menor en vidrierías",
+	ActEcon47529: "Venta al por menor de materiales de construcción y artículos conexos",
+	ActEcon47530: "Venta al por menor de tapices, alfombras y revestimientos de paredes y pisos en comercios especializados",
+	ActEcon47591: "Venta al por menor de muebles",
+	ActEcon47592: "Venta al por menor de artículos de bazar",
+	ActEcon47593: "Venta al por menor de aparatos electrodomésticos, repuestos y accesorios",
+	ActEcon47594: "Venta al por menor de artículos eléctricos y de iluminación",
+	ActEcon47598: "Venta al por menor de instrumentos musicales",
+	ActEcon47610: "Venta al por menor de libros, periódicos y artículos de papelería en comercios especializados",
+	ActEcon47620: "Venta al por menor de discos láser, cassettes, cintas de video y otros",
+	ActEcon47630: "Venta al por menor de productos y equipos de deporte",
+	ActEcon47631: "Venta al por menor de bicicletas, accesorios y repuestos",
+	ActEcon47640: "Venta al por menor de juegos y juguetes en comercios especializados",
+	ActEcon47711: "Venta al por menor de prendas de vestir y accesorios de vestir",
+	ActEcon47712: "Venta al por menor de calzado",
+	ActEcon47713: "Venta al por menor de artículos de peletería, marroquinería y talabartería",
+	ActEcon47721: "Venta al por menor de medicamentos farmacéuticos y otros materiales y artículos de uso médico, odontológico y veterinario",
+	ActEcon47722: "Venta al por menor de productos cosméticos y de tocador",
+	ActEcon47731: "Venta al por menor de productos de joyería, bisutería, óptica, relojería",
+	ActEcon47732: "Venta al por menor de plantas, semillas, animales y artículos conexos",
+	ActEcon47733: "Venta al por menor de combustibles de uso doméstico (gas propano y gas licuado)",
+	ActEcon47734: "Venta al por menor de artesanías, artículos cerámicos y recuerdos en general",
+	ActEcon47735: "Venta al por menor de ataúdes, lápidas y cruces, trofeos, artículos religiosos en general",
+	ActEcon47736: "Venta al por menor de armas de fuego, municiones y accesorios",
+	ActEcon47737: "Venta al por menor de artículos de cohetería y pirotécnicos",
+	ActEcon47738: "Venta al por menor de artículos desechables de uso personal y doméstico (servilletas, papel higiénico, pañales, toallas sanitarias, etc.)",
+	ActEcon47739: "Venta al por menor de otros productos n.c.p.",
+	ActEcon47741: "Venta al por menor de artículos usados",
+	ActEcon47742: "Venta al por menor de textiles y confecciones usados",
+	ActEcon47743: "Venta al por menor de libros, revistas, papel y cartón usados",
+	ActEcon47749: "Venta al por menor de productos usados n.c.p.",
+	ActEcon47811: "Venta al por menor de frutas, verduras y hortalizas",
+	ActEcon47814: "Venta al por menor de productos lácteos",
+	ActEcon47815: "Venta al por menor de productos de panadería, galletas y similares",
+	ActEcon47816: "Venta al por menor de bebidas",
+	ActEcon47818: "Venta al por menor en tiendas de mercado y puestos",
+	ActEcon47821: "Venta al por menor de hilados, tejidos y productos textiles de mercería en puestos de mercados y ferias",
+	ActEcon47822: "Venta al por menor de artículos textiles excepto confecciones para el hogar en puestos de mercados y ferias",
+	ActEcon47823: "Venta al por menor de confecciones textiles para el hogar en puestos de mercados y ferias",
+	ActEcon47824: "Venta al por menor de prendas de vestir, accesorios de vestir y similares en puestos de mercados y ferias",
+	ActEcon47825: "Venta al por menor de ropa usada",
+	ActEcon47826: "Venta al por menor de calzado, artículos de marroquinería y talabartería en puestos de mercados y ferias",
+	ActEcon47827: "Venta al por menor de artículos de marroquinería y talabartería en puestos de mercados y ferias",
+	ActEcon47829: "Venta al por menor de artículos textiles ncp en puestos de mercados y ferias",
+	ActEcon47891: "Venta al por menor de animales, flores y productos conexos en puestos de feria y mercados",
+	ActEcon47892: "Venta al por menor de productos medicinales, cosméticos, de tocador y de limpieza en puestos de ferias y mercados",
+	ActEcon47893: "Venta al por menor de artículos de bazar en puestos de ferias y mercados",
+	ActEcon47894: "Venta al por menor de artículos de papel, envases, libros, revistas y conexos en puestos de feria y mercados",
+	ActEcon47895: "Venta al por menor de materiales de construcción, electrodomésticos, accesorios para autos y similares en puestos de feria y mercados",
+	ActEcon47896: "Venta al por menor de equipos accesorios para las comunicaciones en puestos de feria y mercados",
+	ActEcon47899: "Venta al por menor en puestos de ferias y mercados n.c.p.",
+	ActEcon47910: "Venta al por menor por correo o Internet",
 }
 
 // GetEconomicActivityName returns the name of an economic activity by code
