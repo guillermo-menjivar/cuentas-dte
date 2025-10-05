@@ -204,6 +204,87 @@ const (
 	ActEcon25920 = "25920"
 	ActEcon25930 = "25930"
 	ActEcon25991 = "25991"
+
+	// Add these constants after ActEcon25991:
+
+	ActEcon25992 = "25992"
+	ActEcon25999 = "25999"
+
+	// FABRICACIÓN DE PRODUCTOS DE INFORMÁTICA, ELECTRÓNICA Y ÓPTICA
+	ActEcon26100 = "26100"
+	ActEcon26200 = "26200"
+	ActEcon26300 = "26300"
+	ActEcon26400 = "26400"
+	ActEcon26510 = "26510"
+	ActEcon26520 = "26520"
+	ActEcon26600 = "26600"
+	ActEcon26700 = "26700"
+	ActEcon26800 = "26800"
+
+	// FABRICACIÓN DE EQUIPO ELÉCTRICO
+	ActEcon27100 = "27100"
+	ActEcon27200 = "27200"
+	ActEcon27310 = "27310"
+	ActEcon27320 = "27320"
+	ActEcon27330 = "27330"
+	ActEcon27400 = "27400"
+	ActEcon27500 = "27500"
+	ActEcon27900 = "27900"
+
+	// FABRICACIÓN DE MAQUINARIA Y EQUIPO NCP
+	ActEcon28110 = "28110"
+	ActEcon28120 = "28120"
+	ActEcon28130 = "28130"
+	ActEcon28140 = "28140"
+	ActEcon28150 = "28150"
+	ActEcon28160 = "28160"
+	ActEcon28170 = "28170"
+	ActEcon28180 = "28180"
+	ActEcon28190 = "28190"
+	ActEcon28210 = "28210"
+	ActEcon28220 = "28220"
+	ActEcon28230 = "28230"
+	ActEcon28240 = "28240"
+	ActEcon28250 = "28250"
+	ActEcon28260 = "28260"
+	ActEcon28291 = "28291"
+	ActEcon28299 = "28299"
+
+	// FABRICACIÓN DE VEHÍCULOS AUTOMOTORES, REMOLQUES Y SEMIRREMOLQUES
+	ActEcon29100 = "29100"
+	ActEcon29200 = "29200"
+	ActEcon29300 = "29300"
+
+	// FABRICACIÓN DE OTROS TIPOS DE EQUIPO DE TRANSPORTE
+	ActEcon30110 = "30110"
+	ActEcon30120 = "30120"
+	ActEcon30200 = "30200"
+	ActEcon30300 = "30300"
+	ActEcon30400 = "30400"
+	ActEcon30910 = "30910"
+	ActEcon30920 = "30920"
+	ActEcon30990 = "30990"
+
+	// FABRICACIÓN DE MUEBLES
+	ActEcon31001 = "31001"
+	ActEcon31002 = "31002"
+	ActEcon31008 = "31008"
+	ActEcon31009 = "31009"
+
+	// OTRAS INDUSTRIAS MANUFACTURERAS
+	ActEcon32110 = "32110"
+	ActEcon32120 = "32120"
+	ActEcon32200 = "32200"
+	ActEcon32301 = "32301"
+	ActEcon32308 = "32308"
+	ActEcon32401 = "32401"
+	ActEcon32402 = "32402"
+	ActEcon32409 = "32409"
+	ActEcon32500 = "32500"
+	ActEcon32901 = "32901"
+	ActEcon32902 = "32902"
+	ActEcon32903 = "32903"
+	ActEcon32904 = "32904"
 )
 
 // EconomicActivities is a map of all economic activity codes
@@ -369,6 +450,73 @@ var EconomicActivities = map[string]string{
 	ActEcon25920: "Tratamiento y revestimiento de metales",
 	ActEcon25930: "Fabricación de artículos de cuchillería, herramientas de mano y artículos de ferretería",
 	ActEcon25991: "Fabricación de envases y artículos conexos de metal",
+
+	// Add these entries to the EconomicActivities map:
+
+	ActEcon25992: "Fabricación de artículos metálicos de uso personal y/o doméstico",
+	ActEcon25999: "Fabricación de productos elaborados de metal ncp",
+	ActEcon26100: "Fabricación de componentes electrónicos",
+	ActEcon26200: "Fabricación de computadoras y equipo conexo",
+	ActEcon26300: "Fabricación de equipo de comunicaciones",
+	ActEcon26400: "Fabricación de aparatos electrónicos de consumo para audio, video radio y televisión",
+	ActEcon26510: "Fabricación de instrumentos y aparatos para medir, verificar, ensayar, navegar y de control de procesos industriales",
+	ActEcon26520: "Fabricación de relojes y piezas de relojes",
+	ActEcon26600: "Fabricación de equipo médico de irradiación y equipo electrónico de uso médico y terapéutico",
+	ActEcon26700: "Fabricación de instrumentos de óptica y equipo fotográfico",
+	ActEcon26800: "Fabricación de medios magnéticos y ópticos",
+	ActEcon27100: "Fabricación de motores, generadores, transformadores eléctricos, aparatos de distribución y control de electricidad",
+	ActEcon27200: "Fabricación de pilas, baterías y acumuladores",
+	ActEcon27310: "Fabricación de cables de fibra óptica",
+	ActEcon27320: "Fabricación de otros hilos y cables eléctricos",
+	ActEcon27330: "Fabricación de dispositivos de cableados",
+	ActEcon27400: "Fabricación de equipo eléctrico de iluminación",
+	ActEcon27500: "Fabricación de aparatos de uso doméstico",
+	ActEcon27900: "Fabricación de otros tipos de equipo eléctrico",
+	ActEcon28110: "Fabricación de motores y turbinas, excepto motores para aeronaves, vehículos automotores y motocicletas",
+	ActEcon28120: "Fabricación de equipo hidráulico",
+	ActEcon28130: "Fabricación de otras bombas, compresores, grifos y válvulas",
+	ActEcon28140: "Fabricación de cojinetes, engranajes, trenes de engranajes y piezas de transmisión",
+	ActEcon28150: "Fabricación de hornos y quemadores",
+	ActEcon28160: "Fabricación de equipo de elevación y manipulación",
+	ActEcon28170: "Fabricación de maquinaria y equipo de oficina",
+	ActEcon28180: "Fabricación de herramientas manuales",
+	ActEcon28190: "Fabricación de otros tipos de maquinaria de uso general",
+	ActEcon28210: "Fabricación de maquinaria agropecuaria y forestal",
+	ActEcon28220: "Fabricación de máquinas para conformar metales y maquinaria herramienta",
+	ActEcon28230: "Fabricación de maquinaria metalúrgica",
+	ActEcon28240: "Fabricación de maquinaria para la explotación de minas y canteras y para obras de construcción",
+	ActEcon28250: "Fabricación de maquinaria para la elaboración de alimentos, bebidas y tabaco",
+	ActEcon28260: "Fabricación de maquinaria para la elaboración de productos textiles, prendas de vestir y cueros",
+	ActEcon28291: "Fabricación de máquinas para imprenta",
+	ActEcon28299: "Fabricación de maquinaria de uso especial ncp",
+	ActEcon29100: "Fabricación vehículos automotores",
+	ActEcon29200: "Fabricación de carrocerías para vehículos automotores; fabricación de remolques y semirremolques",
+	ActEcon29300: "Fabricación de partes, piezas y accesorios para vehículos automotores",
+	ActEcon30110: "Fabricación de buques",
+	ActEcon30120: "Construcción y reparación de embarcaciones de recreo",
+	ActEcon30200: "Fabricación de locomotoras y de material rodante",
+	ActEcon30300: "Fabricación de aeronaves y naves espaciales",
+	ActEcon30400: "Fabricación de vehículos militares de combate",
+	ActEcon30910: "Fabricación de motocicletas",
+	ActEcon30920: "Fabricación de bicicletas y sillones de ruedas para inválidos",
+	ActEcon30990: "Fabricación de equipo de transporte ncp",
+	ActEcon31001: "Fabricación de colchones y somier",
+	ActEcon31002: "Fabricación de muebles y otros productos de madera a medida",
+	ActEcon31008: "Servicios de maquilado de muebles",
+	ActEcon31009: "Fabricación de muebles ncp",
+	ActEcon32110: "Fabricación de joyas platerías y joyerías",
+	ActEcon32120: "Fabricación de joyas de imitación (fantasía) y artículos conexos",
+	ActEcon32200: "Fabricación de instrumentos musicales",
+	ActEcon32301: "Fabricación de artículos de deporte",
+	ActEcon32308: "Servicio de maquila de productos deportivos",
+	ActEcon32401: "Fabricación de juegos de mesa y de salón",
+	ActEcon32402: "Servicio de maquilado de juguetes y juegos",
+	ActEcon32409: "Fabricación de juegos y juguetes n.c.p.",
+	ActEcon32500: "Fabricación de instrumentos y materiales médicos y odontológicos",
+	ActEcon32901: "Fabricación de lápices, bolígrafos, sellos y artículos de librería en general",
+	ActEcon32902: "Fabricación de escobas, cepillos, pinceles y similares",
+	ActEcon32903: "Fabricación de artesanías de materiales diversos",
+	ActEcon32904: "Fabricación de artículos de uso personal y domésticos n.c.p.",
 }
 
 // GetEconomicActivityName returns the name of an economic activity by code
