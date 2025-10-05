@@ -39,7 +39,6 @@ type CreateClientRequest struct {
 	BusinessName      string `json:"business_name" binding:"required"`
 	LegalBusinessName string `json:"legal_business_name" binding:"required"`
 	Giro              string `json:"giro" binding:"required"`
-	TipoPersona       string `json:"tipo_persona" binding:"required"`
 	TipoContribuyente string `json:"tipo_contribuyente" binding:"required"`
 	FullAddress       string `json:"full_address" binding:"required"`
 	CountryCode       string `json:"country_code" binding:"required"`
