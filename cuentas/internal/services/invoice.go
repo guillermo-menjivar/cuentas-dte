@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math"
 	"time"
 
 	"cuentas/internal/codigos"
@@ -726,4 +727,8 @@ func (s *InvoiceService) DeleteDraftInvoice(ctx context.Context, companyID, invo
 	}
 
 	return nil
+}
+
+func round(val float64) float64 {
+	return math.Round(val*100) / 100
 }
