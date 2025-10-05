@@ -285,6 +285,83 @@ const (
 	ActEcon32902 = "32902"
 	ActEcon32903 = "32903"
 	ActEcon32904 = "32904"
+
+	// Add these constants after ActEcon32904:
+
+	ActEcon32905 = "32905"
+	ActEcon32908 = "32908"
+	ActEcon32909 = "32909"
+
+	// REPARACIÓN E INSTALACIÓN DE MAQUINARIA Y EQUIPO
+	ActEcon33110 = "33110"
+	ActEcon33120 = "33120"
+	ActEcon33130 = "33130"
+	ActEcon33140 = "33140"
+	ActEcon33150 = "33150"
+	ActEcon33190 = "33190"
+	ActEcon33200 = "33200"
+
+	// SUMINISTROS DE ELECTRICIDAD, GAS, VAPOR Y AIRE ACONDICIONADO
+	ActEcon35101 = "35101"
+	ActEcon35102 = "35102"
+	ActEcon35103 = "35103"
+	ActEcon35200 = "35200"
+	ActEcon35300 = "35300"
+
+	// CAPTACIÓN, TRATAMIENTO Y SUMINISTRO DE AGUA
+	ActEcon36000 = "36000"
+
+	// EVACUACIÓN DE AGUAS RESIDUALES (ALCANTARILLADO)
+	ActEcon37000 = "37000"
+
+	// RECOLECCIÓN, TRATAMIENTO Y ELIMINACIÓN DE DESECHOS; RECICLAJE
+	ActEcon38110 = "38110"
+	ActEcon38120 = "38120"
+	ActEcon38210 = "38210"
+	ActEcon38220 = "38220"
+	ActEcon38301 = "38301"
+	ActEcon38302 = "38302"
+	ActEcon38303 = "38303"
+	ActEcon38304 = "38304"
+	ActEcon38305 = "38305"
+	ActEcon38309 = "38309"
+
+	// ACTIVIDADES DE SANEAMIENTO Y OTROS SERVICIOS DE GESTIÓN DE DESECHOS
+	ActEcon39000 = "39000"
+
+	// CONSTRUCCIÓN
+	ActEcon41001 = "41001"
+	ActEcon41002 = "41002"
+	ActEcon42100 = "42100"
+	ActEcon42200 = "42200"
+	ActEcon42900 = "42900"
+
+	// ACTIVIDADES ESPECIALIZADAS DE CONSTRUCCIÓN
+	ActEcon43110 = "43110"
+	ActEcon43120 = "43120"
+	ActEcon43210 = "43210"
+	ActEcon43220 = "43220"
+	ActEcon43290 = "43290"
+	ActEcon43300 = "43300"
+	ActEcon43900 = "43900"
+	ActEcon43901 = "43901"
+
+	// COMERCIO AL POR MAYOR Y AL POR MENOR; REPARACIÓN DE VEHÍCULOS AUTOMOTORES Y MOTOCICLETAS
+	ActEcon45100 = "45100"
+	ActEcon45201 = "45201"
+	ActEcon45202 = "45202"
+	ActEcon45203 = "45203"
+	ActEcon45204 = "45204"
+	ActEcon45205 = "45205"
+	ActEcon45206 = "45206"
+	ActEcon45207 = "45207"
+	ActEcon45208 = "45208"
+	ActEcon45209 = "45209"
+	ActEcon45211 = "45211"
+	ActEcon45301 = "45301"
+	ActEcon45302 = "45302"
+	ActEcon45401 = "45401"
+	ActEcon45402 = "45402"
 )
 
 // EconomicActivities is a map of all economic activity codes
@@ -517,6 +594,65 @@ var EconomicActivities = map[string]string{
 	ActEcon32902: "Fabricación de escobas, cepillos, pinceles y similares",
 	ActEcon32903: "Fabricación de artesanías de materiales diversos",
 	ActEcon32904: "Fabricación de artículos de uso personal y domésticos n.c.p.",
+
+	// Add these entries to the EconomicActivities map:
+
+	ActEcon32905: "Fabricación de accesorios para las confecciones y la marroquinería n.c.p.",
+	ActEcon32908: "Servicios de maquila ncp",
+	ActEcon32909: "Fabricación de productos manufacturados n.c.p.",
+	ActEcon33110: "Reparación y mantenimiento de productos elaborados de metal",
+	ActEcon33120: "Reparación y mantenimiento de maquinaria",
+	ActEcon33130: "Reparación y mantenimiento de equipo electrónico y óptico",
+	ActEcon33140: "Reparación y mantenimiento de equipo eléctrico",
+	ActEcon33150: "Reparación y mantenimiento de equipo de transporte, excepto vehículos automotores",
+	ActEcon33190: "Reparación y mantenimiento de equipos n.c.p.",
+	ActEcon33200: "Instalación de maquinaria y equipo industrial",
+	ActEcon35101: "Generación de energía eléctrica",
+	ActEcon35102: "Transmisión de energía eléctrica",
+	ActEcon35103: "Distribución de energía eléctrica",
+	ActEcon35200: "Fabricación de gas, distribución de combustibles gaseosos por tuberías",
+	ActEcon35300: "Suministro de vapor y agua caliente",
+	ActEcon36000: "Captación, tratamiento y suministro de agua",
+	ActEcon37000: "Evacuación de aguas residuales (alcantarillado)",
+	ActEcon38110: "Recolección y transporte de desechos sólidos proveniente de hogares y sector urbano",
+	ActEcon38120: "Recolección de desechos peligrosos",
+	ActEcon38210: "Tratamiento y eliminación de desechos inicuos",
+	ActEcon38220: "Tratamiento y eliminación de desechos peligrosos",
+	ActEcon38301: "Reciclaje de desperdicios y desechos textiles",
+	ActEcon38302: "Reciclaje de desperdicios y desechos de plástico y caucho",
+	ActEcon38303: "Reciclaje de desperdicios y desechos de vidrio",
+	ActEcon38304: "Reciclaje de desperdicios y desechos de papel y cartón",
+	ActEcon38305: "Reciclaje de desperdicios y desechos metálicos",
+	ActEcon38309: "Reciclaje de desperdicios y desechos no metálicos n.c.p.",
+	ActEcon39000: "Actividades de Saneamiento y otros Servicios de Gestión de Desechos",
+	ActEcon41001: "Construcción de edificios residenciales",
+	ActEcon41002: "Construcción de edificios no residenciales",
+	ActEcon42100: "Construcción de carreteras, calles y caminos",
+	ActEcon42200: "Construcción de proyectos de servicio público",
+	ActEcon42900: "Construcción de otras obras de ingeniería civil n.c.p.",
+	ActEcon43110: "Demolición",
+	ActEcon43120: "Preparación de terreno",
+	ActEcon43210: "Instalaciones eléctricas",
+	ActEcon43220: "Instalación de fontanería, calefacción y aire acondicionado",
+	ActEcon43290: "Otras instalaciones para obras de construcción",
+	ActEcon43300: "Terminación y acabado de edificios",
+	ActEcon43900: "Otras actividades especializadas de construcción",
+	ActEcon43901: "Fabricación de techos y materiales diversos",
+	ActEcon45100: "Venta de vehículos automotores",
+	ActEcon45201: "Reparación mecánica de vehículos automotores",
+	ActEcon45202: "Reparaciones eléctricas del automotor y recarga de baterías",
+	ActEcon45203: "Enderezado y pintura de vehículos automotores",
+	ActEcon45204: "Reparaciones de radiadores, escapes y silenciadores",
+	ActEcon45205: "Reparación y reconstrucción de vías, stop y otros artículos de fibra de vidrio",
+	ActEcon45206: "Reparación de llantas de vehículos automotores",
+	ActEcon45207: "Polarizado de vehículos (mediante la adhesión de papel especial a los vidrios)",
+	ActEcon45208: "Lavado y pasteado de vehículos (carwash)",
+	ActEcon45209: "Reparaciones de vehículos n.c.p.",
+	ActEcon45211: "Remolque de vehículos automotores",
+	ActEcon45301: "Venta de partes, piezas y accesorios nuevos para vehículos automotores",
+	ActEcon45302: "Venta de partes, piezas y accesorios usados para vehículos automotores",
+	ActEcon45401: "Venta de motocicletas",
+	ActEcon45402: "Venta de repuestos, piezas y accesorios de motocicletas",
 }
 
 // GetEconomicActivityName returns the name of an economic activity by code
