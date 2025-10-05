@@ -645,6 +645,88 @@ const (
 	ActEcon59110 = "59110"
 	ActEcon59120 = "59120"
 	ActEcon59130 = "59130"
+
+	// Add these constants after ActEcon59130:
+
+	ActEcon59140 = "59140"
+	ActEcon59200 = "59200"
+
+	// ACTIVIDADES DE PROGRAMACIÓN Y TRANSMISIÓN
+	ActEcon60100 = "60100"
+	ActEcon60201 = "60201"
+	ActEcon60202 = "60202"
+	ActEcon60299 = "60299"
+	ActEcon60900 = "60900"
+
+	// TELECOMUNICACIONES
+	ActEcon61101 = "61101"
+	ActEcon61102 = "61102"
+	ActEcon61103 = "61103"
+	ActEcon61109 = "61109"
+	ActEcon61201 = "61201"
+	ActEcon61202 = "61202"
+	ActEcon61209 = "61209"
+	ActEcon61301 = "61301"
+	ActEcon61309 = "61309"
+	ActEcon61900 = "61900"
+
+	// PROGRAMACIÓN INFORMÁTICA, CONSULTORÍA INFORMÁTICA Y ACTIVIDADES CONEXAS
+	ActEcon62010 = "62010"
+	ActEcon62020 = "62020"
+	ActEcon62090 = "62090"
+
+	// ACTIVIDADES DE SERVICIOS DE INFORMACIÓN
+	ActEcon63110 = "63110"
+	ActEcon63120 = "63120"
+	ActEcon63910 = "63910"
+	ActEcon63990 = "63990"
+
+	// ACTIVIDADES FINANCIERAS Y DE SEGUROS
+	ActEcon64110 = "64110"
+	ActEcon64190 = "64190"
+	ActEcon64192 = "64192"
+	ActEcon64199 = "64199"
+	ActEcon64200 = "64200"
+	ActEcon64300 = "64300"
+	ActEcon64910 = "64910"
+	ActEcon64920 = "64920"
+	ActEcon64921 = "64921"
+	ActEcon64922 = "64922"
+	ActEcon64928 = "64928"
+	ActEcon64990 = "64990"
+
+	// SEGUROS, REASEGUROS Y FONDOS DE PENSIONES
+	ActEcon65110 = "65110"
+	ActEcon65120 = "65120"
+	ActEcon65199 = "65199"
+	ActEcon65200 = "65200"
+	ActEcon65300 = "65300"
+
+	// ACTIVIDADES AUXILIARES DE LAS ACTIVIDADES DE SERVICIOS FINANCIEROS
+	ActEcon66110 = "66110"
+	ActEcon66120 = "66120"
+	ActEcon66190 = "66190"
+	ActEcon66210 = "66210"
+	ActEcon66220 = "66220"
+	ActEcon66290 = "66290"
+	ActEcon66300 = "66300"
+
+	// ACTIVIDADES INMOBILIARIAS
+	ActEcon68101 = "68101"
+	ActEcon68109 = "68109"
+	ActEcon68200 = "68200"
+
+	// ACTIVIDADES PROFESIONALES, CIENTÍFICAS Y TÉCNICAS
+	// ACTIVIDADES JURÍDICAS Y CONTABLES
+	ActEcon69100 = "69100"
+	ActEcon69200 = "69200"
+
+	// ACTIVIDADES DE OFICINAS CENTRALES; ACTIVIDADES DE CONSULTORÍA EN GESTIÓN EMPRESARIAL
+	ActEcon70100 = "70100"
+	ActEcon70200 = "70200"
+
+	// ACTIVIDADES DE ARQUITECTURA E INGENIERÍA; ENSAYOS Y ANÁLISIS TÉCNICOS
+	ActEcon71101 = "71101"
 )
 
 // EconomicActivities is a map of all economic activity codes
@@ -1193,6 +1275,64 @@ var EconomicActivities = map[string]string{
 	ActEcon59110: "Actividades de producción cinematográfica",
 	ActEcon59120: "Actividades de post producción de películas, videos y programas de televisión",
 	ActEcon59130: "Actividades de distribución de películas cinematográficas, videos y programas de televisión",
+	// Add these entries to the EconomicActivities map:
+
+	ActEcon59140: "Actividades de exhibición de películas cinematográficas y cintas de video",
+	ActEcon59200: "Actividades de edición y grabación de música",
+	ActEcon60100: "Servicios de difusiones de radio",
+	ActEcon60201: "Actividades de programación y difusión de televisión abierta",
+	ActEcon60202: "Actividades de suscripción y difusión de televisión por cable y/o suscripción",
+	ActEcon60299: "Servicios de televisión, incluye televisión por cable",
+	ActEcon60900: "Programación y transmisión de radio y televisión",
+	ActEcon61101: "Servicio de telefonía",
+	ActEcon61102: "Servicio de Internet",
+	ActEcon61103: "Servicio de telefonía fija",
+	ActEcon61109: "Servicio de Internet n.c.p.",
+	ActEcon61201: "Servicios de telefonía celular",
+	ActEcon61202: "Servicios de Internet inalámbrico",
+	ActEcon61209: "Servicios de telecomunicaciones inalámbrico n.c.p.",
+	ActEcon61301: "Telecomunicaciones satelitales",
+	ActEcon61309: "Comunicación vía satélite n.c.p.",
+	ActEcon61900: "Actividades de telecomunicación n.c.p.",
+	ActEcon62010: "Programación Informática",
+	ActEcon62020: "Consultorías y gestión de servicios informáticos",
+	ActEcon62090: "Otras actividades de tecnología de información y servicios de computadora",
+	ActEcon63110: "Procesamiento de datos y actividades relacionadas",
+	ActEcon63120: "Portales WEB",
+	ActEcon63910: "Servicios de Agencias de Noticias",
+	ActEcon63990: "Otros servicios de información n.c.p.",
+	ActEcon64110: "Servicios provistos por el Banco Central de El salvador",
+	ActEcon64190: "Bancos",
+	ActEcon64192: "Entidades dedicadas al envío de remesas",
+	ActEcon64199: "Otras entidades financieras",
+	ActEcon64200: "Actividades de sociedades de cartera",
+	ActEcon64300: "Fideicomisos, fondos y otras fuentes de financiamiento",
+	ActEcon64910: "Arrendamientos financieros",
+	ActEcon64920: "Asociaciones cooperativas de ahorro y crédito dedicadas a la intermediación financiera",
+	ActEcon64921: "Instituciones emisoras de tarjetas de crédito y otros",
+	ActEcon64922: "Tipos de crédito ncp",
+	ActEcon64928: "Prestamistas y casas de empeño",
+	ActEcon64990: "Actividades de servicios financieros, excepto la financiación de planes de seguros y de pensiones n.c.p.",
+	ActEcon65110: "Planes de seguros de vida",
+	ActEcon65120: "Planes de seguro excepto de vida",
+	ActEcon65199: "Seguros generales de todo tipo",
+	ActEcon65200: "Planes se seguro",
+	ActEcon65300: "Planes de pensiones",
+	ActEcon66110: "Administración de mercados financieros (Bolsa de Valores)",
+	ActEcon66120: "Actividades bursátiles (Corredores de Bolsa)",
+	ActEcon66190: "Actividades auxiliares de la intermediación financiera ncp",
+	ActEcon66210: "Evaluación de riesgos y daños",
+	ActEcon66220: "Actividades de agentes y corredores de seguros",
+	ActEcon66290: "Otras actividades auxiliares de seguros y fondos de pensiones",
+	ActEcon66300: "Actividades de administración de fondos",
+	ActEcon68101: "Servicio de alquiler y venta de lotes en cementerios",
+	ActEcon68109: "Actividades inmobiliarias realizadas con bienes propios o arrendados n.c.p.",
+	ActEcon68200: "Actividades Inmobiliarias Realizadas a Cambio de una Retribución o por Contrata",
+	ActEcon69100: "Actividades jurídicas",
+	ActEcon69200: "Actividades de contabilidad, teneduría de libros y auditoría; asesoramiento en materia de impuestos",
+	ActEcon70100: "Actividades de oficinas centrales de sociedades de cartera",
+	ActEcon70200: "Actividades de consultoría en gestión empresarial",
+	ActEcon71101: "Servicios de arquitectura y planificación urbana y servicios conexos",
 }
 
 // GetEconomicActivityName returns the name of an economic activity by code
