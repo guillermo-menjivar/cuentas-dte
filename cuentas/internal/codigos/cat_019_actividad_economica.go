@@ -727,6 +727,88 @@ const (
 
 	// ACTIVIDADES DE ARQUITECTURA E INGENIERÍA; ENSAYOS Y ANÁLISIS TÉCNICOS
 	ActEcon71101 = "71101"
+
+	// Add these constants after ActEcon71101:
+
+	ActEcon71102 = "71102"
+	ActEcon71103 = "71103"
+	ActEcon71200 = "71200"
+
+	// INVESTIGACIÓN CIENTÍFICA Y DESARROLLO
+	ActEcon72100 = "72100"
+	ActEcon72199 = "72199"
+	ActEcon72200 = "72200"
+
+	// PUBLICIDAD Y ESTUDIOS DE MERCADO
+	ActEcon73100 = "73100"
+	ActEcon73200 = "73200"
+
+	// OTRAS ACTIVIDADES PROFESIONALES, CIENTÍFICAS Y TÉCNICAS
+	ActEcon74100 = "74100"
+	ActEcon74200 = "74200"
+	ActEcon74900 = "74900"
+
+	// ACTIVIDADES VETERINARIAS
+	ActEcon75000 = "75000"
+
+	// ACTIVIDADES DE SERVICIOS ADMINISTRATIVOS Y DE APOYO
+	// ACTIVIDADES DE ALQUILER Y ARRENDAMIENTO
+	ActEcon77101 = "77101"
+	ActEcon77102 = "77102"
+	ActEcon77103 = "77103"
+	ActEcon77210 = "77210"
+	ActEcon77220 = "77220"
+	ActEcon77290 = "77290"
+	ActEcon77300 = "77300"
+	ActEcon77400 = "77400"
+
+	// ACTIVIDADES DE EMPLEO
+	ActEcon78100 = "78100"
+	ActEcon78200 = "78200"
+	ActEcon78300 = "78300"
+
+	// ACTIVIDADES DE AGENCIAS DE VIAJES, OPERADORES TURÍSTICOS Y OTROS SERVICIOS DE RESERVA
+	ActEcon79110 = "79110"
+	ActEcon79120 = "79120"
+	ActEcon79900 = "79900"
+
+	// ACTIVIDADES DE INVESTIGACIÓN Y SEGURIDAD
+	ActEcon80100 = "80100"
+	ActEcon80201 = "80201"
+	ActEcon80202 = "80202"
+	ActEcon80300 = "80300"
+
+	// ACTIVIDADES DE SERVICIOS A EDIFICIOS Y PAISAJISMO
+	ActEcon81100 = "81100"
+	ActEcon81210 = "81210"
+	ActEcon81290 = "81290"
+	ActEcon81300 = "81300"
+
+	// ACTIVIDADES ADMINISTRATIVAS Y DE APOYO DE OFICINAS Y OTRAS ACTIVIDADES DE APOYO A LAS EMPRESAS
+	ActEcon82110 = "82110"
+	ActEcon82190 = "82190"
+	ActEcon82200 = "82200"
+	ActEcon82300 = "82300"
+	ActEcon82910 = "82910"
+	ActEcon82921 = "82921"
+	ActEcon82922 = "82922"
+	ActEcon82929 = "82929"
+	ActEcon82990 = "82990"
+
+	// ADMINISTRACIÓN PÚBLICA Y DEFENSA; PLANES DE SEGURIDAD SOCIAL DE AFILIACIÓN OBLIGATORIA
+	ActEcon84110 = "84110"
+	ActEcon84111 = "84111"
+	ActEcon84120 = "84120"
+	ActEcon84130 = "84130"
+	ActEcon84210 = "84210"
+	ActEcon84220 = "84220"
+	ActEcon84230 = "84230"
+	ActEcon84300 = "84300"
+
+	// ENSEÑANZA
+	ActEcon85101 = "85101"
+	ActEcon85102 = "85102"
+	ActEcon85103 = "85103"
 )
 
 // EconomicActivities is a map of all economic activity codes
@@ -1333,6 +1415,63 @@ var EconomicActivities = map[string]string{
 	ActEcon70100: "Actividades de oficinas centrales de sociedades de cartera",
 	ActEcon70200: "Actividades de consultoría en gestión empresarial",
 	ActEcon71101: "Servicios de arquitectura y planificación urbana y servicios conexos",
+
+	// Add these entries to the EconomicActivities map:
+
+	ActEcon71102: "Servicios de ingeniería",
+	ActEcon71103: "Servicios de agrimensura, topografía, cartografía, prospección y geofísica y servicios conexos",
+	ActEcon71200: "Ensayos y análisis técnicos",
+	ActEcon72100: "Investigaciones y desarrollo experimental en el campo de las ciencias naturales y la ingeniería",
+	ActEcon72199: "Investigaciones científicas",
+	ActEcon72200: "Investigaciones y desarrollo experimental en el campo de las ciencias sociales y las humanidades científica y desarrollo",
+	ActEcon73100: "Publicidad",
+	ActEcon73200: "Investigación de mercados y realización de encuestas de opinión pública",
+	ActEcon74100: "Actividades de diseño especializado",
+	ActEcon74200: "Actividades de fotografía",
+	ActEcon74900: "Servicios profesionales y científicos ncp",
+	ActEcon75000: "Actividades veterinarias",
+	ActEcon77101: "Alquiler de equipo de transporte terrestre",
+	ActEcon77102: "Alquiler de equipo de transporte acuático",
+	ActEcon77103: "Alquiler de equipo de transporte por vía aérea",
+	ActEcon77210: "Alquiler y arrendamiento de equipo de recreo y deportivo",
+	ActEcon77220: "Alquiler de cintas de video y discos",
+	ActEcon77290: "Alquiler de otros efectos personales y enseres domésticos",
+	ActEcon77300: "Alquiler de maquinaria y equipo",
+	ActEcon77400: "Arrendamiento de productos de propiedad intelectual",
+	ActEcon78100: "Obtención y dotación de personal",
+	ActEcon78200: "Actividades de las agencias de trabajo temporal",
+	ActEcon78300: "Dotación de recursos humanos y gestión; gestión de las funciones de recursos humanos",
+	ActEcon79110: "Actividades de agencias de viajes y organizadores de viajes; actividades de asistencia a turistas",
+	ActEcon79120: "Actividades de los operadores turísticos",
+	ActEcon79900: "Otros servicios de reservas y actividades relacionadas",
+	ActEcon80100: "Servicios de seguridad privados",
+	ActEcon80201: "Actividades de servicios de sistemas de seguridad",
+	ActEcon80202: "Actividades para la prestación de sistemas de seguridad",
+	ActEcon80300: "Actividades de investigación",
+	ActEcon81100: "Actividades combinadas de mantenimiento de edificios e instalaciones",
+	ActEcon81210: "Limpieza general de edificios",
+	ActEcon81290: "Otras actividades combinadas de mantenimiento de edificios e instalaciones ncp",
+	ActEcon81300: "Servicio de jardinería",
+	ActEcon82110: "Servicios administrativos de oficinas",
+	ActEcon82190: "Servicio de fotocopiado y similares, excepto en imprentas",
+	ActEcon82200: "Actividades de las centrales de llamadas (call center)",
+	ActEcon82300: "Organización de convenciones y ferias de negocios",
+	ActEcon82910: "Actividades de agencias de cobro y oficinas de crédito",
+	ActEcon82921: "Servicios de envase y empaque de productos alimenticios",
+	ActEcon82922: "Servicios de envase y empaque de productos medicinales",
+	ActEcon82929: "Servicio de envase y empaque ncp",
+	ActEcon82990: "Actividades de apoyo empresariales ncp",
+	ActEcon84110: "Actividades de la Administración Pública en general",
+	ActEcon84111: "Alcaldías Municipales",
+	ActEcon84120: "Regulación de las actividades de prestación de servicios sanitarios, educativos, culturales y otros servicios sociales, excepto seguridad social",
+	ActEcon84130: "Regulación y facilitación de la actividad económica",
+	ActEcon84210: "Actividades de administración y funcionamiento del Ministerio de Relaciones Exteriores",
+	ActEcon84220: "Actividades de defensa",
+	ActEcon84230: "Actividades de mantenimiento del orden público y de seguridad",
+	ActEcon84300: "Actividades de planes de seguridad social de afiliación obligatoria",
+	ActEcon85101: "Guardería educativa",
+	ActEcon85102: "Enseñanza preescolar o parvularia",
+	ActEcon85103: "Enseñanza primaria",
 }
 
 // GetEconomicActivityName returns the name of an economic activity by code
