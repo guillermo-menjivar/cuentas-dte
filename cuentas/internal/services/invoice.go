@@ -217,6 +217,7 @@ func (s *InvoiceService) generateInvoiceNumber(ctx context.Context, tx *sql.Tx, 
 }
 
 // processLineItems processes all line items, snapshots data, and calculates totals
+// processLineItems processes all line items, snapshots data, and calculates totals
 func (s *InvoiceService) processLineItems(ctx context.Context, tx *sql.Tx, companyID string, reqItems []models.CreateInvoiceLineItemRequest) ([]models.InvoiceLineItem, float64, float64, float64, error) {
 	var lineItems []models.InvoiceLineItem
 	var subtotal, totalDiscount, totalTaxes float64
@@ -228,10 +229,10 @@ func (s *InvoiceService) processLineItems(ctx context.Context, tx *sql.Tx, compa
 			return nil, 0, 0, 0, err
 		}
 
-		// 2. Calculate line amounts
-		lineSubtotal := item.UnitPrice * reqItem.Quantity
-		discountAmount := lineSubtotal * (reqItem.DiscountPercentage / 100)
-		taxableAmount := lineSubtotal - discountAmount
+		// 2. Calculate line amounts with rounding
+		lineSubtotal := round(item.UnitPrice * reqItem.Quantity)
+		discountAmount := round(lineSubtotal * (reqItem.DiscountPercentage / 100))
+		taxableAmount := round(lineSubtotal - discountAmount)
 
 		// 3. Get taxes for this item
 		taxes, lineTaxTotal, err := s.snapshotItemTaxes(ctx, tx, reqItem.ItemID, taxableAmount)
@@ -239,7 +240,7 @@ func (s *InvoiceService) processLineItems(ctx context.Context, tx *sql.Tx, compa
 			return nil, 0, 0, 0, err
 		}
 
-		lineTotal := taxableAmount + lineTaxTotal
+		lineTotal := round(taxableAmount + lineTaxTotal)
 
 		// 4. Create line item
 		lineItem := models.InvoiceLineItem{
@@ -269,7 +270,8 @@ func (s *InvoiceService) processLineItems(ctx context.Context, tx *sql.Tx, compa
 		totalTaxes += lineTaxTotal
 	}
 
-	return lineItems, subtotal, totalDiscount, totalTaxes, nil
+	// Round final totals
+	return lineItems, round(subtotal), round(totalDiscount), round(totalTaxes), nil
 }
 
 // ItemSnapshot represents the snapshot of inventory item at transaction time
@@ -316,8 +318,7 @@ func (s *InvoiceService) snapshotInventoryItem(ctx context.Context, tx *sql.Tx, 
 	return &snapshot, nil
 }
 
-// snapshotItemTaxes retrieves taxes for an item and calculates tax amounts
-// snapshotItemTaxes retrieves taxes for an item and calculates tax amounts
+// satePercent / 100retrieves taxes for an item and calculates tax amounts
 func (s *InvoiceService) snapshotItemTaxes(ctx context.Context, tx *sql.Tx, itemID string, taxableBase float64) ([]models.InvoiceLineItemTax, float64, error) {
 	query := `
 		SELECT tributo_code
@@ -361,7 +362,7 @@ func (s *InvoiceService) snapshotItemTaxes(ctx context.Context, tx *sql.Tx, item
 
 		// Convert percentage to decimal (13% -> 0.13)
 		taxRate := taxRatePercent / 100
-		taxAmount := taxableBase * taxRate
+		taxAmount := round(taxableBase * taxRate)
 
 		tax := models.InvoiceLineItemTax{
 			TributoCode: tributoCode,
