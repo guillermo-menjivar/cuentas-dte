@@ -809,6 +809,108 @@ const (
 	ActEcon85101 = "85101"
 	ActEcon85102 = "85102"
 	ActEcon85103 = "85103"
+	// Add these constants after ActEcon85103:
+
+	ActEcon85104 = "85104"
+	ActEcon85211 = "85211"
+	ActEcon85212 = "85212"
+	ActEcon85221 = "85221"
+	ActEcon85222 = "85222"
+	ActEcon85301 = "85301"
+	ActEcon85302 = "85302"
+	ActEcon85303 = "85303"
+	ActEcon85410 = "85410"
+	ActEcon85420 = "85420"
+	ActEcon85490 = "85490"
+	ActEcon85499 = "85499"
+	ActEcon85500 = "85500"
+
+	// ACTIVIDADES DE ATENCIÓN A LA SALUD HUMANA Y DE ASISTENCIA SOCIAL
+	ActEcon86100 = "86100"
+	ActEcon86201 = "86201"
+	ActEcon86202 = "86202"
+	ActEcon86203 = "86203"
+	ActEcon86901 = "86901"
+	ActEcon86902 = "86902"
+	ActEcon86909 = "86909"
+
+	// ACTIVIDADES DE ATENCIÓN DE ENFERMERÍA EN INSTITUCIONES
+	ActEcon87100 = "87100"
+	ActEcon87200 = "87200"
+	ActEcon87300 = "87300"
+	ActEcon87900 = "87900"
+	ActEcon87901 = "87901"
+
+	// ACTIVIDADES DE ASISTENCIA SOCIAL SIN ALOJAMIENTO
+	ActEcon88100 = "88100"
+	ActEcon88900 = "88900"
+
+	// ACTIVIDADES ARTÍSTICAS, DE ENTRETENIMIENTO Y RECREATIVAS
+	ActEcon90000 = "90000"
+
+	// ACTIVIDADES BIBLIOTECAS, ARCHIVOS, MUSEOS Y OTRAS ACTIVIDADES CULTURALES
+	ActEcon91010 = "91010"
+	ActEcon91020 = "91020"
+	ActEcon91030 = "91030"
+
+	// ACTIVIDADES DE JUEGOS DE AZAR Y APUESTAS
+	ActEcon92000 = "92000"
+
+	// ACTIVIDADES DEPORTIVAS, DE ESPARCIMIENTO Y RECREATIVAS
+	ActEcon93110 = "93110"
+	ActEcon93120 = "93120"
+	ActEcon93190 = "93190"
+	ActEcon93210 = "93210"
+	ActEcon93291 = "93291"
+	ActEcon93298 = "93298"
+	ActEcon93299 = "93299"
+
+	// OTRAS ACTIVIDADES DE SERVICIOS
+	// ACTIVIDADES DE ASOCIACIONES
+	ActEcon94110 = "94110"
+	ActEcon94120 = "94120"
+	ActEcon94200 = "94200"
+	ActEcon94910 = "94910"
+	ActEcon94920 = "94920"
+	ActEcon94990 = "94990"
+
+	// REPARACIÓN DE COMPUTADORAS Y DE EFECTOS PERSONALES Y ENSERES DOMÉSTICOS
+	ActEcon95110 = "95110"
+	ActEcon95120 = "95120"
+	ActEcon95210 = "95210"
+	ActEcon95220 = "95220"
+	ActEcon95230 = "95230"
+	ActEcon95240 = "95240"
+	ActEcon95291 = "95291"
+	ActEcon95292 = "95292"
+	ActEcon95293 = "95293"
+	ActEcon95294 = "95294"
+	ActEcon95299 = "95299"
+
+	// OTRAS ACTIVIDADES DE SERVICIOS PERSONALES
+	ActEcon96010 = "96010"
+	ActEcon96020 = "96020"
+	ActEcon96030 = "96030"
+	ActEcon96091 = "96091"
+	ActEcon96092 = "96092"
+
+	// ACTIVIDADES DE LOS HOGARES COMO EMPLEADORES
+	ActEcon97000 = "97000"
+
+	// ACTIVIDADES INDIFERENCIADAS DE PRODUCCIÓN DE BIENES Y SERVICIOS DE LOS HOGARES PARA USO PROPIO
+	ActEcon98100 = "98100"
+	ActEcon98200 = "98200"
+
+	// ACTIVIDADES DE ORGANIZACIONES Y ÓRGANOS EXTRATERRITORIALES
+	ActEcon99000 = "99000"
+
+	// EMPLEADOS Y OTRAS PERSONAS NATURALES
+	ActEcon10001 = "10001"
+	ActEcon10002 = "10002"
+	ActEcon10003 = "10003"
+	ActEcon10004 = "10004"
+	ActEcon10005 = "10005"
+	ActEcon10006 = "10006"
 )
 
 // EconomicActivities is a map of all economic activity codes
@@ -1472,6 +1574,80 @@ var EconomicActivities = map[string]string{
 	ActEcon85101: "Guardería educativa",
 	ActEcon85102: "Enseñanza preescolar o parvularia",
 	ActEcon85103: "Enseñanza primaria",
+
+	// Add these entries to the EconomicActivities map:
+
+	ActEcon85104: "Servicio de educación preescolar y primaria integrada",
+	ActEcon85211: "Enseñanza secundaria tercer ciclo (7°, 8° y 9°)",
+	ActEcon85212: "Enseñanza secundaria de formación general bachillerato",
+	ActEcon85221: "Enseñanza secundaria de formación técnica y profesional",
+	ActEcon85222: "Enseñanza secundaria de formación técnica y profesional integrada con enseñanza primaria",
+	ActEcon85301: "Enseñanza superior universitaria",
+	ActEcon85302: "Enseñanza superior no universitaria",
+	ActEcon85303: "Enseñanza superior integrada a educación secundaria y/o primaria",
+	ActEcon85410: "Educación deportiva y recreativa",
+	ActEcon85420: "Educación cultural",
+	ActEcon85490: "Otros tipos de enseñanza n.c.p.",
+	ActEcon85499: "Enseñanza formal",
+	ActEcon85500: "Servicios de apoyo a la enseñanza",
+	ActEcon86100: "Actividades de hospitales",
+	ActEcon86201: "Clínicas médicas",
+	ActEcon86202: "Servicios de Odontología",
+	ActEcon86203: "Servicios médicos",
+	ActEcon86901: "Servicios de análisis y estudios de diagnóstico",
+	ActEcon86902: "Actividades de atención de la salud humana",
+	ActEcon86909: "Otros Servicio relacionados con la salud ncp",
+	ActEcon87100: "Residencias de ancianos con atención de enfermería",
+	ActEcon87200: "Instituciones dedicadas al tratamiento del retraso mental, problemas de salud mental y el uso indebido de sustancias nocivas",
+	ActEcon87300: "Instituciones dedicadas al cuidado de ancianos y discapacitados",
+	ActEcon87900: "Actividades de asistencia a niños y jóvenes",
+	ActEcon87901: "Otras actividades de atención en instituciones",
+	ActEcon88100: "Actividades de asistencia sociales sin alojamiento para ancianos y discapacitados",
+	ActEcon88900: "servicios sociales sin alojamiento ncp",
+	ActEcon90000: "Actividades creativas artísticas y de esparcimiento",
+	ActEcon91010: "Actividades de bibliotecas y archivos",
+	ActEcon91020: "Actividades de museos y preservación de lugares y edificios históricos",
+	ActEcon91030: "Actividades de jardines botánicos, zoológicos y de reservas naturales",
+	ActEcon92000: "Actividades de juegos y apuestas",
+	ActEcon93110: "Gestión de instalaciones deportivas",
+	ActEcon93120: "Actividades de clubes deportivos",
+	ActEcon93190: "Otras actividades deportivas",
+	ActEcon93210: "Actividades de parques de atracciones y parques temáticos",
+	ActEcon93291: "Discotecas y salas de baile",
+	ActEcon93298: "Centros vacacionales",
+	ActEcon93299: "Actividades de esparcimiento ncp",
+	ActEcon94110: "Actividades de organizaciones empresariales y de empleadores",
+	ActEcon94120: "Actividades de organizaciones profesionales",
+	ActEcon94200: "Actividades de sindicatos",
+	ActEcon94910: "Actividades de organizaciones religiosas",
+	ActEcon94920: "Actividades de organizaciones políticas",
+	ActEcon94990: "Actividades de asociaciones n.c.p.",
+	ActEcon95110: "Reparación de computadoras y equipo periférico",
+	ActEcon95120: "Reparación de equipo de comunicación",
+	ActEcon95210: "Reparación de aparatos electrónicos de consumo",
+	ActEcon95220: "Reparación de aparatos doméstico y equipo de hogar y jardín",
+	ActEcon95230: "Reparación de calzado y artículos de cuero",
+	ActEcon95240: "Reparación de muebles y accesorios para el hogar",
+	ActEcon95291: "Reparación de Instrumentos musicales",
+	ActEcon95292: "Servicios de cerrajería y copiado de llaves",
+	ActEcon95293: "Reparación de joyas y relojes",
+	ActEcon95294: "Reparación de bicicletas, sillas de ruedas y rodados n.c.p.",
+	ActEcon95299: "Reparaciones de enseres personales n.c.p.",
+	ActEcon96010: "Lavado y limpieza de prendas de tela y de piel, incluso la limpieza en seco",
+	ActEcon96020: "Peluquería y otros tratamientos de belleza",
+	ActEcon96030: "Pompas fúnebres y actividades conexas",
+	ActEcon96091: "Servicios de sauna y otros servicios para la estética corporal n.c.p.",
+	ActEcon96092: "Servicios n.c.p.",
+	ActEcon97000: "Actividad de los hogares en calidad de empleadores de personal doméstico",
+	ActEcon98100: "Actividades indiferenciadas de producción de bienes de los hogares privados para uso propio",
+	ActEcon98200: "Actividades indiferenciadas de producción de servicios de los hogares privados para uso propio",
+	ActEcon99000: "Actividades de organizaciones y órganos extraterritoriales",
+	ActEcon10001: "Empleados",
+	ActEcon10002: "Pensionado",
+	ActEcon10003: "Estudiante",
+	ActEcon10004: "Desempleado",
+	ActEcon10005: "Otros",
+	ActEcon10006: "Comerciante",
 }
 
 // GetEconomicActivityName returns the name of an economic activity by code
