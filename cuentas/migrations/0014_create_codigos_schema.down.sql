@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS codigos.tributos;
+DROP SCHEMA IF EXISTS codigos CASCADE;
