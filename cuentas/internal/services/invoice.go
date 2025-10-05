@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"cuentas/internal/codigos"
 	"cuentas/internal/database"
 	"cuentas/internal/models"
 )
@@ -315,15 +316,12 @@ func (s *InvoiceService) snapshotInventoryItem(ctx context.Context, tx *sql.Tx, 
 }
 
 // snapshotItemTaxes retrieves taxes for an item and calculates tax amounts
+// snapshotItemTaxes retrieves taxes for an item and calculates tax amounts
 func (s *InvoiceService) snapshotItemTaxes(ctx context.Context, tx *sql.Tx, itemID string, taxableBase float64) ([]models.InvoiceLineItemTax, float64, error) {
 	query := `
-		SELECT
-			iit.tributo_code,
-			t.descripcion,
-			t.porcentaje
-		FROM inventory_item_taxes iit
-		JOIN codigos.tributos t ON iit.tributo_code = t.codigo
-		WHERE iit.item_id = $1
+		SELECT tributo_code
+		FROM inventory_item_taxes
+		WHERE item_id = $1
 	`
 
 	rows, err := tx.QueryContext(ctx, query, itemID)
@@ -336,11 +334,28 @@ func (s *InvoiceService) snapshotItemTaxes(ctx context.Context, tx *sql.Tx, item
 	var totalTax float64
 
 	for rows.Next() {
-		var tributoCode, tributoName string
-		var taxRatePercent float64
+		var tributoCode string
 
-		if err := rows.Scan(&tributoCode, &tributoName, &taxRatePercent); err != nil {
+		if err := rows.Scan(&tributoCode); err != nil {
 			return nil, 0, fmt.Errorf("failed to scan tax: %w", err)
+		}
+
+		// Get tax name from Go codigos package
+		tributoName, exists := codigos.GetTributoName(tributoCode)
+		if !exists {
+			return nil, 0, fmt.Errorf("invalid tributo code: %s", tributoCode)
+		}
+
+		// For now, extract percentage from IVA tax code or default to 0
+		// You can extend this with a proper tax rate lookup
+		var taxRatePercent float64
+		if tributoCode == codigos.TributoIVA13 {
+			taxRatePercent = 13.00
+		} else if tributoCode == codigos.TributoIVAExportaciones {
+			taxRatePercent = 0.00
+		} else {
+			// Add other tax rates as needed
+			taxRatePercent = 0.00
 		}
 
 		// Convert percentage to decimal (13% -> 0.13)
