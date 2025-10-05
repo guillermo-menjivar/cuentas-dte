@@ -20,8 +20,8 @@ NC='\033[0m' # No Color
 echo -e "${BLUE}=== Client Creation Tests ===${NC}"
 echo -e "Company ID: ${COMPANY_ID}\n"
 
-# Test 1: Create client with NIT and NCR (business entity)
-echo -e "${GREEN}Test 1: Creating client with NIT and NCR - San Salvador Centro${NC}"
+# Test 1: Create client with NIT and NCR (business entity - Persona Jurídica)
+echo -e "${GREEN}Test 1: Creating Persona Jurídica with NIT and NCR - San Salvador Centro${NC}"
 curl -X POST "${BASE_URL}/v1/clients" \
   -H "Content-Type: application/json" \
   -H "X-Company-ID: ${COMPANY_ID}" \
@@ -41,8 +41,8 @@ curl -X POST "${BASE_URL}/v1/clients" \
 
 echo -e "\n---\n"
 
-# Test 2: Create another client with NIT and NCR (different business)
-echo -e "${GREEN}Test 2: Creating another client with NIT and NCR - San Salvador Este${NC}"
+# Test 2: Create another Persona Jurídica with NIT and NCR
+echo -e "${GREEN}Test 2: Creating Persona Jurídica with NIT and NCR - San Salvador Este${NC}"
 curl -X POST "${BASE_URL}/v1/clients" \
   -H "Content-Type: application/json" \
   -H "X-Company-ID: ${COMPANY_ID}" \
@@ -55,15 +55,15 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "tipo_contribuyente": "Mediano Contribuyente",
     "full_address": "Boulevard del Hipodromo #450, Colonia San Benito, San Salvador",
     "country_code": "SV",
-    "tipo_persona": "1",
+    "tipo_persona": "2",
     "department_code": "06",
     "municipality_code": "22"
   }' | jq '.'
 
 echo -e "\n---\n"
 
-# Test 3: Create client with DUI only (individual person)
-echo -e "${GREEN}Test 3: Creating client with DUI only - San Salvador Norte${NC}"
+# Test 3: Create Persona Natural with DUI only
+echo -e "${GREEN}Test 3: Creating Persona Natural with DUI only - San Salvador Norte${NC}"
 curl -X POST "${BASE_URL}/v1/clients" \
   -H "Content-Type: application/json" \
   -H "X-Company-ID: ${COMPANY_ID}" \
@@ -75,15 +75,15 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "tipo_contribuyente": "Pequeño Contribuyente",
     "full_address": "Colonia Escalon, Calle Los Bambues #234, San Salvador",
     "country_code": "SV",
-    "tipo_persona": "2",
+    "tipo_persona": "1",
     "department_code": "06",
     "municipality_code": "20"
   }' | jq '.'
 
 echo -e "\n---\n"
 
-# Test 4: Create another client with DUI only
-echo -e "${GREEN}Test 4: Creating another client with DUI only - San Salvador Sur${NC}"
+# Test 4: Create another Persona Natural with DUI only
+echo -e "${GREEN}Test 4: Creating Persona Natural with DUI only - San Salvador Sur${NC}"
 curl -X POST "${BASE_URL}/v1/clients" \
   -H "Content-Type: application/json" \
   -H "X-Company-ID: ${COMPANY_ID}" \
@@ -95,15 +95,15 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "tipo_contribuyente": "Pequeño Contribuyente",
     "full_address": "Mercado Central, Local 45, San Salvador",
     "country_code": "SV",
-    "department_code": "06",
     "tipo_persona": "1",
+    "department_code": "06",
     "municipality_code": "24"
   }' | jq '.'
 
 echo -e "\n---\n"
 
-# Test 5: Create client with all three IDs (DUI, NIT, and NCR)
-echo -e "${GREEN}Test 5: Creating client with DUI, NIT, and NCR - La Libertad Este${NC}"
+# Test 5: Create Persona Natural with DUI, NIT, and NCR (professional with company registration)
+echo -e "${GREEN}Test 5: Creating Persona Natural with DUI, NIT, and NCR - La Libertad Este${NC}"
 curl -X POST "${BASE_URL}/v1/clients" \
   -H "Content-Type: application/json" \
   -H "X-Company-ID: ${COMPANY_ID}" \
@@ -124,8 +124,8 @@ curl -X POST "${BASE_URL}/v1/clients" \
 
 echo -e "\n---\n"
 
-# Test 6: Create client with DUI only (another individual)
-echo -e "${GREEN}Test 6: Creating client with DUI only - Santa Ana Centro${NC}"
+# Test 6: Create Persona Natural with DUI only
+echo -e "${GREEN}Test 6: Creating Persona Natural with DUI only - Santa Ana Centro${NC}"
 curl -X POST "${BASE_URL}/v1/clients" \
   -H "Content-Type: application/json" \
   -H "X-Company-ID: ${COMPANY_ID}" \
@@ -137,15 +137,15 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "tipo_contribuyente": "Pequeño Contribuyente",
     "full_address": "Calle Principal, Santa Ana",
     "country_code": "SV",
-    "tipo_persona": "2",
+    "tipo_persona": "1",
     "department_code": "02",
     "municipality_code": "15"
   }' | jq '.'
 
 echo -e "\n---\n"
 
-# Test 7: Create large corporation with NIT and NCR - Usulután
-echo -e "${GREEN}Test 7: Creating large corporation with NIT and NCR - Usulután Norte${NC}"
+# Test 7: Create Persona Jurídica - large corporation
+echo -e "${GREEN}Test 7: Creating Persona Jurídica with NIT and NCR - Usulután Norte${NC}"
 curl -X POST "${BASE_URL}/v1/clients" \
   -H "Content-Type: application/json" \
   -H "X-Company-ID: ${COMPANY_ID}" \
@@ -165,105 +165,8 @@ curl -X POST "${BASE_URL}/v1/clients" \
 
 echo -e "\n${BLUE}=== Error Case Tests ===${NC}\n"
 
-# Test 8: Error - Try to create with NCR only (should fail)
-echo -e "${RED}Test 8: Error case - NCR without NIT (should fail)${NC}"
-curl -X POST "${BASE_URL}/v1/clients" \
-  -H "Content-Type: application/json" \
-  -H "X-Company-ID: ${COMPANY_ID}" \
-  -d '{
-    "ncr": "567890-1",
-    "business_name": "Test Business",
-    "legal_business_name": "Test Business Legal Name",
-    "giro": "Test giro",
-    "tipo_contribuyente": "Test",
-    "full_address": "Test Address",
-    "country_code": "SV",
-    "tipo_persona": "1",
-    "department_code": "06",
-    "municipality_code": "23"
-  }' | jq '.'
-
-echo -e "\n---\n"
-
-# Test 9: Error - Try to create with NIT only (should fail)
-echo -e "${RED}Test 9: Error case - NIT without NCR (should fail)${NC}"
-curl -X POST "${BASE_URL}/v1/clients" \
-  -H "Content-Type: application/json" \
-  -H "X-Company-ID: ${COMPANY_ID}" \
-  -d '{
-    "nit": "0614-123456-001-2",
-    "business_name": "Test Business",
-    "legal_business_name": "Test Business Legal Name",
-    "giro": "Test giro",
-    "tipo_contribuyente": "Test",
-    "full_address": "Test Address",
-    "country_code": "SV",
-    "tipo_persona": "1",
-    "department_code": "06",
-    "municipality_code": "23"
-  }' | jq '.'
-
-echo -e "\n---\n"
-
-# Test 10: Error - Try to create without any ID (should fail)
-echo -e "${RED}Test 10: Error case - No identification provided (should fail)${NC}"
-curl -X POST "${BASE_URL}/v1/clients" \
-  -H "Content-Type: application/json" \
-  -H "X-Company-ID: ${COMPANY_ID}" \
-  -d '{
-    "business_name": "Test Business",
-    "legal_business_name": "Test Business Legal Name",
-    "giro": "Test giro",
-    "tipo_contribuyente": "Test",
-    "full_address": "Test Address",
-    "country_code": "SV",
-    "department_code": "06",
-    "municipality_code": "23"
-  }' | jq '.'
-
-echo -e "\n---\n"
-
-# Test 11: Error - Invalid DUI format (should fail)
-echo -e "${RED}Test 11: Error case - Invalid DUI format (should fail)${NC}"
-curl -X POST "${BASE_URL}/v1/clients" \
-  -H "Content-Type: application/json" \
-  -H "X-Company-ID: ${COMPANY_ID}" \
-  -d '{
-    "dui": "12345678",
-    "business_name": "Test Business",
-    "legal_business_name": "Test Business Legal Name",
-    "giro": "Test giro",
-    "tipo_contribuyente": "Test",
-    "full_address": "Test Address",
-    "country_code": "SV",
-    "department_code": "06",
-    "municipality_code": "23"
-  }' | jq '.'
-
-echo -e "\n---\n"
-
-# Test 12: Error - Invalid NIT format (should fail)
-echo -e "${RED}Test 12: Error case - Invalid NIT format (should fail)${NC}"
-curl -X POST "${BASE_URL}/v1/clients" \
-  -H "Content-Type: application/json" \
-  -H "X-Company-ID: ${COMPANY_ID}" \
-  -d '{
-    "nit": "0614123456001-2",
-    "ncr": "12345-6",
-    "business_name": "Test Business",
-    "legal_business_name": "Test Business Legal Name",
-    "giro": "Test giro",
-    "tipo_contribuyente": "Test",
-    "full_address": "Test Address",
-    "country_code": "SV",
-    "department_code": "06",
-    "municipality_code": "23"
-  }' | jq '.'
-
-echo -e "\n---\n"
-
-# Test 13: Error - Municipality doesn't belong to department (should fail)
-echo -e "${RED}Test 13: Error case - San Salvador municipality (23) in Santa Ana department (02) (should fail)${NC}"
+# Test 8: Error - Missing tipo_persona (should fail)
+echo -e "${RED}Test 8: Error case - Missing tipo_persona (should fail)${NC}"
 curl -X POST "${BASE_URL}/v1/clients" \
   -H "Content-Type: application/json" \
   -H "X-Company-ID: ${COMPANY_ID}" \
@@ -275,64 +178,86 @@ curl -X POST "${BASE_URL}/v1/clients" \
     "tipo_contribuyente": "Test",
     "full_address": "Test Address",
     "country_code": "SV",
-    "department_code": "02",
+    "department_code": "06",
     "municipality_code": "23"
   }' | jq '.'
 
 echo -e "\n---\n"
 
-# Test 14: Error - La Libertad municipality in San Salvador department (should fail)
-echo -e "${RED}Test 14: Error case - La Libertad Centro (24) in San Salvador department (06) (should fail)${NC}"
+# Test 9: Error - Invalid tipo_persona (should fail)
+echo -e "${RED}Test 9: Error case - Invalid tipo_persona '3' (should fail)${NC}"
 curl -X POST "${BASE_URL}/v1/clients" \
   -H "Content-Type: application/json" \
   -H "X-Company-ID: ${COMPANY_ID}" \
   -d '{
     "dui": "08901234-5",
-    "business_name": "Test Business 2",
-    "legal_business_name": "Test Business Legal Name 2",
+    "business_name": "Test Business",
+    "legal_business_name": "Test Business Legal Name",
     "giro": "Test giro",
     "tipo_contribuyente": "Test",
     "full_address": "Test Address",
     "country_code": "SV",
+    "tipo_persona": "3",
     "department_code": "06",
-    "municipality_code": "25"
+    "municipality_code": "23"
   }' | jq '.'
 
 echo -e "\n---\n"
 
-# Test 15: Error - Invalid municipality code (should fail)
-echo -e "${RED}Test 15: Error case - Invalid municipality code (99) (should fail)${NC}"
+# Test 10: Error - NCR without NIT (should fail)
+echo -e "${RED}Test 10: Error case - NCR without NIT (should fail)${NC}"
 curl -X POST "${BASE_URL}/v1/clients" \
   -H "Content-Type: application/json" \
   -H "X-Company-ID: ${COMPANY_ID}" \
   -d '{
-    "dui": "09012345-6",
-    "business_name": "Test Business 3",
-    "legal_business_name": "Test Business Legal Name 3",
+    "ncr": "567890-1",
+    "business_name": "Test Business",
+    "legal_business_name": "Test Business Legal Name",
     "giro": "Test giro",
     "tipo_contribuyente": "Test",
     "full_address": "Test Address",
     "country_code": "SV",
+    "tipo_persona": "2",
     "department_code": "06",
-    "municipality_code": "99"
+    "municipality_code": "23"
   }' | jq '.'
 
 echo -e "\n---\n"
 
-# Test 16: Error - Invalid department code (should fail)
-echo -e "${RED}Test 16: Error case - Invalid department code (99) (should fail)${NC}"
+# Test 11: Error - NIT without NCR (should fail)
+echo -e "${RED}Test 11: Error case - NIT without NCR (should fail)${NC}"
 curl -X POST "${BASE_URL}/v1/clients" \
   -H "Content-Type: application/json" \
   -H "X-Company-ID: ${COMPANY_ID}" \
   -d '{
-    "dui": "01234567-8",
-    "business_name": "Test Business 4",
-    "legal_business_name": "Test Business Legal Name 4",
+    "nit": "0614-123456-001-2",
+    "business_name": "Test Business",
+    "legal_business_name": "Test Business Legal Name",
     "giro": "Test giro",
     "tipo_contribuyente": "Test",
     "full_address": "Test Address",
     "country_code": "SV",
-    "department_code": "99",
+    "tipo_persona": "2",
+    "department_code": "06",
+    "municipality_code": "23"
+  }' | jq '.'
+
+echo -e "\n---\n"
+
+# Test 12: Error - No identification (should fail)
+echo -e "${RED}Test 12: Error case - No identification provided (should fail)${NC}"
+curl -X POST "${BASE_URL}/v1/clients" \
+  -H "Content-Type: application/json" \
+  -H "X-Company-ID: ${COMPANY_ID}" \
+  -d '{
+    "business_name": "Test Business",
+    "legal_business_name": "Test Business Legal Name",
+    "giro": "Test giro",
+    "tipo_contribuyente": "Test",
+    "full_address": "Test Address",
+    "country_code": "SV",
+    "tipo_persona": "1",
+    "department_code": "06",
     "municipality_code": "23"
   }' | jq '.'
 
