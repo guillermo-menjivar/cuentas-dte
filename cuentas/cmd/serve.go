@@ -152,6 +152,7 @@ func startServer() {
 	{
 		v1.GET("/health", handlers.HealthHandler)
 		v1.POST("/companies", handlers.CreateCompanyHandler)
+		v1.GET("/companies", handlers.ListCompaniesHandler)
 		v1.GET("/companies/:id", handlers.GetCompanyHandler)
 		v1.POST("/companies/:id/authenticate", handlers.AuthenticateCompanyHandler)
 
