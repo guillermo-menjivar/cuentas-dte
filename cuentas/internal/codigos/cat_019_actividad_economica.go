@@ -557,6 +557,94 @@ const (
 	ActEcon47896 = "47896"
 	ActEcon47899 = "47899"
 	ActEcon47910 = "47910"
+
+	// Add these constants after ActEcon47910:
+
+	ActEcon47990 = "47990"
+
+	// TRANSPORTE Y ALMACENAMIENTO
+	// TRANSPORTE POR VÍA TERRESTRE Y TRANSPORTE POR TUBERÍAS
+	ActEcon49110 = "49110"
+	ActEcon49120 = "49120"
+	ActEcon49211 = "49211"
+	ActEcon49212 = "49212"
+	ActEcon49213 = "49213"
+	ActEcon49214 = "49214"
+	ActEcon49221 = "49221"
+	ActEcon49222 = "49222"
+	ActEcon49223 = "49223"
+	ActEcon49225 = "49225"
+	ActEcon49226 = "49226"
+	ActEcon49229 = "49229"
+	ActEcon49231 = "49231"
+	ActEcon49232 = "49232"
+	ActEcon49233 = "49233"
+	ActEcon49234 = "49234"
+	ActEcon49235 = "49235"
+	ActEcon49300 = "49300"
+
+	// TRANSPORTE POR VÍA ACUÁTICA
+	ActEcon50110 = "50110"
+	ActEcon50120 = "50120"
+	ActEcon50211 = "50211"
+	ActEcon50212 = "50212"
+	ActEcon50220 = "50220"
+
+	// TRANSPORTE POR VÍA AÉREA
+	ActEcon51100 = "51100"
+	ActEcon51201 = "51201"
+	ActEcon51202 = "51202"
+
+	// ALMACENAMIENTO Y ACTIVIDADES DE APOYO AL TRANSPORTE
+	ActEcon52101 = "52101"
+	ActEcon52102 = "52102"
+	ActEcon52103 = "52103"
+	ActEcon52109 = "52109"
+	ActEcon52211 = "52211"
+	ActEcon52212 = "52212"
+	ActEcon52219 = "52219"
+	ActEcon52220 = "52220"
+	ActEcon52230 = "52230"
+	ActEcon52240 = "52240"
+	ActEcon52290 = "52290"
+	ActEcon52291 = "52291"
+
+	// ACTIVIDADES POSTALES Y DE MENSAJERÍA
+	ActEcon53100 = "53100"
+	ActEcon53200 = "53200"
+	ActEcon53201 = "53201"
+
+	// ACTIVIDADES DE ALOJAMIENTO Y DE SERVICIO DE COMIDAS
+	ActEcon55101 = "55101"
+	ActEcon55102 = "55102"
+	ActEcon55200 = "55200"
+	ActEcon55900 = "55900"
+
+	// ACTIVIDADES DE SERVICIO DE COMIDAS Y BEBIDAS
+	ActEcon56101 = "56101"
+	ActEcon56106 = "56106"
+	ActEcon56107 = "56107"
+	ActEcon56108 = "56108"
+	ActEcon56109 = "56109"
+	ActEcon56210 = "56210"
+	ActEcon56291 = "56291"
+	ActEcon56292 = "56292"
+	ActEcon56299 = "56299"
+	ActEcon56301 = "56301"
+	ActEcon56302 = "56302"
+
+	// INFORMACIÓN Y COMUNICACIONES
+	// ACTIVIDADES DE EDICIÓN
+	ActEcon58110 = "58110"
+	ActEcon58120 = "58120"
+	ActEcon58130 = "58130"
+	ActEcon58190 = "58190"
+	ActEcon58200 = "58200"
+
+	// ACTIVIDADES DE PRODUCCIÓN DE PELÍCULAS CINEMATOGRÁFICAS, VIDEOS Y PROGRAMAS DE TELEVISIÓN
+	ActEcon59110 = "59110"
+	ActEcon59120 = "59120"
+	ActEcon59130 = "59130"
 )
 
 // EconomicActivities is a map of all economic activity codes
@@ -1037,6 +1125,74 @@ var EconomicActivities = map[string]string{
 	ActEcon47896: "Venta al por menor de equipos accesorios para las comunicaciones en puestos de feria y mercados",
 	ActEcon47899: "Venta al por menor en puestos de ferias y mercados n.c.p.",
 	ActEcon47910: "Venta al por menor por correo o Internet",
+
+	// Add these entries to the EconomicActivities map:
+
+	ActEcon47990: "Otros tipos de venta al por menor no realizada, en almacenes, puestos de venta o mercado",
+	ActEcon49110: "Transporte interurbano de pasajeros por ferrocarril",
+	ActEcon49120: "Transporte de carga por ferrocarril",
+	ActEcon49211: "Transporte de pasajeros urbanos e interurbano mediante buses",
+	ActEcon49212: "Transporte de pasajeros interdepartamental mediante microbuses",
+	ActEcon49213: "Transporte de pasajeros urbanos e interurbano mediante microbuses",
+	ActEcon49214: "Transporte de pasajeros interdepartamental mediante buses",
+	ActEcon49221: "Transporte internacional de pasajeros",
+	ActEcon49222: "Transporte de pasajeros mediante taxis y autos con chofer",
+	ActEcon49223: "Transporte escolar",
+	ActEcon49225: "Transporte de pasajeros para excursiones",
+	ActEcon49226: "Servicios de transporte de personal",
+	ActEcon49229: "Transporte de pasajeros por vía terrestre ncp",
+	ActEcon49231: "Transporte de carga urbano",
+	ActEcon49232: "Transporte nacional de carga",
+	ActEcon49233: "Transporte de carga internacional",
+	ActEcon49234: "Servicios de mudanza",
+	ActEcon49235: "Alquiler de vehículos de carga con conductor",
+	ActEcon49300: "Transporte por oleoducto o gasoducto",
+	ActEcon50110: "Transporte de pasajeros marítimo y de cabotaje",
+	ActEcon50120: "Transporte de carga marítimo y de cabotaje",
+	ActEcon50211: "Transporte de pasajeros por vías de navegación interiores",
+	ActEcon50212: "Alquiler de equipo de transporte de pasajeros por vías de navegación interior con conductor",
+	ActEcon50220: "Transporte de carga por vías de navegación interiores",
+	ActEcon51100: "Transporte aéreo de pasajeros",
+	ActEcon51201: "Transporte de carga por vía aérea",
+	ActEcon51202: "Alquiler de equipo de aerotransporte con operadores para el propósito de transportar carga",
+	ActEcon52101: "Alquiler de instalaciones de almacenamiento en zonas francas",
+	ActEcon52102: "Alquiler de silos para conservación y almacenamiento de granos",
+	ActEcon52103: "Alquiler de instalaciones con refrigeración para almacenamiento y conservación de alimentos y otros productos",
+	ActEcon52109: "Alquiler de bodegas para almacenamiento y depósito n.c.p.",
+	ActEcon52211: "Servicio de garaje y estacionamiento",
+	ActEcon52212: "Servicios de terminales para el transporte por vía terrestre",
+	ActEcon52219: "Servicios para el transporte por vía terrestre n.c.p.",
+	ActEcon52220: "Servicios para el transporte acuático",
+	ActEcon52230: "Servicios para el transporte aéreo",
+	ActEcon52240: "Manipulación de carga",
+	ActEcon52290: "Servicios para el transporte ncp",
+	ActEcon52291: "Agencias de tramitaciones aduanales",
+	ActEcon53100: "Servicios de correo nacional",
+	ActEcon53200: "Actividades de correo distintas a las actividades postales nacionales",
+	ActEcon53201: "Agencia privada de correo y encomiendas",
+	ActEcon55101: "Actividades de alojamiento para estancias cortas",
+	ActEcon55102: "Hoteles",
+	ActEcon55200: "Actividades de campamentos, parques de vehículos de recreo y parques de caravanas",
+	ActEcon55900: "Alojamiento n.c.p.",
+	ActEcon56101: "Restaurantes",
+	ActEcon56106: "Pupusería",
+	ActEcon56107: "Actividades varias de restaurantes",
+	ActEcon56108: "Comedores",
+	ActEcon56109: "Merenderos ambulantes",
+	ActEcon56210: "Preparación de comida para eventos especiales",
+	ActEcon56291: "Servicios de provisión de comidas por contrato",
+	ActEcon56292: "Servicios de concesión de cafetines y chalet en empresas e",
+	ActEcon56299: "Servicios de preparación de comidas ncp",
+	ActEcon56301: "Servicio de expendio de bebidas en salones y bares",
+	ActEcon56302: "Servicio de expendio de bebidas en puestos callejeros, mercados y ferias",
+	ActEcon58110: "Edición de libros, folletos, partituras y otras ediciones distintas a estas",
+	ActEcon58120: "Edición de directorios y listas de correos",
+	ActEcon58130: "Edición de periódicos, revistas y otras publicaciones periódicas",
+	ActEcon58190: "Otras actividades de edición",
+	ActEcon58200: "Edición de programas informáticos (software)",
+	ActEcon59110: "Actividades de producción cinematográfica",
+	ActEcon59120: "Actividades de post producción de películas, videos y programas de televisión",
+	ActEcon59130: "Actividades de distribución de películas cinematográficas, videos y programas de televisión",
 }
 
 // GetEconomicActivityName returns the name of an economic activity by code
