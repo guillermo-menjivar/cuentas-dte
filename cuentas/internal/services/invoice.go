@@ -102,21 +102,20 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 	}
 	invoice.ID = invoiceID
 
-	// 7. Insert line items and taxes
-	for i, lineItem := range lineItems {
-		lineItem.InvoiceID = invoiceID
-		lineItem.LineNumber = i + 1
+	for i := range lineItems { // Change from `for i, lineItem` to `for i := range lineItems`
+		lineItems[i].InvoiceID = invoiceID
+		lineItems[i].LineNumber = i + 1
 
-		lineItemID, err := s.insertLineItem(ctx, tx, &lineItem)
+		lineItemID, err := s.insertLineItem(ctx, tx, &lineItems[i])
 		if err != nil {
 			return nil, fmt.Errorf("failed to insert line item %d: %w", i+1, err)
 		}
-		lineItem.ID = lineItemID
+		lineItems[i].ID = lineItemID // This now updates the actual slice
 
 		// Insert taxes for this line item
-		for _, tax := range lineItem.Taxes {
-			tax.LineItemID = lineItemID
-			if err := s.insertLineItemTax(ctx, tx, &tax); err != nil {
+		for j := range lineItems[i].Taxes { // Use index, not value
+			lineItems[i].Taxes[j].LineItemID = lineItemID
+			if err := s.insertLineItemTax(ctx, tx, &lineItems[i].Taxes[j]); err != nil {
 				return nil, fmt.Errorf("failed to insert tax for line item %d: %w", i+1, err)
 			}
 		}
