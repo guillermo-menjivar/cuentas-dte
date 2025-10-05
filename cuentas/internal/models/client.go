@@ -39,6 +39,7 @@ type CreateClientRequest struct {
 	BusinessName      string `json:"business_name" binding:"required"`
 	LegalBusinessName string `json:"legal_business_name" binding:"required"`
 	Giro              string `json:"giro" binding:"required"`
+	TipoPersona       string `json:"tipo_persona" binding:"required"`
 	TipoContribuyente string `json:"tipo_contribuyente" binding:"required"`
 	FullAddress       string `json:"full_address" binding:"required"`
 	CountryCode       string `json:"country_code" binding:"required"`
@@ -185,19 +186,6 @@ func (r *CreateClientRequest) Validate() error {
 
 	if r.TipoPersona != "" && !codigos.IsValidPersonType(r.TipoPersona) {
 		return fmt.Errorf("invalid tipo_persona: must be '1' (Persona Natural) or '2' (Persona Jurídica)")
-	}
-
-	// Auto-detect tipo_persona if not provided
-	if r.TipoPersona == "" {
-		if r.NIT != nil && *r.NIT != "" {
-			// Has NIT, likely juridica
-			r.TipoPersona = codigos.PersonTypeJuridica
-		} else if r.DUI != nil && *r.DUI != "" {
-			// Has DUI, likely natural
-			r.TipoPersona = codigos.PersonTypeNatural
-		} else {
-			return fmt.Errorf("tipo_persona is required when NIT and DUI are not provided")
-		}
 	}
 
 	return nil
