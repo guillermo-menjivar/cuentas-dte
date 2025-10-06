@@ -33,3 +33,5 @@ CREATE TABLE dte_sequences (
     last_sequence BIGINT NOT NULL DEFAULT 0,
     PRIMARY KEY (point_of_sale_id, tipo_dte)
 );
+
+ALTER TABLE invoices ADD COLUMN point_of_sale_id UUID REFERENCES point_of_sale(id);
