@@ -5,7 +5,4 @@
 
 API_URL="http://localhost:8080/v1/actividades-economicas/categories"
 
-echo "Fetching all economic activity categories..."
-echo ""
-
 curl -s -X GET "$API_URL"
