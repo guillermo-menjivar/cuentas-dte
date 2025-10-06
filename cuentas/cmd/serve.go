@@ -180,6 +180,13 @@ func startServer() {
 		v1.GET("/invoices", invoiceHandler.ListInvoices)
 		v1.GET("/invoices/:id", invoiceHandler.GetInvoice)
 		v1.DELETE("/invoices/:id", invoiceHandler.DeleteInvoice)
+
+		actividadHandler := handlers.NewActividadEconomicaHandler()
+		v1.GET("/actividades-economicas/categories", actividadHandler.GetCategories)
+		v1.GET("/actividades-economicas/categories/:code", actividadHandler.GetCategoryByCode)
+		v1.GET("/actividades-economicas/categories/:code/activities", actividadHandler.GetActivitiesByCategory)
+		v1.GET("/actividades-economicas/search", actividadHandler.SearchActivities)
+		v1.GET("/actividades-economicas/:code", actividadHandler.GetActivityDetails)
 	}
 
 	// Start server
