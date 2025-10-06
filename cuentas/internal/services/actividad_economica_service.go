@@ -1,8 +1,8 @@
 package services
 
 import (
+	"cuentas/internal/codigos"
 	"strings"
-	"your-project/codigos"
 )
 
 type ActividadEconomicaService struct{}
