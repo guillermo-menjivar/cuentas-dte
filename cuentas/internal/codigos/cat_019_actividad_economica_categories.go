@@ -1,5 +1,13 @@
 package codigos
 
+type ActivityCategory struct {
+	Code       string   `json:"code"`
+	Name       string   `json:"name"`
+	ParentCode string   `json:"parent_code,omitempty"`
+	Level      int      `json:"level"` // 1=sector, 2=subsector, 3=group
+	Keywords   []string `json:"keywords,omitempty"`
+}
+
 // Categories defines the hierarchical structure of economic activities
 var ActividadEconomicaCategories = map[string]ActivityCategory{
 	// Level 1: Major Sectors
