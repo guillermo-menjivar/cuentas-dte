@@ -870,3 +870,46 @@ func (s *InvoiceService) getAndIncrementDTESequence(ctx context.Context, tx *sql
 
 	return newSeq, nil
 }
+
+func (s *InvoiceService) checkCreditLimit(ctx context.Context, tx *sql.Tx, clientID string, invoiceTotal float64) error {
+	query := `
+		SELECT credit_limit, current_balance, credit_status
+		FROM clients
+		WHERE id = $1
+	`
+
+	var creditLimit, currentBalance float64
+	var creditStatus string
+
+	err := tx.QueryRowContext(ctx, query, clientID).Scan(&creditLimit, &currentBalance, &creditStatus)
+	if err != nil {
+		return fmt.Errorf("failed to check credit limit: %w", err)
+	}
+
+	if creditStatus == "suspended" {
+		return ErrCreditSuspended
+	}
+
+	newBalance := currentBalance + invoiceTotal
+	if newBalance > creditLimit {
+		return ErrCreditLimitExceeded
+	}
+
+	return nil
+}
+
+// updateClientBalance updates the client's current balance after finalization
+func (s *InvoiceService) updateClientBalance(ctx context.Context, tx *sql.Tx, clientID string, amount float64) error {
+	query := `
+		UPDATE clients
+		SET current_balance = current_balance + $1,
+		    credit_status = CASE
+		        WHEN current_balance + $1 > credit_limit THEN 'over_limit'
+		        ELSE 'good_standing'
+		    END
+		WHERE id = $2
+	`
+
+	_, err := tx.ExecContext(ctx, query, amount, clientID)
+	return err
+}
