@@ -1,6 +1,7 @@
 package models
 
 import (
+	"cuentas/internal/codigos"
 	"fmt"
 	"strings"
 	"time"
@@ -44,6 +45,7 @@ type Invoice struct {
 
 	// Payment tracking
 	PaymentTerms  string     `json:"payment_terms"`
+	PaymentMethod string     `json:"payment_method"`
 	PaymentStatus string     `json:"payment_status"`
 	AmountPaid    float64    `json:"amount_paid"`
 	BalanceDue    float64    `json:"balance_due"`
@@ -80,6 +82,7 @@ type CreateInvoiceRequest struct {
 	PaymentTerms    string                         `json:"payment_terms"`
 	DueDate         *time.Time                     `json:"due_date"`
 	PointOfSaleID   string                         `json:"point_of_sale_id" binding:"required"`
+	PaymentMethod   string                         `json:"payment_method" binding:"required"`
 	EstablishmentID string                         `json:"establishment_id" binding:"required"`
 	Notes           *string                        `json:"notes"`
 	ContactEmail    *string                        `json:"contact_email"`
@@ -102,6 +105,10 @@ func (r *CreateInvoiceRequest) Validate() error {
 		if !contains(validTerms, r.PaymentTerms) {
 			return fmt.Errorf("invalid payment_terms: must be one of %v", validTerms)
 		}
+	}
+
+	if !codigos.IsValidPaymentMethod(r.PaymentMethod) {
+		return ErrInvalidPaymentMethod
 	}
 
 	// If payment terms require due date, validate it exists
