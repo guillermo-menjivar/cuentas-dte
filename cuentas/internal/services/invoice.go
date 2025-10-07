@@ -133,6 +133,7 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 	invoice.ID = invoiceID
 
 	// 8. Insert line items and taxes
+
 	for i := range lineItems {
 		lineItems[i].InvoiceID = invoiceID
 		lineItems[i].LineNumber = i + 1
@@ -146,9 +147,11 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 		// Insert taxes for this line item
 		for j := range lineItems[i].Taxes {
 			lineItems[i].Taxes[j].LineItemID = lineItemID
-			if err := s.insertLineItemTax(ctx, tx, &lineItems[i].Taxes[j]); err != nil {
+			taxID, err := s.insertLineItemTax(ctx, tx, &lineItems[i].Taxes[j])
+			if err != nil {
 				return nil, fmt.Errorf("failed to insert tax for line item %d: %w", i+1, err)
 			}
+			lineItems[i].Taxes[j].ID = taxID // SET THE ID
 		}
 	}
 
@@ -415,6 +418,29 @@ func (s *InvoiceService) snapshotItemTaxes(ctx context.Context, tx *sql.Tx, item
 }
 
 // insertLineItem inserts a line item and returns the ID
+func (s *InvoiceService) insertLineItemTax(ctx context.Context, tx *sql.Tx, tax *models.InvoiceLineItemTax) (string, error) {
+	query := `
+		INSERT INTO invoice_line_item_taxes (
+			line_item_id, tributo_code, tributo_name,
+			tax_rate, taxable_base, tax_amount,
+			created_at
+		) VALUES (
+			$1, $2, $3,
+			$4, $5, $6,
+			$7
+		) RETURNING id
+	`
+
+	var id string
+	err := tx.QueryRowContext(ctx, query,
+		tax.LineItemID, tax.TributoCode, tax.TributoName,
+		tax.TaxRate, tax.TaxableBase, tax.TaxAmount,
+		tax.CreatedAt,
+	).Scan(&id)
+
+	return id, err
+}
+
 func (s *InvoiceService) insertLineItem(ctx context.Context, tx *sql.Tx, lineItem *models.InvoiceLineItem) (string, error) {
 	query := `
 		INSERT INTO invoice_line_items (
@@ -449,29 +475,6 @@ func (s *InvoiceService) insertLineItem(ctx context.Context, tx *sql.Tx, lineIte
 	}
 
 	return id, nil
-}
-
-// insertLineItemTax inserts a tax record for a line item
-func (s *InvoiceService) insertLineItemTax(ctx context.Context, tx *sql.Tx, tax *models.InvoiceLineItemTax) error {
-	query := `
-		INSERT INTO invoice_line_item_taxes (
-			line_item_id, tributo_code, tributo_name,
-			tax_rate, taxable_base, tax_amount,
-			created_at
-		) VALUES (
-			$1, $2, $3,
-			$4, $5, $6,
-			$7
-		)
-	`
-
-	_, err := tx.ExecContext(ctx, query,
-		tax.LineItemID, tax.TributoCode, tax.TributoName,
-		tax.TaxRate, tax.TaxableBase, tax.TaxAmount,
-		tax.CreatedAt,
-	)
-
-	return err
 }
 
 // GetInvoice retrieves a complete invoice with line items and taxes
