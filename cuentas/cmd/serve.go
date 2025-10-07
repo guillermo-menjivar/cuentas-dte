@@ -187,6 +187,22 @@ func startServer() {
 		v1.GET("/actividades-economicas/categories/:code/activities", actividadHandler.GetActivitiesByCategory)
 		v1.GET("/actividades-economicas/search", actividadHandler.SearchActivities)
 		v1.GET("/actividades-economicas/:code", actividadHandler.GetActivityDetails)
+
+		establishmentHandler := handlers.NewEstablishmentHandler()
+
+		v1.POST("/establishments", establishmentHandler.CreateEstablishment)
+		v1.GET("/establishments", establishmentHandler.ListEstablishments)
+		v1.GET("/establishments/:id", establishmentHandler.GetEstablishment)
+		v1.PATCH("/establishments/:id", establishmentHandler.UpdateEstablishment)
+		v1.DELETE("/establishments/:id", establishmentHandler.DeactivateEstablishment)
+
+		// Point of Sale routes
+		v1.POST("/establishments/:id/pos", establishmentHandler.CreatePointOfSale)
+		v1.GET("/establishments/:id/pos", establishmentHandler.ListPointsOfSale)
+		v1.GET("/pos/:id", establishmentHandler.GetPointOfSale)
+		v1.PATCH("/pos/:id", establishmentHandler.UpdatePointOfSale)
+		v1.PATCH("/pos/:id/location", establishmentHandler.UpdatePOSLocation)
+		v1.DELETE("/pos/:id", establishmentHandler.DeactivatePointOfSale)
 	}
 
 	// Start server
