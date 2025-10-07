@@ -87,17 +87,20 @@ func (h *InvoiceHandler) ListInvoices(c *gin.Context) {
 
 	// Build filters from query params
 	filters := make(map[string]interface{})
-
 	if status := c.Query("status"); status != "" {
 		filters["status"] = status
 	}
-
 	if clientID := c.Query("client_id"); clientID != "" {
 		filters["client_id"] = clientID
 	}
-
 	if paymentStatus := c.Query("payment_status"); paymentStatus != "" {
 		filters["payment_status"] = paymentStatus
+	}
+	if establishmentID := c.Query("establishment_id"); establishmentID != "" {
+		filters["establishment_id"] = establishmentID
+	}
+	if posID := c.Query("point_of_sale_id"); posID != "" {
+		filters["point_of_sale_id"] = posID
 	}
 
 	invoices, err := h.invoiceService.ListInvoices(c.Request.Context(), companyID, filters)
