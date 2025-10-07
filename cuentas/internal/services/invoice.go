@@ -887,7 +887,7 @@ func (s *InvoiceService) checkCreditLimit(ctx context.Context, tx *sql.Tx, clien
 	}
 
 	if creditStatus == "suspended" {
-		return ErrCreditSuspended
+		return models.ErrCreditSuspended
 	}
 
 	newBalance := currentBalance + invoiceTotal
