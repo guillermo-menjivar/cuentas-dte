@@ -17,4 +17,5 @@ var (
 	ErrInvalidLatitude        = errors.New("latitude must be between -90 and 90")
 	ErrInvalidLongitude       = errors.New("longitude must be between -180 and 180")
 	ErrPointOfSaleNotFound    = errors.New("point of sale not found")
+	ErrInvalidPaymentMethod   = errors.New("invalid payment method code")
 )
