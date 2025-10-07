@@ -180,6 +180,7 @@ func startServer() {
 		v1.GET("/invoices", invoiceHandler.ListInvoices)
 		v1.GET("/invoices/:id", invoiceHandler.GetInvoice)
 		v1.DELETE("/invoices/:id", invoiceHandler.DeleteInvoice)
+		v1.POST("/invoices/:id/finalize", invoiceHandler.FinalizeInvoice)
 
 		actividadHandler := handlers.NewActividadEconomicaHandler()
 		v1.GET("/actividades-economicas/categories", actividadHandler.GetCategories)
