@@ -18,7 +18,27 @@ func NewInvoiceService() *InvoiceService {
 	return &InvoiceService{}
 }
 
-// CreateInvoice creates a new draft invoice with complete snapshots
+func (s *InvoiceService) validatePointOfSale(ctx context.Context, tx *sql.Tx, companyID, posID string) (string, error) {
+	query := `
+		SELECT pos.id, e.id as establishment_id
+		FROM point_of_sale pos
+		JOIN establishments e ON pos.establishment_id = e.id
+		WHERE pos.id = $1 AND e.company_id = $2 AND pos.active = true AND e.active = true
+	`
+
+	var id, establishmentID string
+	err := tx.QueryRowContext(ctx, query, posID, companyID).Scan(&id, &establishmentID)
+	if err == sql.ErrNoRows {
+		return "", ErrPointOfSaleNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("failed to validate point of sale: %w", err)
+	}
+
+	return establishmentID, nil
+}
+
+// Update CreateInvoice function
 func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, req *models.CreateInvoiceRequest) (*models.Invoice, error) {
 	// Validate request
 	if err := req.Validate(); err != nil {
@@ -32,27 +52,33 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 	}
 	defer tx.Rollback()
 
-	// 1. Snapshot client data
+	// 1. Validate POS exists and belongs to company, get establishment_id
+	establishmentID, err := s.validatePointOfSale(ctx, tx, companyID, req.PointOfSaleID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Snapshot client data
 	client, err := s.snapshotClient(ctx, tx, companyID, req.ClientID)
 	if err != nil {
 		return nil, err
 	}
 
-	// 2. Generate invoice number
-	invoiceNumber, err := s.generateInvoiceNumber(ctx, tx, companyID)
+	// 3. Generate invoice number (now needs POS)
+	invoiceNumber, err := s.generateInvoiceNumber(ctx, tx, req.PointOfSaleID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate invoice number: %w", err)
 	}
 
-	// 3. Process line items and calculate totals
+	// 4. Process line items and calculate totals
 	lineItems, subtotal, totalDiscount, totalTaxes, err := s.processLineItems(ctx, tx, companyID, req.LineItems)
 	if err != nil {
 		return nil, err
 	}
 
-	total := subtotal - totalDiscount + totalTaxes
+	total := round(subtotal - totalDiscount + totalTaxes)
 
-	// 4. Calculate due date if needed
+	// 5. Calculate due date if needed
 	var dueDate *time.Time
 	if req.DueDate != nil {
 		dueDate = req.DueDate
@@ -64,9 +90,11 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 		dueDate = &date
 	}
 
-	// 5. Create invoice record
+	// 6. Create invoice record
 	invoice := &models.Invoice{
 		CompanyID:               companyID,
+		EstablishmentID:         establishmentID, // ADD THIS
+		PointOfSaleID:           req.PointOfSaleID,
 		ClientID:                req.ClientID,
 		InvoiceNumber:           invoiceNumber,
 		InvoiceType:             "sale",
@@ -95,14 +123,15 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 		CreatedAt:               time.Now(),
 	}
 
-	// 6. Insert invoice
+	// 7. Insert invoice
 	invoiceID, err := s.insertInvoice(ctx, tx, invoice)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert invoice: %w", err)
 	}
 	invoice.ID = invoiceID
 
-	for i := range lineItems { // Change from `for i, lineItem` to `for i := range lineItems`
+	// 8. Insert line items and taxes
+	for i := range lineItems {
 		lineItems[i].InvoiceID = invoiceID
 		lineItems[i].LineNumber = i + 1
 
@@ -110,10 +139,10 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 		if err != nil {
 			return nil, fmt.Errorf("failed to insert line item %d: %w", i+1, err)
 		}
-		lineItems[i].ID = lineItemID // This now updates the actual slice
+		lineItems[i].ID = lineItemID
 
 		// Insert taxes for this line item
-		for j := range lineItems[i].Taxes { // Use index, not value
+		for j := range lineItems[i].Taxes {
 			lineItems[i].Taxes[j].LineItemID = lineItemID
 			if err := s.insertLineItemTax(ctx, tx, &lineItems[i].Taxes[j]); err != nil {
 				return nil, fmt.Errorf("failed to insert tax for line item %d: %w", i+1, err)
@@ -121,12 +150,12 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 		}
 	}
 
-	// 8. Commit transaction
+	// 9. Commit transaction
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// 9. Attach line items to invoice
+	// 10. Attach line items to invoice
 	invoice.LineItems = lineItems
 
 	return invoice, nil
@@ -383,43 +412,6 @@ func (s *InvoiceService) snapshotItemTaxes(ctx context.Context, tx *sql.Tx, item
 	return taxes, totalTax, nil
 }
 
-// insertInvoice inserts the invoice header and returns the ID
-func (s *InvoiceService) insertInvoice(ctx context.Context, tx *sql.Tx, invoice *models.Invoice) (string, error) {
-	query := `
-		INSERT INTO invoices (
-			company_id, client_id, invoice_number, invoice_type,
-			client_name, client_legal_name, client_nit, client_ncr, client_dui,
-			client_address, client_tipo_contribuyente, client_tipo_persona,
-			subtotal, total_discount, total_taxes, total,
-			currency, payment_terms, payment_status, amount_paid, balance_due, due_date,
-			status, notes, contact_email, contact_whatsapp, created_at
-		) VALUES (
-			$1, $2, $3, $4,
-			$5, $6, $7, $8, $9,
-			$10, $11, $12,
-			$13, $14, $15, $16,
-			$17, $18, $19, $20, $21, $22,
-			$23, $24, $25, $26, $27
-		) RETURNING id
-	`
-
-	var id string
-	err := tx.QueryRowContext(ctx, query,
-		invoice.CompanyID, invoice.ClientID, invoice.InvoiceNumber, invoice.InvoiceType,
-		invoice.ClientName, invoice.ClientLegalName, invoice.ClientNit, invoice.ClientNcr, invoice.ClientDui,
-		invoice.ClientAddress, invoice.ClientTipoContribuyente, invoice.ClientTipoPersona,
-		invoice.Subtotal, invoice.TotalDiscount, invoice.TotalTaxes, invoice.Total,
-		invoice.Currency, invoice.PaymentTerms, invoice.PaymentStatus, invoice.AmountPaid, invoice.BalanceDue, invoice.DueDate,
-		invoice.Status, invoice.Notes, invoice.ContactEmail, invoice.ContactWhatsapp, invoice.CreatedAt,
-	).Scan(&id)
-
-	if err != nil {
-		return "", err
-	}
-
-	return id, nil
-}
-
 // insertLineItem inserts a line item and returns the ID
 func (s *InvoiceService) insertLineItem(ctx context.Context, tx *sql.Tx, lineItem *models.InvoiceLineItem) (string, error) {
 	query := `
@@ -508,54 +500,6 @@ func (s *InvoiceService) GetInvoice(ctx context.Context, companyID, invoiceID st
 	return invoice, nil
 }
 
-// getInvoiceHeader retrieves just the invoice header
-func (s *InvoiceService) getInvoiceHeader(ctx context.Context, companyID, invoiceID string) (*models.Invoice, error) {
-	query := `
-		SELECT
-			id, company_id, client_id,
-			invoice_number, invoice_type,
-			references_invoice_id, void_reason,
-			client_name, client_legal_name, client_nit, client_ncr, client_dui,
-			client_address, client_tipo_contribuyente, client_tipo_persona,
-			subtotal, total_discount, total_taxes, total,
-			currency,
-			payment_terms, payment_status, amount_paid, balance_due, due_date,
-			status,
-			dte_codigo_generacion, dte_numero_control, dte_status, dte_hacienda_response, dte_submitted_at,
-			created_at, finalized_at, voided_at,
-			created_by, voided_by, notes,
-			contact_email, contact_whatsapp
-		FROM invoices
-		WHERE id = $1 AND company_id = $2
-	`
-
-	invoice := &models.Invoice{}
-	err := database.DB.QueryRowContext(ctx, query, invoiceID, companyID).Scan(
-		&invoice.ID, &invoice.CompanyID, &invoice.ClientID,
-		&invoice.InvoiceNumber, &invoice.InvoiceType,
-		&invoice.ReferencesInvoiceID, &invoice.VoidReason,
-		&invoice.ClientName, &invoice.ClientLegalName, &invoice.ClientNit, &invoice.ClientNcr, &invoice.ClientDui,
-		&invoice.ClientAddress, &invoice.ClientTipoContribuyente, &invoice.ClientTipoPersona,
-		&invoice.Subtotal, &invoice.TotalDiscount, &invoice.TotalTaxes, &invoice.Total,
-		&invoice.Currency,
-		&invoice.PaymentTerms, &invoice.PaymentStatus, &invoice.AmountPaid, &invoice.BalanceDue, &invoice.DueDate,
-		&invoice.Status,
-		&invoice.DteCodigoGeneracion, &invoice.DteNumeroControl, &invoice.DteStatus, &invoice.DteHaciendaResponse, &invoice.DteSubmittedAt,
-		&invoice.CreatedAt, &invoice.FinalizedAt, &invoice.VoidedAt,
-		&invoice.CreatedBy, &invoice.VoidedBy, &invoice.Notes,
-		&invoice.ContactEmail, &invoice.ContactWhatsapp,
-	)
-
-	if err == sql.ErrNoRows {
-		return nil, ErrInvoiceNotFound
-	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to query invoice: %w", err)
-	}
-
-	return invoice, nil
-}
-
 // getLineItems retrieves all line items for an invoice
 func (s *InvoiceService) getLineItems(ctx context.Context, invoiceID string) ([]models.InvoiceLineItem, error) {
 	query := `
@@ -631,11 +575,131 @@ func (s *InvoiceService) getLineItemTaxes(ctx context.Context, lineItemID string
 	return taxes, rows.Err()
 }
 
-// ListInvoices retrieves invoices with filters
+// DeleteDraftInvoice deletes a draft invoice (only drafts can be deleted)
+func (s *InvoiceService) DeleteDraftInvoice(ctx context.Context, companyID, invoiceID string) error {
+	// Verify it's a draft
+	invoice, err := s.getInvoiceHeader(ctx, companyID, invoiceID)
+	if err != nil {
+		return err
+	}
+
+	if invoice.Status != "draft" {
+		return ErrInvoiceNotDraft
+	}
+
+	// Delete (cascade will handle line items and taxes)
+	query := `DELETE FROM invoices WHERE id = $1 AND company_id = $2`
+	result, err := database.DB.ExecContext(ctx, query, invoiceID, companyID)
+	if err != nil {
+		return fmt.Errorf("failed to delete invoice: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return ErrInvoiceNotFound
+	}
+
+	return nil
+}
+
+func round(val float64) float64 {
+	return math.Round(val*100) / 100
+}
+
+// / new
+// Update insertInvoice to include establishment_id
+func (s *InvoiceService) insertInvoice(ctx context.Context, tx *sql.Tx, invoice *models.Invoice) (string, error) {
+	query := `
+		INSERT INTO invoices (
+			company_id, establishment_id, point_of_sale_id, client_id, invoice_number, invoice_type,
+			client_name, client_legal_name, client_nit, client_ncr, client_dui,
+			client_address, client_tipo_contribuyente, client_tipo_persona,
+			subtotal, total_discount, total_taxes, total,
+			currency, payment_terms, payment_status, amount_paid, balance_due, due_date,
+			status, notes, contact_email, contact_whatsapp, created_at
+		) VALUES (
+			$1, $2, $3, $4, $5, $6,
+			$7, $8, $9, $10, $11,
+			$12, $13, $14,
+			$15, $16, $17, $18,
+			$19, $20, $21, $22, $23, $24,
+			$25, $26, $27, $28, $29
+		) RETURNING id
+	`
+
+	var id string
+	err := tx.QueryRowContext(ctx, query,
+		invoice.CompanyID, invoice.EstablishmentID, invoice.PointOfSaleID, invoice.ClientID, invoice.InvoiceNumber, invoice.InvoiceType,
+		invoice.ClientName, invoice.ClientLegalName, invoice.ClientNit, invoice.ClientNcr, invoice.ClientDui,
+		invoice.ClientAddress, invoice.ClientTipoContribuyente, invoice.ClientTipoPersona,
+		invoice.Subtotal, invoice.TotalDiscount, invoice.TotalTaxes, invoice.Total,
+		invoice.Currency, invoice.PaymentTerms, invoice.PaymentStatus, invoice.AmountPaid, invoice.BalanceDue, invoice.DueDate,
+		invoice.Status, invoice.Notes, invoice.ContactEmail, invoice.ContactWhatsapp, invoice.CreatedAt,
+	).Scan(&id)
+
+	if err != nil {
+		return "", err
+	}
+
+	return id, nil
+}
+
+// Update getInvoiceHeader to include establishment_id
+func (s *InvoiceService) getInvoiceHeader(ctx context.Context, companyID, invoiceID string) (*models.Invoice, error) {
+	query := `
+		SELECT
+			id, company_id, establishment_id, point_of_sale_id, client_id,
+			invoice_number, invoice_type,
+			references_invoice_id, void_reason,
+			client_name, client_legal_name, client_nit, client_ncr, client_dui,
+			client_address, client_tipo_contribuyente, client_tipo_persona,
+			subtotal, total_discount, total_taxes, total,
+			currency,
+			payment_terms, payment_status, amount_paid, balance_due, due_date,
+			status,
+			dte_codigo_generacion, dte_numero_control, dte_status, dte_hacienda_response, dte_submitted_at,
+			created_at, finalized_at, voided_at,
+			created_by, voided_by, notes,
+			contact_email, contact_whatsapp
+		FROM invoices
+		WHERE id = $1 AND company_id = $2
+	`
+
+	invoice := &models.Invoice{}
+	err := database.DB.QueryRowContext(ctx, query, invoiceID, companyID).Scan(
+		&invoice.ID, &invoice.CompanyID, &invoice.EstablishmentID, &invoice.PointOfSaleID, &invoice.ClientID,
+		&invoice.InvoiceNumber, &invoice.InvoiceType,
+		&invoice.ReferencesInvoiceID, &invoice.VoidReason,
+		&invoice.ClientName, &invoice.ClientLegalName, &invoice.ClientNit, &invoice.ClientNcr, &invoice.ClientDui,
+		&invoice.ClientAddress, &invoice.ClientTipoContribuyente, &invoice.ClientTipoPersona,
+		&invoice.Subtotal, &invoice.TotalDiscount, &invoice.TotalTaxes, &invoice.Total,
+		&invoice.Currency,
+		&invoice.PaymentTerms, &invoice.PaymentStatus, &invoice.AmountPaid, &invoice.BalanceDue, &invoice.DueDate,
+		&invoice.Status,
+		&invoice.DteCodigoGeneracion, &invoice.DteNumeroControl, &invoice.DteStatus, &invoice.DteHaciendaResponse, &invoice.DteSubmittedAt,
+		&invoice.CreatedAt, &invoice.FinalizedAt, &invoice.VoidedAt,
+		&invoice.CreatedBy, &invoice.VoidedBy, &invoice.Notes,
+		&invoice.ContactEmail, &invoice.ContactWhatsapp,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, ErrInvoiceNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to query invoice: %w", err)
+	}
+
+	return invoice, nil
+}
+
+// Update ListInvoices to include establishment_id
 func (s *InvoiceService) ListInvoices(ctx context.Context, companyID string, filters map[string]interface{}) ([]models.Invoice, error) {
 	query := `
 		SELECT
-			id, company_id, client_id,
+			id, company_id, establishment_id, point_of_sale_id, client_id,
 			invoice_number, invoice_type,
 			client_name, client_legal_name,
 			subtotal, total_discount, total_taxes, total,
@@ -669,6 +733,20 @@ func (s *InvoiceService) ListInvoices(ctx context.Context, companyID string, fil
 		args = append(args, paymentStatus)
 	}
 
+	// ADD: Filter by establishment
+	if establishmentID, ok := filters["establishment_id"].(string); ok && establishmentID != "" {
+		argCount++
+		query += fmt.Sprintf(" AND establishment_id = $%d", argCount)
+		args = append(args, establishmentID)
+	}
+
+	// ADD: Filter by POS
+	if posID, ok := filters["point_of_sale_id"].(string); ok && posID != "" {
+		argCount++
+		query += fmt.Sprintf(" AND point_of_sale_id = $%d", argCount)
+		args = append(args, posID)
+	}
+
 	query += " ORDER BY created_at DESC"
 
 	rows, err := database.DB.QueryContext(ctx, query, args...)
@@ -681,7 +759,7 @@ func (s *InvoiceService) ListInvoices(ctx context.Context, companyID string, fil
 	for rows.Next() {
 		var inv models.Invoice
 		err := rows.Scan(
-			&inv.ID, &inv.CompanyID, &inv.ClientID,
+			&inv.ID, &inv.CompanyID, &inv.EstablishmentID, &inv.PointOfSaleID, &inv.ClientID,
 			&inv.InvoiceNumber, &inv.InvoiceType,
 			&inv.ClientName, &inv.ClientLegalName,
 			&inv.Subtotal, &inv.TotalDiscount, &inv.TotalTaxes, &inv.Total,
@@ -697,38 +775,4 @@ func (s *InvoiceService) ListInvoices(ctx context.Context, companyID string, fil
 	}
 
 	return invoices, rows.Err()
-}
-
-// DeleteDraftInvoice deletes a draft invoice (only drafts can be deleted)
-func (s *InvoiceService) DeleteDraftInvoice(ctx context.Context, companyID, invoiceID string) error {
-	// Verify it's a draft
-	invoice, err := s.getInvoiceHeader(ctx, companyID, invoiceID)
-	if err != nil {
-		return err
-	}
-
-	if invoice.Status != "draft" {
-		return ErrInvoiceNotDraft
-	}
-
-	// Delete (cascade will handle line items and taxes)
-	query := `DELETE FROM invoices WHERE id = $1 AND company_id = $2`
-	result, err := database.DB.ExecContext(ctx, query, invoiceID, companyID)
-	if err != nil {
-		return fmt.Errorf("failed to delete invoice: %w", err)
-	}
-
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return ErrInvoiceNotFound
-	}
-
-	return nil
-}
-
-func round(val float64) float64 {
-	return math.Round(val*100) / 100
 }
