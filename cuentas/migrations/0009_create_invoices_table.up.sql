@@ -90,3 +90,4 @@ COMMENT ON COLUMN invoices.payment_terms IS 'Payment terms: cash, net_30, net_60
 COMMENT ON COLUMN invoices.dte_codigo_generacion IS 'UUID generated for DTE submission to Hacienda';
 COMMENT ON COLUMN invoices.dte_numero_control IS 'DTE control number format: DTE-01-XXXXXXXX-XXXXXXXXXXXXXXX';
 COMMENT ON COLUMN invoices.balance_due IS 'Remaining amount owed (total - amount_paid)';
+
