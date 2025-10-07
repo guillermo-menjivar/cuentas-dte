@@ -46,7 +46,7 @@ type UpdateEstablishmentRequest struct {
 // Validate validates the CreateEstablishmentRequest
 func (r *CreateEstablishmentRequest) Validate() error {
 	// Validate tipo_establecimiento using codigos
-	if !isValidTipoEstablecimiento(r.TipoEstablecimiento) {
+	if !IsValidTipoEstablecimiento(r.TipoEstablecimiento) {
 		return ErrInvalidTipoEstablecimiento
 	}
 
@@ -137,7 +137,7 @@ func (r *CreatePOSRequest) Validate() error {
 }
 
 // Helper validation functions (will use codigos package)
-func isValidTipoEstablecimiento(tipo string) bool {
+func IsValidTipoEstablecimiento(tipo string) bool {
 	validTypes := []string{"01", "02", "04", "07", "20"}
 	for _, v := range validTypes {
 		if tipo == v {
