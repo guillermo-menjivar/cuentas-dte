@@ -18,4 +18,7 @@ var (
 	ErrInvalidLongitude       = errors.New("longitude must be between -180 and 180")
 	ErrPointOfSaleNotFound    = errors.New("point of sale not found")
 	ErrInvalidPaymentMethod   = errors.New("invalid payment method code")
+	ErrInvoiceNotDraft        = errors.New("invoice is not in draft status")
+	ErrCreditLimitExceeded    = errors.New("credit limit exceeded")
+	ErrCreditSuspended        = errors.New("client credit is suspended")
 )
