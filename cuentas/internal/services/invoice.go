@@ -782,3 +782,10 @@ func (s *InvoiceService) ListInvoices(ctx context.Context, companyID string, fil
 
 	return invoices, rows.Err()
 }
+
+func (s *InvoiceService) determineDTEType(tipoPersona string) string {
+	if tipoPersona == "2" {
+		return "03" // CCF for businesses
+	}
+	return "01" // Factura for individuals (default)
+}
