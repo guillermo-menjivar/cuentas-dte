@@ -825,3 +825,48 @@ func (s *InvoiceService) generateNumeroControl(ctx context.Context, tx *sql.Tx, 
 
 	return numeroControl, nil
 }
+
+func (s *InvoiceService) getAndIncrementDTESequence(ctx context.Context, tx *sql.Tx, posID, tipoDte string) (int64, error) {
+	// Try to get existing sequence with row lock
+	var currentSeq int64
+	query := `
+		SELECT last_sequence
+		FROM dte_sequences
+		WHERE point_of_sale_id = $1 AND tipo_dte = $2
+		FOR UPDATE
+	`
+
+	err := tx.QueryRowContext(ctx, query, posID, tipoDte).Scan(&currentSeq)
+
+	if err == sql.ErrNoRows {
+		// First time - insert new sequence starting at 1
+		insertQuery := `
+			INSERT INTO dte_sequences (point_of_sale_id, tipo_dte, last_sequence, updated_at)
+			VALUES ($1, $2, 1, $3)
+		`
+		_, err = tx.ExecContext(ctx, insertQuery, posID, tipoDte, time.Now())
+		if err != nil {
+			return 0, fmt.Errorf("failed to initialize sequence: %w", err)
+		}
+		return 1, nil
+	}
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to get sequence: %w", err)
+	}
+
+	// Increment sequence
+	newSeq := currentSeq + 1
+	updateQuery := `
+		UPDATE dte_sequences
+		SET last_sequence = $1, updated_at = $2
+		WHERE point_of_sale_id = $3 AND tipo_dte = $4
+	`
+
+	_, err = tx.ExecContext(ctx, updateQuery, newSeq, time.Now(), posID, tipoDte)
+	if err != nil {
+		return 0, fmt.Errorf("failed to increment sequence: %w", err)
+	}
+
+	return newSeq, nil
+}
