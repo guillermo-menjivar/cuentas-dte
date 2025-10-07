@@ -80,6 +80,7 @@ type CreateInvoiceRequest struct {
 	PaymentTerms    string                         `json:"payment_terms"`
 	DueDate         *time.Time                     `json:"due_date"`
 	PointOfSaleID   string                         `json:"point_of_sale_id" binding:"required"`
+	EstablishmentID string                         `json:"establishment_id" binding:"required"`
 	Notes           *string                        `json:"notes"`
 	ContactEmail    *string                        `json:"contact_email"`
 	ContactWhatsapp *string                        `json:"contact_whatsapp"`
