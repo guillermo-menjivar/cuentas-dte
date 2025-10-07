@@ -155,6 +155,7 @@ func (h *HaciendaService) AuthenticateCompany(ctx context.Context, companyID str
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve password from vault: %v", err)
 	}
+	fmt.Println("this is the password", password)
 
 	// Make authentication request to Hacienda API
 	authResponse, err := h.authenticateWithHacienda(username, password)
@@ -185,6 +186,7 @@ func (h *HaciendaService) authenticateWithHacienda(username, password string) (*
 		strings.NewReader(formData.Encode()),
 	)
 	if err != nil {
+		fmt.Println(err)
 		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
 
@@ -218,6 +220,8 @@ func (h *HaciendaService) authenticateWithHacienda(username, password string) (*
 
 	// Verify the response status
 	if authResponse.Status != "OK" {
+		fmt.Println(authResponse.Status)
+		fmt.Println(authResponse)
 		return nil, fmt.Errorf("authentication failed: status is not OK")
 	}
 

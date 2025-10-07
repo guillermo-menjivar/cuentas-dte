@@ -8,9 +8,11 @@ import (
 
 // Invoice represents an invoice transaction
 type Invoice struct {
-	ID        string `json:"id"`
-	CompanyID string `json:"company_id"`
-	ClientID  string `json:"client_id"`
+	ID              string `json:"id"`
+	CompanyID       string `json:"company_id"`
+	EstablishmentID string `json:"establishment_id"` // ADD THIS
+	PointOfSaleID   string `json:"point_of_sale_id"`
+	ClientID        string `json:"client_id"`
 
 	// Invoice identification
 	InvoiceNumber string `json:"invoice_number"`
@@ -77,6 +79,7 @@ type CreateInvoiceRequest struct {
 	ClientID        string                         `json:"client_id" binding:"required"`
 	PaymentTerms    string                         `json:"payment_terms"`
 	DueDate         *time.Time                     `json:"due_date"`
+	PointOfSaleID   string                         `json:"point_of_sale_id" binding:"required"`
 	Notes           *string                        `json:"notes"`
 	ContactEmail    *string                        `json:"contact_email"`
 	ContactWhatsapp *string                        `json:"contact_whatsapp"`
