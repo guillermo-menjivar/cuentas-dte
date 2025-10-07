@@ -996,3 +996,42 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 
 	return finalizedInvoice, nil
 }
+
+// getInvoiceForUpdate gets an invoice with a row lock for safe concurrent updates
+func (s *InvoiceService) getInvoiceForUpdate(ctx context.Context, tx *sql.Tx, companyID, invoiceID string) (*models.Invoice, error) {
+	query := `
+		SELECT
+			id, company_id, establishment_id, point_of_sale_id, client_id,
+			invoice_number, invoice_type, status,
+			client_name, client_legal_name, client_nit, client_ncr, client_dui,
+			client_address, client_tipo_contribuyente, client_tipo_persona,
+			subtotal, total_discount, total_taxes, total,
+			currency, payment_terms, payment_method, payment_status, 
+			amount_paid, balance_due, due_date,
+			created_at
+		FROM invoices
+		WHERE id = $1 AND company_id = $2
+		FOR UPDATE
+	`
+
+	invoice := &models.Invoice{}
+	err := tx.QueryRowContext(ctx, query, invoiceID, companyID).Scan(
+		&invoice.ID, &invoice.CompanyID, &invoice.EstablishmentID, &invoice.PointOfSaleID, &invoice.ClientID,
+		&invoice.InvoiceNumber, &invoice.InvoiceType, &invoice.Status,
+		&invoice.ClientName, &invoice.ClientLegalName, &invoice.ClientNit, &invoice.ClientNcr, &invoice.ClientDui,
+		&invoice.ClientAddress, &invoice.ClientTipoContribuyente, &invoice.ClientTipoPersona,
+		&invoice.Subtotal, &invoice.TotalDiscount, &invoice.TotalTaxes, &invoice.Total,
+		&invoice.Currency, &invoice.PaymentTerms, &invoice.PaymentMethod, &invoice.PaymentStatus,
+		&invoice.AmountPaid, &invoice.BalanceDue, &invoice.DueDate,
+		&invoice.CreatedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, ErrInvoiceNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to query invoice: %w", err)
+	}
+
+	return invoice, nil
+}
