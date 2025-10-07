@@ -145,3 +145,42 @@ func (h *InvoiceHandler) DeleteInvoice(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "invoice deleted successfully"})
 }
+
+// FinalizeInvoice handles POST /v1/invoices/:id/finalize
+func (h *InvoiceHandler) FinalizeInvoice(c *gin.Context) {
+	companyID := c.GetString("company_id")
+	if companyID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id not found in context"})
+		return
+	}
+
+	invoiceID := c.Param("id")
+	if invoiceID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invoice_id is required"})
+		return
+	}
+
+	invoice, err := h.invoiceService.FinalizeInvoice(c.Request.Context(), companyID, invoiceID)
+	if err != nil {
+		if err == services.ErrInvoiceNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "invoice not found"})
+			return
+		}
+		if err == services.ErrInvoiceNotDraft {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "only draft invoices can be finalized"})
+			return
+		}
+		if err == services.ErrCreditLimitExceeded {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "credit limit exceeded"})
+			return
+		}
+		if err == services.ErrCreditSuspended {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "client credit is suspended"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, invoice)
+}
