@@ -940,7 +940,13 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 	}
 
 	// 3. Determine DTE type based on client tipo_persona
-	tipoDte := s.determineDTEType(invoice.ClientTipoPersona)
+	var tipoDte string
+	if invoice.ClientTipoPersona != nil {
+		tipoDte = s.determineDTEType(*invoice.ClientTipoPersona)
+	} else {
+		// Default to factura if tipo_persona is not set
+		tipoDte = "01"
+	}
 
 	// 4. Generate DTE identifiers
 	codigoGeneracion := s.generateCodigoGeneracion()
