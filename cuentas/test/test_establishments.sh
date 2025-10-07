@@ -19,24 +19,21 @@ fi
 
 echo -e "${BLUE}=== Establishment and POS Testing ===${NC}\n"
 
-# Get Company ID and Token (you'll need to login first)
+# Get Company ID
 read -p "Enter Company ID: " COMPANY_ID
-read -p "Enter Auth Token: " AUTH_TOKEN
 
-if [ -z "$COMPANY_ID" ] || [ -z "$AUTH_TOKEN" ]; then
-    echo -e "${RED}Company ID and Auth Token are required${NC}"
+if [ -z "$COMPANY_ID" ]; then
+    echo -e "${RED}Company ID is required${NC}"
     exit 1
 fi
 
 COMPANY_HEADER="X-Company-ID: $COMPANY_ID"
-AUTH_HEADER="Authorization: Bearer $AUTH_TOKEN"
 
 # Test 1: Create Establishment
 echo -e "${BLUE}Test 1: Creating Establishment (Casa Matriz)${NC}"
 CREATE_ESTABLISHMENT_RESPONSE=$(curl -s -X POST "$BASE_URL/establishments" \
   -H "$CONTENT_TYPE" \
   -H "$COMPANY_HEADER" \
-  -H "$AUTH_HEADER" \
   -d '{
     "tipo_establecimiento": "02",
     "nombre": "Casa Matriz - San Salvador",
@@ -65,7 +62,6 @@ echo -e "${BLUE}Test 2: Creating Establishment (Sucursal Santa Ana)${NC}"
 CREATE_SUCURSAL_RESPONSE=$(curl -s -X POST "$BASE_URL/establishments" \
   -H "$CONTENT_TYPE" \
   -H "$COMPANY_HEADER" \
-  -H "$AUTH_HEADER" \
   -d '{
     "tipo_establecimiento": "01",
     "nombre": "Sucursal Santa Ana",
@@ -91,8 +87,7 @@ fi
 # Test 3: List all establishments
 echo -e "${BLUE}Test 3: Listing all Establishments${NC}"
 LIST_ESTABLISHMENTS_RESPONSE=$(curl -s -X GET "$BASE_URL/establishments" \
-  -H "$COMPANY_HEADER" \
-  -H "$AUTH_HEADER")
+  -H "$COMPANY_HEADER")
 
 echo "$LIST_ESTABLISHMENTS_RESPONSE" | jq '.'
 ESTABLISHMENT_COUNT=$(echo "$LIST_ESTABLISHMENTS_RESPONSE" | jq '.count')
@@ -101,8 +96,7 @@ echo -e "${GREEN}✓ Found $ESTABLISHMENT_COUNT establishments${NC}\n"
 # Test 4: Get specific establishment
 echo -e "${BLUE}Test 4: Getting Establishment Details${NC}"
 GET_ESTABLISHMENT_RESPONSE=$(curl -s -X GET "$BASE_URL/establishments/$ESTABLISHMENT_ID" \
-  -H "$COMPANY_HEADER" \
-  -H "$AUTH_HEADER")
+  -H "$COMPANY_HEADER")
 
 echo "$GET_ESTABLISHMENT_RESPONSE" | jq '.'
 echo -e "${GREEN}✓ Retrieved establishment details${NC}\n"
@@ -112,7 +106,6 @@ echo -e "${BLUE}Test 5: Updating Establishment${NC}"
 UPDATE_ESTABLISHMENT_RESPONSE=$(curl -s -X PATCH "$BASE_URL/establishments/$ESTABLISHMENT_ID" \
   -H "$CONTENT_TYPE" \
   -H "$COMPANY_HEADER" \
-  -H "$AUTH_HEADER" \
   -d '{
     "telefono": "22509999",
     "cod_establecimiento_mh": "0001"
@@ -126,7 +119,6 @@ echo -e "${BLUE}Test 6: Creating Point of Sale (Fixed POS)${NC}"
 CREATE_POS_RESPONSE=$(curl -s -X POST "$BASE_URL/establishments/$ESTABLISHMENT_ID/pos" \
   -H "$CONTENT_TYPE" \
   -H "$COMPANY_HEADER" \
-  -H "$AUTH_HEADER" \
   -d '{
     "nombre": "Caja Principal 1",
     "cod_punto_venta_mh": "0001",
@@ -150,7 +142,6 @@ echo -e "${BLUE}Test 7: Creating Portable Point of Sale (with GPS)${NC}"
 CREATE_PORTABLE_POS_RESPONSE=$(curl -s -X POST "$BASE_URL/establishments/$ESTABLISHMENT_ID/pos" \
   -H "$CONTENT_TYPE" \
   -H "$COMPANY_HEADER" \
-  -H "$AUTH_HEADER" \
   -d '{
     "nombre": "Food Truck - Mobile POS",
     "cod_punto_venta_mh": "0002",
@@ -174,8 +165,7 @@ fi
 # Test 8: List all POS for establishment
 echo -e "${BLUE}Test 8: Listing all Points of Sale for Establishment${NC}"
 LIST_POS_RESPONSE=$(curl -s -X GET "$BASE_URL/establishments/$ESTABLISHMENT_ID/pos" \
-  -H "$COMPANY_HEADER" \
-  -H "$AUTH_HEADER")
+  -H "$COMPANY_HEADER")
 
 echo "$LIST_POS_RESPONSE" | jq '.'
 POS_COUNT=$(echo "$LIST_POS_RESPONSE" | jq '.count')
@@ -184,8 +174,7 @@ echo -e "${GREEN}✓ Found $POS_COUNT points of sale${NC}\n"
 # Test 9: Get specific POS
 echo -e "${BLUE}Test 9: Getting Point of Sale Details${NC}"
 GET_POS_RESPONSE=$(curl -s -X GET "$BASE_URL/pos/$POS_ID" \
-  -H "$COMPANY_HEADER" \
-  -H "$AUTH_HEADER")
+  -H "$COMPANY_HEADER")
 
 echo "$GET_POS_RESPONSE" | jq '.'
 echo -e "${GREEN}✓ Retrieved POS details${NC}\n"
@@ -196,7 +185,6 @@ if [ "$PORTABLE_POS_ID" != "null" ] && [ -n "$PORTABLE_POS_ID" ]; then
     UPDATE_LOCATION_RESPONSE=$(curl -s -X PATCH "$BASE_URL/pos/$PORTABLE_POS_ID/location" \
       -H "$CONTENT_TYPE" \
       -H "$COMPANY_HEADER" \
-      -H "$AUTH_HEADER" \
       -d '{
         "latitude": 13.7001,
         "longitude": -89.1925
@@ -211,7 +199,6 @@ echo -e "${BLUE}Test 11: Updating Point of Sale${NC}"
 UPDATE_POS_RESPONSE=$(curl -s -X PATCH "$BASE_URL/pos/$POS_ID" \
   -H "$CONTENT_TYPE" \
   -H "$COMPANY_HEADER" \
-  -H "$AUTH_HEADER" \
   -d '{
     "nombre": "Caja Principal 1 - Actualizada",
     "cod_punto_venta_mh": "0001"
@@ -223,8 +210,7 @@ echo -e "${GREEN}✓ POS updated${NC}\n"
 # Test 12: List only active establishments
 echo -e "${BLUE}Test 12: Listing Active Establishments Only${NC}"
 LIST_ACTIVE_RESPONSE=$(curl -s -X GET "$BASE_URL/establishments?active_only=true" \
-  -H "$COMPANY_HEADER" \
-  -H "$AUTH_HEADER")
+  -H "$COMPANY_HEADER")
 
 echo "$LIST_ACTIVE_RESPONSE" | jq '.'
 echo -e "${GREEN}✓ Retrieved active establishments${NC}\n"
@@ -247,25 +233,21 @@ if [ "$CLEANUP" = "y" ]; then
     echo -e "${BLUE}Deactivating test POS...${NC}"
     
     curl -s -X DELETE "$BASE_URL/pos/$POS_ID" \
-      -H "$COMPANY_HEADER" \
-      -H "$AUTH_HEADER" | jq '.'
+      -H "$COMPANY_HEADER" | jq '.'
     
     if [ "$PORTABLE_POS_ID" != "null" ]; then
         curl -s -X DELETE "$BASE_URL/pos/$PORTABLE_POS_ID" \
-          -H "$COMPANY_HEADER" \
-          -H "$AUTH_HEADER" | jq '.'
+          -H "$COMPANY_HEADER" | jq '.'
     fi
     
     echo -e "${BLUE}Deactivating test establishments...${NC}"
     
     curl -s -X DELETE "$BASE_URL/establishments/$ESTABLISHMENT_ID" \
-      -H "$COMPANY_HEADER" \
-      -H "$AUTH_HEADER" | jq '.'
+      -H "$COMPANY_HEADER" | jq '.'
     
     if [ "$SUCURSAL_ID" != "null" ]; then
         curl -s -X DELETE "$BASE_URL/establishments/$SUCURSAL_ID" \
-          -H "$COMPANY_HEADER" \
-          -H "$AUTH_HEADER" | jq '.'
+          -H "$COMPANY_HEADER" | jq '.'
     fi
     
     echo -e "${GREEN}✓ Test data deactivated${NC}"
