@@ -45,6 +45,7 @@ REQUEST_BODY=$(cat <<EOF
     "client_id": "$CLIENT_ID",
     "payment_terms": "cash",
     "notes": "Test invoice created from script",
+    "payment_method": "01",
     "contact_email": "test@example.com",
     "contact_whatsapp": "+50312345678",
     "line_items": $LINE_ITEMS
