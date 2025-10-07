@@ -18,27 +18,30 @@ func NewInvoiceService() *InvoiceService {
 	return &InvoiceService{}
 }
 
-func (s *InvoiceService) validatePointOfSale(ctx context.Context, tx *sql.Tx, companyID, posID string) (string, error) {
+func (s *InvoiceService) validatePointOfSale(ctx context.Context, tx *sql.Tx, companyID, establishmentID, posID string) error {
 	query := `
-		SELECT pos.id, e.id as establishment_id
+		SELECT pos.id
 		FROM point_of_sale pos
 		JOIN establishments e ON pos.establishment_id = e.id
-		WHERE pos.id = $1 AND e.company_id = $2 AND pos.active = true AND e.active = true
+		WHERE pos.id = $1 
+			AND e.id = $2 
+			AND e.company_id = $3 
+			AND pos.active = true 
+			AND e.active = true
 	`
 
-	var id, establishmentID string
-	err := tx.QueryRowContext(ctx, query, posID, companyID).Scan(&id, &establishmentID)
+	var id string
+	err := tx.QueryRowContext(ctx, query, posID, establishmentID, companyID).Scan(&id)
 	if err == sql.ErrNoRows {
-		return "", ErrPointOfSaleNotFound
+		return ErrPointOfSaleNotFound
 	}
 	if err != nil {
-		return "", fmt.Errorf("failed to validate point of sale: %w", err)
+		return fmt.Errorf("failed to validate point of sale: %w", err)
 	}
 
-	return establishmentID, nil
+	return nil
 }
 
-// Update CreateInvoice function
 func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, req *models.CreateInvoiceRequest) (*models.Invoice, error) {
 	// Validate request
 	if err := req.Validate(); err != nil {
@@ -52,9 +55,8 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 	}
 	defer tx.Rollback()
 
-	// 1. Validate POS exists and belongs to company, get establishment_id
-	establishmentID, err := s.validatePointOfSale(ctx, tx, companyID, req.PointOfSaleID)
-	if err != nil {
+	// 1. Validate establishment and POS belong together and to company
+	if err := s.validatePointOfSale(ctx, tx, companyID, req.EstablishmentID, req.PointOfSaleID); err != nil {
 		return nil, err
 	}
 
@@ -64,7 +66,7 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 		return nil, err
 	}
 
-	// 3. Generate invoice number (now needs POS)
+	// 3. Generate invoice number
 	invoiceNumber, err := s.generateInvoiceNumber(ctx, tx, req.PointOfSaleID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate invoice number: %w", err)
@@ -93,7 +95,128 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 	// 6. Create invoice record
 	invoice := &models.Invoice{
 		CompanyID:               companyID,
-		EstablishmentID:         establishmentID, // ADD THIS
+		EstablishmentID:         req.EstablishmentID,
+		PointOfSaleID:           req.PointOfSaleID,
+		ClientID:                req.ClientID,
+		InvoiceNumber:           invoiceNumber,
+		InvoiceType:             "sale",
+		ClientName:              client.ClientName,
+		ClientLegalName:         client.ClientLegalName,
+		ClientNit:               client.ClientNit,
+		ClientNcr:               client.ClientNcr,
+		ClientDui:               client.ClientDui,
+		ClientAddress:           client.ClientAddress,
+		ClientTipoContribuyente: client.ClientTipoContribuyente,
+		ClientTipoPersona:       client.ClientTipoPersona,
+		Subtotal:                subtotal,
+		TotalDiscount:           totalDiscount,
+		TotalTaxes:              totalTaxes,
+		Total:                   total,
+		Currency:                "USD",
+		PaymentTerms:            req.PaymentTerms,
+		PaymentStatus:           "unpaid",
+		AmountPaid:              0,
+		BalanceDue:              total,
+		DueDate:                 dueDate,
+		Status:                  "draft",
+		Notes:                   req.Notes,
+		ContactEmail:            req.ContactEmail,
+		ContactWhatsapp:         req.ContactWhatsapp,
+		CreatedAt:               time.Now(),
+	}
+
+	// 7. Insert invoice
+	invoiceID, err := s.insertInvoice(ctx, tx, invoice)
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert invoice: %w", err)
+	}
+	invoice.ID = invoiceID
+
+	// 8. Insert line items and taxes
+	for i := range lineItems {
+		lineItems[i].InvoiceID = invoiceID
+		lineItems[i].LineNumber = i + 1
+
+		lineItemID, err := s.insertLineItem(ctx, tx, &lineItems[i])
+		if err != nil {
+			return nil, fmt.Errorf("failed to insert line item %d: %w", i+1, err)
+		}
+		lineItems[i].ID = lineItemID
+
+		// Insert taxes for this line item
+		for j := range lineItems[i].Taxes {
+			lineItems[i].Taxes[j].LineItemID = lineItemID
+			if err := s.insertLineItemTax(ctx, tx, &lineItems[i].Taxes[j]); err != nil {
+				return nil, fmt.Errorf("failed to insert tax for line item %d: %w", i+1, err)
+			}
+		}
+	}
+
+	// 9. Commit transaction
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	// 10. Attach line items to invoice
+	invoice.LineItems = lineItems
+
+	return invoice, nil
+}
+
+func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, req *models.CreateInvoiceRequest) (*models.Invoice, error) {
+	// Validate request
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
+	// Begin transaction
+	tx, err := database.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// 1. Validate establishment and POS belong together and to company
+	if err := s.validatePointOfSale(ctx, tx, companyID, req.EstablishmentID, req.PointOfSaleID); err != nil {
+		return nil, err
+	}
+
+	// 2. Snapshot client data
+	client, err := s.snapshotClient(ctx, tx, companyID, req.ClientID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. Generate invoice number
+	invoiceNumber, err := s.generateInvoiceNumber(ctx, tx, req.PointOfSaleID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate invoice number: %w", err)
+	}
+
+	// 4. Process line items and calculate totals
+	lineItems, subtotal, totalDiscount, totalTaxes, err := s.processLineItems(ctx, tx, companyID, req.LineItems)
+	if err != nil {
+		return nil, err
+	}
+
+	total := round(subtotal - totalDiscount + totalTaxes)
+
+	// 5. Calculate due date if needed
+	var dueDate *time.Time
+	if req.DueDate != nil {
+		dueDate = req.DueDate
+	} else if req.PaymentTerms == "net_30" {
+		date := time.Now().AddDate(0, 0, 30)
+		dueDate = &date
+	} else if req.PaymentTerms == "net_60" {
+		date := time.Now().AddDate(0, 0, 60)
+		dueDate = &date
+	}
+
+	// 6. Create invoice record
+	invoice := &models.Invoice{
+		CompanyID:               companyID,
+		EstablishmentID:         req.EstablishmentID,
 		PointOfSaleID:           req.PointOfSaleID,
 		ClientID:                req.ClientID,
 		InvoiceNumber:           invoiceNumber,
