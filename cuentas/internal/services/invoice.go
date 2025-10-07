@@ -5,7 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
+	"strings"
 	"time"
+
+	"github.com/google/uuid"
 
 	"cuentas/internal/codigos"
 	"cuentas/internal/database"
@@ -788,4 +791,37 @@ func (s *InvoiceService) determineDTEType(tipoPersona string) string {
 		return "03" // CCF for businesses
 	}
 	return "01" // Factura for individuals (default)
+}
+
+func (s *InvoiceService) generateCodigoGeneracion() string {
+	return strings.ToUpper(uuid.New().String())
+}
+
+func (s *InvoiceService) generateNumeroControl(ctx context.Context, tx *sql.Tx, posID, tipoDte string) (string, error) {
+	// Get establishment and POS codes
+	query := `
+		SELECT 
+			COALESCE(e.cod_establecimiento_mh, '0000'),
+			COALESCE(pos.cod_punto_venta_mh, '0001')
+		FROM point_of_sale pos
+		JOIN establishments e ON pos.establishment_id = e.id
+		WHERE pos.id = $1
+	`
+
+	var codEstable, codPuntoVenta string
+	err := tx.QueryRowContext(ctx, query, posID).Scan(&codEstable, &codPuntoVenta)
+	if err != nil {
+		return "", fmt.Errorf("failed to get establishment codes: %w", err)
+	}
+
+	// Get next sequence for this POS and tipoDte
+	sequence, err := s.getAndIncrementDTESequence(ctx, tx, posID, tipoDte)
+	if err != nil {
+		return "", err
+	}
+
+	// Format: DTE-{tipo}-{8chars}-{15digits}
+	numeroControl := fmt.Sprintf("DTE-%s-%s%s-%015d", tipoDte, codEstable, codPuntoVenta, sequence)
+
+	return numeroControl, nil
 }
