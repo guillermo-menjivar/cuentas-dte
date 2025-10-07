@@ -113,6 +113,7 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 		TotalTaxes:              totalTaxes,
 		Total:                   total,
 		Currency:                "USD",
+		PaymentMethod:           req.PaymentMethod,
 		PaymentTerms:            req.PaymentTerms,
 		PaymentStatus:           "unpaid",
 		AmountPaid:              0,
@@ -623,7 +624,7 @@ func (s *InvoiceService) insertInvoice(ctx context.Context, tx *sql.Tx, invoice 
 			client_name, client_legal_name, client_nit, client_ncr, client_dui,
 			client_address, client_tipo_contribuyente, client_tipo_persona,
 			subtotal, total_discount, total_taxes, total,
-			currency, payment_terms, payment_status, amount_paid, balance_due, due_date,
+			currency, payment_terms, payment_method, payment_status, amount_paid, balance_due, due_date,
 			status, notes, contact_email, contact_whatsapp, created_at
 		) VALUES (
 			$1, $2, $3, $4, $5, $6,
@@ -631,7 +632,7 @@ func (s *InvoiceService) insertInvoice(ctx context.Context, tx *sql.Tx, invoice 
 			$12, $13, $14,
 			$15, $16, $17, $18,
 			$19, $20, $21, $22, $23, $24,
-			$25, $26, $27, $28, $29
+			$25, $26, $27, $28, $29, $30
 		) RETURNING id
 	`
 
@@ -641,7 +642,7 @@ func (s *InvoiceService) insertInvoice(ctx context.Context, tx *sql.Tx, invoice 
 		invoice.ClientName, invoice.ClientLegalName, invoice.ClientNit, invoice.ClientNcr, invoice.ClientDui,
 		invoice.ClientAddress, invoice.ClientTipoContribuyente, invoice.ClientTipoPersona,
 		invoice.Subtotal, invoice.TotalDiscount, invoice.TotalTaxes, invoice.Total,
-		invoice.Currency, invoice.PaymentTerms, invoice.PaymentStatus, invoice.AmountPaid, invoice.BalanceDue, invoice.DueDate,
+		invoice.Currency, invoice.PaymentTerms, invoice.PaymentMethod, invoice.PaymentStatus, invoice.AmountPaid, invoice.BalanceDue, invoice.DueDate,
 		invoice.Status, invoice.Notes, invoice.ContactEmail, invoice.ContactWhatsapp, invoice.CreatedAt,
 	).Scan(&id)
 
@@ -663,7 +664,7 @@ func (s *InvoiceService) getInvoiceHeader(ctx context.Context, companyID, invoic
 			client_address, client_tipo_contribuyente, client_tipo_persona,
 			subtotal, total_discount, total_taxes, total,
 			currency,
-			payment_terms, payment_status, amount_paid, balance_due, due_date,
+			payment_terms, payment_method, payment_status, amount_paid, balance_due, due_date,
 			status,
 			dte_codigo_generacion, dte_numero_control, dte_status, dte_hacienda_response, dte_submitted_at,
 			created_at, finalized_at, voided_at,
@@ -682,7 +683,7 @@ func (s *InvoiceService) getInvoiceHeader(ctx context.Context, companyID, invoic
 		&invoice.ClientAddress, &invoice.ClientTipoContribuyente, &invoice.ClientTipoPersona,
 		&invoice.Subtotal, &invoice.TotalDiscount, &invoice.TotalTaxes, &invoice.Total,
 		&invoice.Currency,
-		&invoice.PaymentTerms, &invoice.PaymentStatus, &invoice.AmountPaid, &invoice.BalanceDue, &invoice.DueDate,
+		&invoice.PaymentTerms, &invoice.PaymentMethod, &invoice.PaymentStatus, &invoice.AmountPaid, &invoice.BalanceDue, &invoice.DueDate,
 		&invoice.Status,
 		&invoice.DteCodigoGeneracion, &invoice.DteNumeroControl, &invoice.DteStatus, &invoice.DteHaciendaResponse, &invoice.DteSubmittedAt,
 		&invoice.CreatedAt, &invoice.FinalizedAt, &invoice.VoidedAt,
@@ -708,7 +709,7 @@ func (s *InvoiceService) ListInvoices(ctx context.Context, companyID string, fil
 			invoice_number, invoice_type,
 			client_name, client_legal_name,
 			subtotal, total_discount, total_taxes, total,
-			payment_terms, payment_status, amount_paid, balance_due, due_date,
+			payment_terms, payment_method, payment_status, amount_paid, balance_due, due_date,
 			status,
 			created_at, finalized_at,
 			notes
@@ -768,7 +769,7 @@ func (s *InvoiceService) ListInvoices(ctx context.Context, companyID string, fil
 			&inv.InvoiceNumber, &inv.InvoiceType,
 			&inv.ClientName, &inv.ClientLegalName,
 			&inv.Subtotal, &inv.TotalDiscount, &inv.TotalTaxes, &inv.Total,
-			&inv.PaymentTerms, &inv.PaymentStatus, &inv.AmountPaid, &inv.BalanceDue, &inv.DueDate,
+			&inv.PaymentTerms, &inv.PaymentMethod, &inv.PaymentStatus, &inv.AmountPaid, &inv.BalanceDue, &inv.DueDate,
 			&inv.Status,
 			&inv.CreatedAt, &inv.FinalizedAt,
 			&inv.Notes,
