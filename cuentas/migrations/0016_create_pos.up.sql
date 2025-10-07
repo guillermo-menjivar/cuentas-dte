@@ -14,5 +14,3 @@ CREATE TABLE point_of_sale (
 
 CREATE INDEX idx_pos_establishment ON point_of_sale(establishment_id);
 CREATE INDEX idx_pos_active ON point_of_sale(establishment_id, active);
-CREATE INDEX idx_pos_location ON point_of_sale USING gist(ll_to_earth(latitude, longitude)) 
-    WHERE latitude IS NOT NULL AND longitude IS NOT NULL;  -- For proximity queries if needed
