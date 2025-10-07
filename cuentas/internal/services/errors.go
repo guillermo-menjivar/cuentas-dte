@@ -12,4 +12,5 @@ var (
 	ErrInsufficientPayment   = errors.New("payment amount exceeds balance due")
 	ErrCreditLimitExceeded   = errors.New("client credit limit exceeded")
 	ErrInvalidInvoiceStatus  = errors.New("invalid invoice status for this operation")
+	ErrPointOfSaleNotFound   = errors.New("POS not found")
 )
