@@ -913,3 +913,86 @@ func (s *InvoiceService) updateClientBalance(ctx context.Context, tx *sql.Tx, cl
 	_, err := tx.ExecContext(ctx, query, amount, clientID)
 	return err
 }
+
+func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoiceID string) (*models.Invoice, error) {
+	// Begin transaction
+	tx, err := database.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// 1. Get invoice and verify it's a draft (with row lock)
+	invoice, err := s.getInvoiceForUpdate(ctx, tx, companyID, invoiceID)
+	if err != nil {
+		return nil, err
+	}
+
+	if invoice.Status != "draft" {
+		return nil, ErrInvoiceNotDraft
+	}
+
+	// 2. Check credit limit if credit transaction
+	if invoice.PaymentTerms == "cuenta" || invoice.PaymentTerms == "net_30" || invoice.PaymentTerms == "net_60" {
+		if err := s.checkCreditLimit(ctx, tx, invoice.ClientID, invoice.Total); err != nil {
+			return nil, err
+		}
+	}
+
+	// 3. Determine DTE type based on client tipo_persona
+	tipoDte := s.determineDTEType(invoice.ClientTipoPersona)
+
+	// 4. Generate DTE identifiers
+	codigoGeneracion := s.generateCodigoGeneracion()
+	numeroControl, err := s.generateNumeroControl(ctx, tx, invoice.PointOfSaleID, tipoDte)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate numero control: %w", err)
+	}
+
+	// 5. Update invoice to finalized
+	now := time.Now()
+	placeholderUserID := "00000000-0000-0000-0000-000000000000"
+
+	updateQuery := `
+		UPDATE invoices
+		SET status = 'finalized',
+		    dte_codigo_generacion = $1,
+		    dte_numero_control = $2,
+		    dte_status = 'not_submitted',
+		    finalized_at = $3,
+		    created_by = $4
+		WHERE id = $5 AND company_id = $6
+	`
+
+	_, err = tx.ExecContext(ctx, updateQuery,
+		codigoGeneracion,
+		numeroControl,
+		now,
+		placeholderUserID,
+		invoiceID,
+		companyID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update invoice: %w", err)
+	}
+
+	// 6. Update client balance if credit
+	if invoice.PaymentTerms == "cuenta" || invoice.PaymentTerms == "net_30" || invoice.PaymentTerms == "net_60" {
+		if err := s.updateClientBalance(ctx, tx, invoice.ClientID, invoice.Total); err != nil {
+			return nil, fmt.Errorf("failed to update client balance: %w", err)
+		}
+	}
+
+	// 7. Commit transaction
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	// 8. Get and return the finalized invoice
+	finalizedInvoice, err := s.GetInvoice(ctx, companyID, invoiceID)
+	if err != nil {
+		return nil, err
+	}
+
+	return finalizedInvoice, nil
+}
