@@ -55,11 +55,11 @@ type Invoice struct {
 	Status string `json:"status"`
 
 	// DTE tracking
-	DteCodigoGeneracion *string                `json:"dte_codigo_generacion,omitempty"`
-	DteNumeroControl    *string                `json:"dte_numero_control,omitempty"`
-	DteStatus           *string                `json:"dte_status,omitempty"`
-	DteHaciendaResponse map[string]interface{} `json:"dte_hacienda_response,omitempty"`
-	DteSubmittedAt      *time.Time             `json:"dte_submitted_at,omitempty"`
+	DteCodigoGeneracion *string    `json:"dte_codigo_generacion,omitempty"`
+	DteNumeroControl    *string    `json:"dte_numero_control,omitempty"`
+	DteStatus           *string    `json:"dte_status,omitempty"`
+	DteHaciendaResponse *string    `json:"dte_hacienda_response,omitempty"`
+	DteSubmittedAt      *time.Time `json:"dte_submitted_at,omitempty"`
 
 	// Timestamps
 	CreatedAt   time.Time  `json:"created_at"`
