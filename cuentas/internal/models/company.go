@@ -9,19 +9,22 @@ import (
 
 // Company represents a company in the system
 type Company struct {
-	ID             string    `json:"id"`
-	Name           string    `json:"name"`
-	NIT            int64     `json:"-"`   // Store as int, don't expose directly
-	NITFormatted   string    `json:"nit"` // Expose formatted version
-	NCR            int64     `json:"-"`   // Store as int, don't expose directly
-	NCRFormatted   string    `json:"ncr"` // Expose formatted version
-	HCUsername     string    `json:"hc_username"`
-	HCPasswordRef  string    `json:"-"` // Never expose in JSON
-	LastActivityAt time.Time `json:"last_activity_at"`
-	Email          string    `json:"email"`
-	Active         bool      `json:"active"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	ID              string    `json:"id"`
+	Name            string    `json:"name"`
+	CodActividad    string    `json:"cod_actividad" binding:"required"` // NEW
+	NombreComercial *string   `json:"nombre_comercial"`                 // NEW: Optional
+	DTEAmbiente     string    `json:"dte_ambiente" binding:"required"`
+	NIT             int64     `json:"-"`   // Store as int, don't expose directly
+	NITFormatted    string    `json:"nit"` // Expose formatted version
+	NCR             int64     `json:"-"`   // Store as int, don't expose directly
+	NCRFormatted    string    `json:"ncr"` // Expose formatted version
+	HCUsername      string    `json:"hc_username"`
+	HCPasswordRef   string    `json:"-"` // Never expose in JSON
+	LastActivityAt  time.Time `json:"last_activity_at"`
+	Email           string    `json:"email"`
+	Active          bool      `json:"active"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 // CreateCompanyRequest represents the request to create a company
