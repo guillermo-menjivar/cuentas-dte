@@ -712,8 +712,9 @@ func (s *InvoiceService) ListInvoices(ctx context.Context, companyID string, fil
 			invoice_number, invoice_type,
 			client_name, client_legal_name,
 			subtotal, total_discount, total_taxes, total,
-			payment_terms, payment_method, payment_status, amount_paid, balance_due, due_date,
+			payment_terms, payment_status, amount_paid, balance_due, due_date,
 			status,
+			dte_status, dte_codigo_generacion, dte_numero_control,
 			created_at, finalized_at,
 			notes
 		FROM invoices
@@ -742,18 +743,23 @@ func (s *InvoiceService) ListInvoices(ctx context.Context, companyID string, fil
 		args = append(args, paymentStatus)
 	}
 
-	// ADD: Filter by establishment
 	if establishmentID, ok := filters["establishment_id"].(string); ok && establishmentID != "" {
 		argCount++
 		query += fmt.Sprintf(" AND establishment_id = $%d", argCount)
 		args = append(args, establishmentID)
 	}
 
-	// ADD: Filter by POS
 	if posID, ok := filters["point_of_sale_id"].(string); ok && posID != "" {
 		argCount++
 		query += fmt.Sprintf(" AND point_of_sale_id = $%d", argCount)
 		args = append(args, posID)
+	}
+
+	// ADD: Filter by DTE status
+	if dteStatus, ok := filters["dte_status"].(string); ok && dteStatus != "" {
+		argCount++
+		query += fmt.Sprintf(" AND dte_status = $%d", argCount)
+		args = append(args, dteStatus)
 	}
 
 	query += " ORDER BY created_at DESC"
@@ -772,8 +778,9 @@ func (s *InvoiceService) ListInvoices(ctx context.Context, companyID string, fil
 			&inv.InvoiceNumber, &inv.InvoiceType,
 			&inv.ClientName, &inv.ClientLegalName,
 			&inv.Subtotal, &inv.TotalDiscount, &inv.TotalTaxes, &inv.Total,
-			&inv.PaymentTerms, &inv.PaymentMethod, &inv.PaymentStatus, &inv.AmountPaid, &inv.BalanceDue, &inv.DueDate,
+			&inv.PaymentTerms, &inv.PaymentStatus, &inv.AmountPaid, &inv.BalanceDue, &inv.DueDate,
 			&inv.Status,
+			&inv.DteStatus, &inv.DteCodigoGeneracion, &inv.DteNumeroControl,
 			&inv.CreatedAt, &inv.FinalizedAt,
 			&inv.Notes,
 		)
