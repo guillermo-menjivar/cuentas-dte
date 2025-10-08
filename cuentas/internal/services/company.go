@@ -3,9 +3,11 @@ package services
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 
+	"cuentas/internal/codigos"
 	"cuentas/internal/models"
 	"cuentas/internal/tools"
 
@@ -65,6 +67,14 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req *models.CreateCo
 		}
 		return nil, fmt.Errorf("failed to insert company: %v", err)
 	}
+	descActividad, exists := codigos.GetEconomicActivityName(req.CodActividad)
+	if !exists {
+		return nil, errors.New("invalid economic activity code")
+	}
+
+	// Store both in database
+	company.CodActividad = req.CodActividad
+	company.DescActividad = descActividad
 
 	return company, nil
 }
