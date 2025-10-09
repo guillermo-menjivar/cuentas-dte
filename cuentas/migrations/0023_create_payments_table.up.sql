@@ -20,7 +20,6 @@ CREATE TABLE payments (
 
 -- Indexes for fast queries
 CREATE INDEX idx_payments_company ON payments(company_id);
-CREATE INDEX idx_payments_date ON payments(payment_date);
 CREATE INDEX idx_payments_method ON payments(payment_method);
 
 -- Add comments for documentation
