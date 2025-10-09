@@ -9,32 +9,40 @@ import (
 
 // Company represents a company in the system
 type Company struct {
-	ID              string    `json:"id"`
-	Name            string    `json:"name"`
-	CodActividad    string    `json:"cod_actividad" binding:"required"` // NEW
-	NombreComercial *string   `json:"nombre_comercial"`                 // NEW: Optional
-	DTEAmbiente     string    `json:"dte_ambiente" binding:"required"`
-	NIT             int64     `json:"-"`   // Store as int, don't expose directly
-	NITFormatted    string    `json:"nit"` // Expose formatted version
-	NCR             int64     `json:"-"`   // Store as int, don't expose directly
-	NCRFormatted    string    `json:"ncr"` // Expose formatted version
-	HCUsername      string    `json:"hc_username"`
-	HCPasswordRef   string    `json:"-"` // Never expose in JSON
-	LastActivityAt  time.Time `json:"last_activity_at"`
-	Email           string    `json:"email"`
-	Active          bool      `json:"active"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	ID                  string    `json:"id"`
+	Name                string    `json:"name"`
+	CodActividad        string    `json:"cod_actividad" binding:"required"` // NEW
+	NombreComercial     *string   `json:"nombre_comercial"`                 // NEW: Optional
+	DTEAmbiente         string    `json:"dte_ambiente" binding:"required"`
+	NIT                 int64     `json:"-"`   // Store as int, don't expose directly
+	NITFormatted        string    `json:"nit"` // Expose formatted version
+	NCR                 int64     `json:"-"`   // Store as int, don't expose directly
+	NCRFormatted        string    `json:"ncr"` // Expose formatted version
+	HCUsername          string    `json:"hc_username"`
+	DescActividad       string    `json:"desc_actividad"`
+	HCPasswordRef       string    `json:"-"` // Never expose in JSON
+	LastActivityAt      time.Time `json:"last_activity_at"`
+	FirmadorUsername    string    `json:"firmador_username"` // NEW
+	FirmadorPasswordRef string    `json:"-"`
+	Email               string    `json:"email"`
+	Active              bool      `json:"active"`
+	CreatedAt           time.Time `json:"created_at"`
+	UpdatedAt           time.Time `json:"updated_at"`
 }
 
 // CreateCompanyRequest represents the request to create a company
 type CreateCompanyRequest struct {
-	Name       string `json:"name" binding:"required"`
-	NIT        string `json:"nit" binding:"required"` // Accept as string with dashes
-	NCR        string `json:"ncr" binding:"required"` // Accept as string with dashes
-	HCUsername string `json:"hc_username" binding:"required"`
-	HCPassword string `json:"hc_password" binding:"required"`
-	Email      string `json:"email" binding:"required"`
+	Name             string  `json:"name" binding:"required"`
+	NIT              string  `json:"nit" binding:"required"` // Accept as string with dashes
+	NCR              string  `json:"ncr" binding:"required"` // Accept as string with dashes
+	HCUsername       string  `json:"hc_username" binding:"required"`
+	HCPassword       string  `json:"hc_password" binding:"required"`
+	Email            string  `json:"email" binding:"required"`
+	CodActividad     string  `json:"cod_actividad" binding:"required"`
+	NombreComercial  *string `json:"nombre_comercial"`
+	DTEAmbiente      string  `json:"dte_ambiente" binding:"required"`
+	FirmadorUsername string  `json:"firmador_username" binding:"required"` // NEW
+	FirmadorPassword string  `json:"firmador_password" binding:"required"`
 }
 
 // Validate validates the create company request
