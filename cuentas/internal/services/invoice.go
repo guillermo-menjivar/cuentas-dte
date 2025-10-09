@@ -921,7 +921,8 @@ func (s *InvoiceService) updateClientBalance(ctx context.Context, tx *sql.Tx, cl
 	return err
 }
 
-func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoiceID string) (*models.Invoice, error) {
+func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoiceID, userID string, payment *models.CreatePaymentRequest) (*models.Invoice, error) {
+
 	// Begin transaction
 	tx, err := database.DB.BeginTx(ctx, nil)
 	if err != nil {
