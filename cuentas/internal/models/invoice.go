@@ -129,3 +129,23 @@ func (r *CreateInvoiceRequest) Validate() error {
 
 	return nil
 }
+
+// FinalizeInvoiceRequest represents payment info required when finalizing
+type FinalizeInvoiceRequest struct {
+	Payment CreatePaymentRequest `json:"payment" binding:"required"`
+}
+
+// Validate validates the finalize invoice request
+func (r *FinalizeInvoiceRequest) Validate(invoiceTotal float64) error {
+	// Validate the payment itself
+	if err := r.Payment.Validate(); err != nil {
+		return err
+	}
+
+	// Validate amount doesn't exceed invoice total
+	if r.Payment.Amount > invoiceTotal {
+		return fmt.Errorf("payment amount (%.2f) cannot exceed invoice total (%.2f)", r.Payment.Amount, invoiceTotal)
+	}
+
+	return nil
+}

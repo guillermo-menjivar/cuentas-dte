@@ -1,24 +1,22 @@
 package models
 
 import (
+	"cuentas/internal/codigos"
 	"fmt"
 	"time"
 )
 
 // InvoicePayment represents a payment made against an invoice
 type InvoicePayment struct {
-	ID        string `json:"id"`
-	InvoiceID string `json:"invoice_id"`
-
-	PaymentDate   time.Time `json:"payment_date"`
-	PaymentMethod string    `json:"payment_method"`
-	Amount        float64   `json:"amount"`
-
-	ReferenceNumber *string `json:"reference_number,omitempty"`
-	Notes           *string `json:"notes,omitempty"`
-
-	CreatedBy *string   `json:"created_by,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
+	ID              string    `json:"id"`
+	InvoiceID       string    `json:"invoice_id"`
+	PaymentDate     time.Time `json:"payment_date"`
+	PaymentMethod   string    `json:"payment_method"`
+	Amount          float64   `json:"amount"`
+	ReferenceNumber *string   `json:"reference_number,omitempty"`
+	Notes           *string   `json:"notes,omitempty"`
+	CreatedBy       *string   `json:"created_by,omitempty"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 // CreatePaymentRequest represents a request to record a payment
@@ -36,16 +34,9 @@ func (r *CreatePaymentRequest) Validate() error {
 		return fmt.Errorf("amount must be greater than 0")
 	}
 
-	validMethods := []string{"cash", "card", "transfer", "check", "other"}
-	found := false
-	for _, method := range validMethods {
-		if r.PaymentMethod == method {
-			found = true
-			break
-		}
-	}
-	if !found {
-		return fmt.Errorf("invalid payment_method: must be one of %v", validMethods)
+	// Validate payment method against cat_012
+	if !codigos.IsValidPaymentMethod(r.PaymentMethod) {
+		return fmt.Errorf("invalid payment_method: must be a valid cat_012 code")
 	}
 
 	// Default payment date to now if not provided

@@ -160,7 +160,35 @@ func (h *InvoiceHandler) FinalizeInvoice(c *gin.Context) {
 		return
 	}
 
-	invoice, err := h.invoiceService.FinalizeInvoice(c.Request.Context(), companyID, invoiceID)
+	// Parse request body with payment info
+	var req models.FinalizeInvoiceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Get the invoice first to validate payment amount
+	existingInvoice, err := h.invoiceService.GetInvoice(c.Request.Context(), companyID, invoiceID)
+	if err != nil {
+		if err == services.ErrInvoiceNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "invoice not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate payment against invoice total
+	if err := req.Validate(existingInvoice.Total); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// TODO: Get user ID from auth context when auth is implemented
+	userID := "00000000-0000-0000-0000-000000000000" // Placeholder
+
+	// Finalize invoice with payment info
+	invoice, err := h.invoiceService.FinalizeInvoice(c.Request.Context(), companyID, invoiceID, userID, &req.Payment)
 	if err != nil {
 		if err == services.ErrInvoiceNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "invoice not found"})
