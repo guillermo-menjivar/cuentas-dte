@@ -35,7 +35,7 @@ REQUEST_BODY=$(cat <<EOF
 {
   "payment": {
     "amount": $PAYMENT_AMOUNT,
-    "method": "$PAYMENT_METHOD",
+    "payment_method": "$PAYMENT_METHOD",
     "reference": "TEST-PAYMENT-001"
   }
 }
