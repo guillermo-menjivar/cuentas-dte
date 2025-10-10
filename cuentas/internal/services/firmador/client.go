@@ -19,6 +19,8 @@ import (
 type Client struct {
 	baseURL    string
 	httpClient *retryablehttp.Client
+	nit        string
+	password   string
 }
 
 // SignRequest represents the request payload for the firmador service
@@ -52,6 +54,18 @@ type Config struct {
 	Backoff      retryablehttp.Backoff
 }
 
+// FirmadorError represents a structured error from the firmador service
+type FirmadorError struct {
+	Type      string // "network", "auth", "validation", "server"
+	Code      string // e.g., "ECONNREFUSED", "401", "INVALID_DTE"
+	Message   string // Human-readable message
+	Timestamp time.Time
+}
+
+func (e *FirmadorError) Error() string {
+	return fmt.Sprintf("[%s] %s: %s", e.Type, e.Code, e.Message)
+}
+
 // DefaultConfig returns default configuration for the firmador client
 func DefaultConfig() *Config {
 	return &Config{
@@ -65,8 +79,8 @@ func DefaultConfig() *Config {
 	}
 }
 
-// NewClient creates a new firmador client
-func NewClient(cfg *Config) *Client {
+// NewClient creates a new firmador client with credentials
+func NewClient(cfg *Config, nit, password string) *Client {
 	if cfg == nil {
 		cfg = DefaultConfig()
 	}
@@ -112,11 +126,13 @@ func NewClient(cfg *Config) *Client {
 	return &Client{
 		baseURL:    cfg.BaseURL,
 		httpClient: retryClient,
+		nit:        nit,
+		password:   password,
 	}
 }
 
 // NewClientFromViper creates a firmador client using Viper configuration
-func NewClientFromViper() *Client {
+func NewClientFromViper(nit, password string) *Client {
 	cfg := &Config{
 		BaseURL:      viper.GetString("firmador_url"),
 		Timeout:      viper.GetDuration("firmador.timeout"),
@@ -125,7 +141,7 @@ func NewClientFromViper() *Client {
 		RetryWaitMax: viper.GetDuration("firmador.retry_wait_max"),
 	}
 
-	return NewClient(cfg)
+	return NewClient(cfg, nit, password)
 }
 
 // customRetryPolicy determines whether a request should be retried
@@ -163,44 +179,47 @@ func customRetryPolicy(ctx context.Context, resp *http.Response, err error) (boo
 	return false, nil
 }
 
-// SignDTE is a type-safe wrapper that requires the DTE interface
-// This validates the DTE before signing
-func (c *Client) SignDTE(ctx context.Context, nit string, password string, document dte.DTE) (string, error) {
-	// Validate before signing
-	if err := document.Validate(); err != nil {
-		return "", fmt.Errorf("DTE validation failed: %w", err)
-	}
-
-	return c.SignDocument(ctx, nit, password, document)
-}
-
-// SignDocument signs a DTE document using the firmador service
-// Accepts any type that can be marshaled to JSON - provides maximum flexibility
-func (c *Client) SignDocument(ctx context.Context, nit string, password string, document interface{}) (string, error) {
+// Sign signs a document using the stored credentials
+func (c *Client) Sign(ctx context.Context, document interface{}) (string, error) {
 	// Marshal the DTE to JSON first
 	dteJSON, err := json.Marshal(document)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal DTE: %w", err)
+		return "", &FirmadorError{
+			Type:      "validation",
+			Code:      "MARSHAL_ERROR",
+			Message:   fmt.Sprintf("failed to marshal DTE: %v", err),
+			Timestamp: time.Now(),
+		}
 	}
 
 	// Prepare the request payload
 	signReq := SignRequest{
-		NIT:         nit,
+		NIT:         c.nit,
 		Activo:      true,
-		PasswordPri: password,
+		PasswordPri: c.password,
 		DteJson:     dteJSON,
 	}
 
 	// Marshal the request
 	reqBody, err := json.Marshal(signReq)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal sign request: %w", err)
+		return "", &FirmadorError{
+			Type:      "validation",
+			Code:      "REQUEST_MARSHAL_ERROR",
+			Message:   fmt.Sprintf("failed to marshal sign request: %v", err),
+			Timestamp: time.Now(),
+		}
 	}
 
 	// Create retryable HTTP request
 	req, err := retryablehttp.NewRequestWithContext(ctx, http.MethodPost, c.baseURL, bytes.NewBuffer(reqBody))
 	if err != nil {
-		return "", fmt.Errorf("failed to create HTTP request: %w", err)
+		return "", &FirmadorError{
+			Type:      "network",
+			Code:      "REQUEST_CREATE_ERROR",
+			Message:   fmt.Sprintf("failed to create HTTP request: %v", err),
+			Timestamp: time.Now(),
+		}
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -208,25 +227,63 @@ func (c *Client) SignDocument(ctx context.Context, nit string, password string, 
 	// Execute the request with retries
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("failed to call firmador service after retries: %w", err)
+		return "", &FirmadorError{
+			Type:      "network",
+			Code:      "CONNECTION_ERROR",
+			Message:   fmt.Sprintf("failed to call firmador service after retries: %v", err),
+			Timestamp: time.Now(),
+		}
 	}
 	defer resp.Body.Close()
 
 	// Read response body
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("failed to read response body: %w", err)
+		return "", &FirmadorError{
+			Type:      "network",
+			Code:      "RESPONSE_READ_ERROR",
+			Message:   fmt.Sprintf("failed to read response body: %v", err),
+			Timestamp: time.Now(),
+		}
 	}
 
 	// Check HTTP status code
+	if resp.StatusCode == http.StatusUnauthorized {
+		return "", &FirmadorError{
+			Type:      "auth",
+			Code:      "UNAUTHORIZED",
+			Message:   "invalid credentials",
+			Timestamp: time.Now(),
+		}
+	}
+
+	if resp.StatusCode >= 500 {
+		return "", &FirmadorError{
+			Type:      "server",
+			Code:      fmt.Sprintf("HTTP_%d", resp.StatusCode),
+			Message:   fmt.Sprintf("server error: %s", string(respBody)),
+			Timestamp: time.Now(),
+		}
+	}
+
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("firmador service returned status %d: %s", resp.StatusCode, string(respBody))
+		return "", &FirmadorError{
+			Type:      "server",
+			Code:      fmt.Sprintf("HTTP_%d", resp.StatusCode),
+			Message:   fmt.Sprintf("firmador service returned status %d: %s", resp.StatusCode, string(respBody)),
+			Timestamp: time.Now(),
+		}
 	}
 
 	// Parse response
 	var signResp SignResponse
 	if err := json.Unmarshal(respBody, &signResp); err != nil {
-		return "", fmt.Errorf("failed to parse response: %w", err)
+		return "", &FirmadorError{
+			Type:      "validation",
+			Code:      "RESPONSE_PARSE_ERROR",
+			Message:   fmt.Sprintf("failed to parse response: %v", err),
+			Timestamp: time.Now(),
+		}
 	}
 
 	// Check response status
@@ -235,37 +292,56 @@ func (c *Client) SignDocument(ctx context.Context, nit string, password string, 
 		var errResp SignResponseError
 		if err := json.Unmarshal(signResp.Body, &errResp); err == nil && errResp.Codigo != "" {
 			return "", &FirmadorError{
-				Code:     errResp.Codigo,
-				Messages: errResp.Mensaje,
+				Type:      "validation",
+				Code:      errResp.Codigo,
+				Message:   fmt.Sprintf("%v", errResp.Mensaje),
+				Timestamp: time.Now(),
 			}
 		}
-		return "", fmt.Errorf("firmador returned error status: %s", signResp.Status)
+		return "", &FirmadorError{
+			Type:      "server",
+			Code:      "ERROR_STATUS",
+			Message:   fmt.Sprintf("firmador returned error status: %s", signResp.Status),
+			Timestamp: time.Now(),
+		}
 	}
 
 	// Extract the signed document (it's a string in the body field)
 	var signedDoc string
 	if err := json.Unmarshal(signResp.Body, &signedDoc); err != nil {
-		return "", fmt.Errorf("failed to extract signed document: %w", err)
+		return "", &FirmadorError{
+			Type:      "validation",
+			Code:      "SIGNED_DOC_PARSE_ERROR",
+			Message:   fmt.Sprintf("failed to extract signed document: %v", err),
+			Timestamp: time.Now(),
+		}
 	}
 
 	if signedDoc == "" {
-		return "", fmt.Errorf("firmador returned empty signed document")
+		return "", &FirmadorError{
+			Type:      "validation",
+			Code:      "EMPTY_SIGNED_DOC",
+			Message:   "firmador returned empty signed document",
+			Timestamp: time.Now(),
+		}
 	}
 
 	return signedDoc, nil
 }
 
-// FirmadorError represents an error from the firmador service
-type FirmadorError struct {
-	Code     string
-	Messages []string
-}
-
-func (e *FirmadorError) Error() string {
-	if len(e.Messages) > 0 {
-		return fmt.Sprintf("firmador error [%s]: %v", e.Code, e.Messages)
+// SignDTE is a type-safe wrapper that validates the DTE before signing
+func (c *Client) SignDTE(ctx context.Context, document dte.DTE) (string, error) {
+	// Validate before signing
+	if err := document.Validate(); err != nil {
+		return "", &FirmadorError{
+			Type:      "validation",
+			Code:      "DTE_VALIDATION_ERROR",
+			Message:   fmt.Sprintf("DTE validation failed: %v", err),
+			Timestamp: time.Now(),
+		}
 	}
-	return fmt.Errorf("firmador error [%s]", e.Code)
+
+	return c.Sign(ctx, document)
 }
 
 // IsRetryableError checks if an error is retryable
@@ -274,13 +350,14 @@ func IsRetryableError(err error) bool {
 		return false
 	}
 
-	// FirmadorError (business logic errors) are not retryable
-	if _, ok := err.(*FirmadorError); ok {
-		return false
+	firmErr, ok := err.(*FirmadorError)
+	if !ok {
+		return true // Unknown errors might be retryable
 	}
 
-	// Other errors might be retryable (network issues, etc.)
-	return true
+	// Only network and server errors are retryable
+	// Auth and validation errors are not retryable
+	return firmErr.Type == "network" || firmErr.Type == "server"
 }
 
 // GetBaseURL returns the configured base URL
