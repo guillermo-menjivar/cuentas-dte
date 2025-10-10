@@ -8,6 +8,7 @@ import (
 	"cuentas/internal/handlers"
 	"cuentas/internal/middleware"
 	"cuentas/internal/services"
+	"cuentas/internal/services/firmador"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-migrate/migrate/v4"
@@ -17,7 +18,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-var vaultService *services.VaultService
+var (
+	vaultService   *services.VaultService
+	firmadorClient *firmador.Client
+)
 
 // ServeCmd represents the serve command
 var ServeCmd = &cobra.Command{
@@ -47,6 +51,11 @@ var ServeCmd = &cobra.Command{
 		// Run database migrations automatically
 		if err := runDatabaseMigrations(); err != nil {
 			log.Fatalf("Failed to run migrations: %v", err)
+		}
+
+		// Initialize Firmador client
+		if err := initializeFirmador(); err != nil {
+			log.Fatalf("Failed to initialize Firmador: %v", err)
 		}
 
 		fmt.Printf("Server running on port: %s\n", GlobalConfig.Port)
@@ -101,6 +110,16 @@ func initializeVault() error {
 	return nil
 }
 
+func initializeFirmador() error {
+	fmt.Println("Initializing Firmador client...")
+
+	// Create firmador client from viper config
+	firmadorClient = firmador.NewClientFromViper()
+
+	fmt.Printf("Firmador client initialized (URL: %s)\n", firmadorClient.GetBaseURL())
+	return nil
+}
+
 func runDatabaseMigrations() error {
 	fmt.Println("Running database migrations...")
 
@@ -142,6 +161,7 @@ func startServer() {
 		c.Set("db", database.DB)             // Inject database connection
 		c.Set("redis", database.RedisClient) // Inject Redis client
 		c.Set("vaultService", vaultService)  // Inject Vault service
+		c.Set("firmador", firmadorClient)
 		c.Next()
 	})
 
