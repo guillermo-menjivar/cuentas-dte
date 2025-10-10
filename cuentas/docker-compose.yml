@@ -106,6 +106,7 @@ services:
       CUENTAS_PORT: "8080"
       CUENTAS_REDIS_URL: "redis://:redis_password@redis:6379"
       CUENTAS_VAULT_URL: "http://vault:8200"
+      CUENTAS_FIRMADOR_URL: "http://167.172.230.154:8113"
     volumes:
       - ./config.yaml:/app/config.yaml
       - vault_data:/vault/data
