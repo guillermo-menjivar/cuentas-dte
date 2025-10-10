@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -21,6 +22,13 @@ type Config struct {
 	VaultURL           string `mapstructure:"vault_url"`
 	VaultToken         string `mapstructure:"vault_token"`
 	VaultRetryAttempts int    `mapstructure:"vault_retry_attempts"`
+
+	// Firmador configuration
+	FirmadorURL          string        `mapstructure:"firmador_url"`
+	FirmadorTimeout      time.Duration `mapstructure:"firmador_timeout"`
+	FirmadorRetryMax     int           `mapstructure:"firmador_retry_max"`
+	FirmadorRetryWaitMin time.Duration `mapstructure:"firmador_retry_wait_min"`
+	FirmadorRetryWaitMax time.Duration `mapstructure:"firmador_retry_wait_max"`
 }
 
 var GlobalConfig Config
@@ -34,6 +42,7 @@ for El Salvador's Hacienda system.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Cuentas DTE Management System")
 		fmt.Printf("Hacienda URL: %s\n", GlobalConfig.HaciendaURL)
+		fmt.Printf("Firmador URL: %s\n", GlobalConfig.FirmadorURL)
 		fmt.Printf("Server Port: %s\n", GlobalConfig.Port)
 		fmt.Println("Use 'cuentas serve' to start the API server")
 	},
@@ -70,6 +79,13 @@ func init() {
 	viper.SetDefault("vault_url", "http://localhost:8200")
 	viper.SetDefault("vault_token", "vault-root-token")
 	viper.SetDefault("vault_retry_attempts", 10)
+
+	// Firmador defaults
+	viper.SetDefault("firmador_url", "http://localhost:8113/firmardocumento")
+	viper.SetDefault("firmador_timeout", 30*time.Second)
+	viper.SetDefault("firmador_retry_max", 3)
+	viper.SetDefault("firmador_retry_wait_min", 1*time.Second)
+	viper.SetDefault("firmador_retry_wait_max", 5*time.Second)
 }
 
 // initConfig reads in config file and ENV variables.
