@@ -806,21 +806,54 @@ func (s *InvoiceService) generateCodigoGeneracion() string {
 }
 
 // generateNumeroControl generates the DTE numero control using the validator
+// generateNumeroControl generates the DTE numero control with strict validation
 func (s *InvoiceService) generateNumeroControl(ctx context.Context, tx *sql.Tx, posID, tipoDte string) (string, error) {
-	// Get establishment and POS codes
+	// Get establishment and POS codes (no COALESCE - must be set)
 	query := `
 		SELECT 
-			COALESCE(e.cod_establecimiento_mh, '0000'),
-			COALESCE(pos.cod_punto_venta_mh, '0001')
+			e.cod_establecimiento_mh,
+			pos.cod_punto_venta_mh,
+			e.nombre as establishment_name,
+			pos.nombre as pos_name
 		FROM point_of_sale pos
 		JOIN establishments e ON pos.establishment_id = e.id
 		WHERE pos.id = $1
 	`
 
-	var codEstable, codPuntoVenta string
-	err := tx.QueryRowContext(ctx, query, posID).Scan(&codEstable, &codPuntoVenta)
+	var codEstable, codPuntoVenta *string
+	var establishmentName, posName string
+
+	err := tx.QueryRowContext(ctx, query, posID).Scan(&codEstable, &codPuntoVenta, &establishmentName, &posName)
 	if err != nil {
 		return "", fmt.Errorf("failed to get establishment codes: %w", err)
+	}
+
+	// Strict validation: MH codes must be set
+	if codEstable == nil || *codEstable == "" {
+		return "", fmt.Errorf("establishment '%s' must have cod_establecimiento_mh assigned by Hacienda before finalizing invoices", establishmentName)
+	}
+	if codPuntoVenta == nil || *codPuntoVenta == "" {
+		return "", fmt.Errorf("point of sale '%s' must have cod_punto_venta_mh assigned by Hacienda before finalizing invoices", posName)
+	}
+
+	// Validate 4-character format
+	if len(*codEstable) != 4 {
+		return "", fmt.Errorf("establishment '%s' cod_establecimiento_mh must be exactly 4 characters, got %d: '%s'",
+			establishmentName, len(*codEstable), *codEstable)
+	}
+	if len(*codPuntoVenta) != 4 {
+		return "", fmt.Errorf("point of sale '%s' cod_punto_venta_mh must be exactly 4 characters, got %d: '%s'",
+			posName, len(*codPuntoVenta), *codPuntoVenta)
+	}
+
+	// Validate codes are alphanumeric (Hacienda uses numeric, but spec allows alphanumeric)
+	if !isValidMHCode(*codEstable) {
+		return "", fmt.Errorf("establishment '%s' cod_establecimiento_mh contains invalid characters: '%s'",
+			establishmentName, *codEstable)
+	}
+	if !isValidMHCode(*codPuntoVenta) {
+		return "", fmt.Errorf("point of sale '%s' cod_punto_venta_mh contains invalid characters: '%s'",
+			posName, *codPuntoVenta)
 	}
 
 	// Get next sequence for this POS and tipoDte
@@ -830,12 +863,23 @@ func (s *InvoiceService) generateNumeroControl(ctx context.Context, tx *sql.Tx, 
 	}
 
 	// Build numero control using the validator (ensures correctness)
-	numeroControl, err := dte.BuildNumeroControl(tipoDte, codEstable, codPuntoVenta, sequence)
+	numeroControl, err := dte.BuildNumeroControl(tipoDte, *codEstable, *codPuntoVenta, sequence)
 	if err != nil {
 		return "", fmt.Errorf("failed to build numero control: %w", err)
 	}
 
 	return numeroControl, nil
+}
+
+// isValidMHCode checks if an MH code contains only alphanumeric characters
+func (s *InvoiceService) isValidMHCode(code string) bool {
+	// Hacienda codes are typically numeric, but spec allows alphanumeric
+	for _, char := range code {
+		if !((char >= '0' && char <= '9') || (char >= 'A' && char <= 'Z')) {
+			return false
+		}
+	}
+	return true
 }
 
 func (s *InvoiceService) getAndIncrementDTESequence(ctx context.Context, tx *sql.Tx, posID, tipoDte string) (int64, error) {
