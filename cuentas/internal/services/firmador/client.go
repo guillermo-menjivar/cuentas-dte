@@ -19,8 +19,6 @@ import (
 type Client struct {
 	baseURL    string
 	httpClient *retryablehttp.Client
-	nit        string
-	password   string
 }
 
 // SignRequest represents the request payload for the firmador service
@@ -66,23 +64,16 @@ func (e *FirmadorError) Error() string {
 	return fmt.Sprintf("[%s] %s: %s", e.Type, e.Code, e.Message)
 }
 
-// DefaultConfig returns default configuration for the firmador client
-func DefaultConfig() *Config {
-	return &Config{
-		BaseURL:      viper.GetString("firmador_url"),
-		Timeout:      30 * time.Second,
-		RetryMax:     3,
-		RetryWaitMin: 1 * time.Second,
-		RetryWaitMax: 5 * time.Second,
-		CheckRetry:   retryablehttp.DefaultRetryPolicy,
-		Backoff:      retryablehttp.DefaultBackoff,
-	}
-}
-
-// NewClient creates a new firmador client with credentials
-func NewClient(cfg *Config, nit, password string) *Client {
+// NewClient creates a new firmador client
+func NewClient(cfg *Config) *Client {
 	if cfg == nil {
-		cfg = DefaultConfig()
+		cfg = &Config{
+			BaseURL:      "http://localhost:8113/firmardocumento",
+			Timeout:      30 * time.Second,
+			RetryMax:     3,
+			RetryWaitMin: 1 * time.Second,
+			RetryWaitMax: 5 * time.Second,
+		}
 	}
 
 	// Set defaults for any missing config
@@ -126,22 +117,20 @@ func NewClient(cfg *Config, nit, password string) *Client {
 	return &Client{
 		baseURL:    cfg.BaseURL,
 		httpClient: retryClient,
-		nit:        nit,
-		password:   password,
 	}
 }
 
 // NewClientFromViper creates a firmador client using Viper configuration
-func NewClientFromViper(nit, password string) *Client {
+func NewClientFromViper() *Client {
 	cfg := &Config{
 		BaseURL:      viper.GetString("firmador_url"),
-		Timeout:      viper.GetDuration("firmador.timeout"),
-		RetryMax:     viper.GetInt("firmador.retry_max"),
-		RetryWaitMin: viper.GetDuration("firmador.retry_wait_min"),
-		RetryWaitMax: viper.GetDuration("firmador.retry_wait_max"),
+		Timeout:      viper.GetDuration("firmador_timeout"),
+		RetryMax:     viper.GetInt("firmador_retry_max"),
+		RetryWaitMin: viper.GetDuration("firmador_retry_wait_min"),
+		RetryWaitMax: viper.GetDuration("firmador_retry_wait_max"),
 	}
 
-	return NewClient(cfg, nit, password)
+	return NewClient(cfg)
 }
 
 // customRetryPolicy determines whether a request should be retried
@@ -179,8 +168,8 @@ func customRetryPolicy(ctx context.Context, resp *http.Response, err error) (boo
 	return false, nil
 }
 
-// Sign signs a document using the stored credentials
-func (c *Client) Sign(ctx context.Context, document interface{}) (string, error) {
+// Sign signs a document using the provided credentials
+func (c *Client) Sign(ctx context.Context, nit, password string, document interface{}) (string, error) {
 	// Marshal the DTE to JSON first
 	dteJSON, err := json.Marshal(document)
 	if err != nil {
@@ -194,9 +183,9 @@ func (c *Client) Sign(ctx context.Context, document interface{}) (string, error)
 
 	// Prepare the request payload
 	signReq := SignRequest{
-		NIT:         c.nit,
+		NIT:         nit,
 		Activo:      true,
-		PasswordPri: c.password,
+		PasswordPri: password,
 		DteJson:     dteJSON,
 	}
 
@@ -330,7 +319,7 @@ func (c *Client) Sign(ctx context.Context, document interface{}) (string, error)
 }
 
 // SignDTE is a type-safe wrapper that validates the DTE before signing
-func (c *Client) SignDTE(ctx context.Context, document dte.DTE) (string, error) {
+func (c *Client) SignDTE(ctx context.Context, nit, password string, document dte.DTE) (string, error) {
 	// Validate before signing
 	if err := document.Validate(); err != nil {
 		return "", &FirmadorError{
@@ -341,7 +330,7 @@ func (c *Client) SignDTE(ctx context.Context, document dte.DTE) (string, error) 
 		}
 	}
 
-	return c.Sign(ctx, document)
+	return c.Sign(ctx, nit, password, document)
 }
 
 // IsRetryableError checks if an error is retryable
