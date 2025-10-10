@@ -58,6 +58,11 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req *models.CreateCo
 		return nil, fmt.Errorf("failed to store password in vault: %v", err)
 	}
 
+	descActividad, exists := codigos.GetEconomicActivityName(req.CodActividad)
+	if !exists {
+		return nil, errors.New("invalid economic activity code")
+	}
+
 	// Insert into database
 	company, err := s.insertCompany(ctx, companyID, req, nitInt, ncrInt, vaultRef)
 	if err != nil {
@@ -66,10 +71,6 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req *models.CreateCo
 			fmt.Printf("Warning: failed to cleanup vault entry: %v\n", delErr)
 		}
 		return nil, fmt.Errorf("failed to insert company: %v", err)
-	}
-	descActividad, exists := codigos.GetEconomicActivityName(req.CodActividad)
-	if !exists {
-		return nil, errors.New("invalid economic activity code")
 	}
 
 	// Store both in database
