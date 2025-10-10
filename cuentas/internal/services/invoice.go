@@ -847,11 +847,11 @@ func (s *InvoiceService) generateNumeroControl(ctx context.Context, tx *sql.Tx, 
 	}
 
 	// Validate codes are alphanumeric (Hacienda uses numeric, but spec allows alphanumeric)
-	if !isValidMHCode(*codEstable) {
+	if !s.isValidMHCode(*codEstable) {
 		return "", fmt.Errorf("establishment '%s' cod_establecimiento_mh contains invalid characters: '%s'",
 			establishmentName, *codEstable)
 	}
-	if !isValidMHCode(*codPuntoVenta) {
+	if !s.isValidMHCode(*codPuntoVenta) {
 		return "", fmt.Errorf("point of sale '%s' cod_punto_venta_mh contains invalid characters: '%s'",
 			posName, *codPuntoVenta)
 	}
