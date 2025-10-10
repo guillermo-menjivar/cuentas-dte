@@ -52,7 +52,7 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req *models.CreateCo
 		return nil, fmt.Errorf("failed to parse NCR: %v", err)
 	}
 
-	descActividad, exists := codigos.GetEconomicActivityCode(req.CodActividad)
+	descActividad, exists := codigos.GetEconomicActivityName(req.CodActividad)
 	if !exists {
 		fmt.Println("you submitted", req.CodActividad)
 		return nil, errors.New("invalid economic activity code")

@@ -103,6 +103,7 @@ func CreateCompanyHandler(c *gin.Context) {
 	}
 
 	// Create company
+	fmt.Println(req)
 	company, err := companyService.CreateCompany(c.Request.Context(), &req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
