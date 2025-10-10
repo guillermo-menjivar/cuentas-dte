@@ -921,8 +921,8 @@ func (s *InvoiceService) updateClientBalance(ctx context.Context, tx *sql.Tx, cl
 	return err
 }
 
+// FinalizeInvoice finalizes a draft invoice and generates DTE identifiers
 func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoiceID, userID string, payment *models.CreatePaymentRequest) (*models.Invoice, error) {
-
 	// Begin transaction
 	tx, err := database.DB.BeginTx(ctx, nil)
 	if err != nil {
@@ -952,8 +952,7 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 	if invoice.ClientTipoPersona != nil {
 		tipoDte = s.determineDTEType(*invoice.ClientTipoPersona)
 	} else {
-		// Default to factura if tipo_persona is not set
-		tipoDte = "01"
+		tipoDte = "01" // Default to factura
 	}
 
 	// 4. Generate DTE identifiers
@@ -963,26 +962,37 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 		return nil, fmt.Errorf("failed to generate numero control: %w", err)
 	}
 
-	// 5. Update invoice to finalized
+	// 5. Calculate payment status based on amount paid
+	paymentStatus := s.calculatePaymentStatus(payment.Amount, invoice.Total)
+	balanceDue := invoice.Total - payment.Amount
+
+	// 6. Update invoice to finalized
 	now := time.Now()
-	placeholderUserID := "00000000-0000-0000-0000-000000000000"
 
 	updateQuery := `
 		UPDATE invoices
 		SET status = 'finalized',
-		    dte_codigo_generacion = $1,
-		    dte_numero_control = $2,
+		    payment_method = $1,
+		    payment_status = $2,
+		    amount_paid = $3,
+		    balance_due = $4,
+		    dte_codigo_generacion = $5,
+		    dte_numero_control = $6,
 		    dte_status = 'not_submitted',
-		    finalized_at = $3,
-		    created_by = $4
-		WHERE id = $5 AND company_id = $6
+		    finalized_at = $7,
+		    created_by = $8
+		WHERE id = $9 AND company_id = $10
 	`
 
 	_, err = tx.ExecContext(ctx, updateQuery,
+		payment.PaymentMethod,
+		paymentStatus,
+		payment.Amount,
+		balanceDue,
 		codigoGeneracion,
 		numeroControl,
 		now,
-		placeholderUserID,
+		userID,
 		invoiceID,
 		companyID,
 	)
@@ -990,25 +1000,65 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 		return nil, fmt.Errorf("failed to update invoice: %w", err)
 	}
 
-	// 6. Update client balance if credit
+	// 7. Record the payment in payments table
+	paymentID := uuid.New().String()
+	paymentDate := now
+	if payment.PaymentDate != nil {
+		paymentDate = *payment.PaymentDate
+	}
+
+	insertPaymentQuery := `
+		INSERT INTO payments (
+			id, company_id, invoice_id, amount, payment_method, 
+			payment_reference, payment_date, created_by, notes
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+	`
+
+	_, err = tx.ExecContext(ctx, insertPaymentQuery,
+		paymentID,
+		companyID,
+		invoiceID,
+		payment.Amount,
+		payment.PaymentMethod,
+		payment.ReferenceNumber,
+		paymentDate,
+		userID,
+		payment.Notes,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to record payment: %w", err)
+	}
+
+	// 8. Update client balance if credit
 	if invoice.PaymentTerms == "cuenta" || invoice.PaymentTerms == "net_30" || invoice.PaymentTerms == "net_60" {
-		if err := s.updateClientBalance(ctx, tx, invoice.ClientID, invoice.Total); err != nil {
+		// Add the balance due (not total) to client's balance
+		if err := s.updateClientBalance(ctx, tx, invoice.ClientID, balanceDue); err != nil {
 			return nil, fmt.Errorf("failed to update client balance: %w", err)
 		}
 	}
 
-	// 7. Commit transaction
+	// 9. Commit transaction
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// 8. Get and return the finalized invoice
+	// 10. Get and return the finalized invoice
 	finalizedInvoice, err := s.GetInvoice(ctx, companyID, invoiceID)
 	if err != nil {
 		return nil, err
 	}
 
 	return finalizedInvoice, nil
+}
+
+// Helper: Calculate payment status based on amount paid
+func (s *InvoiceService) calculatePaymentStatus(amountPaid, total float64) string {
+	if amountPaid == 0 {
+		return "unpaid"
+	} else if amountPaid >= total {
+		return "paid"
+	}
+	return "partial"
 }
 
 // getInvoiceForUpdate gets an invoice with a row lock for safe concurrent updates
