@@ -52,15 +52,16 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req *models.CreateCo
 		return nil, fmt.Errorf("failed to parse NCR: %v", err)
 	}
 
+	descActividad, exists := codigos.GetEconomicActivityCode(req.CodActividad)
+	if !exists {
+		fmt.Println("you submitted", req.CodActividad)
+		return nil, errors.New("invalid economic activity code")
+	}
+
 	// Store password in Vault FIRST
 	vaultRef, err := s.vaultService.StoreCompanyPassword(companyID, req.HCPassword)
 	if err != nil {
 		return nil, fmt.Errorf("failed to store password in vault: %v", err)
-	}
-
-	descActividad, exists := codigos.GetEconomicActivityName(req.CodActividad)
-	if !exists {
-		return nil, errors.New("invalid economic activity code")
 	}
 
 	// Insert into database
