@@ -54,7 +54,6 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req *models.CreateCo
 
 	descActividad, exists := codigos.GetEconomicActivityName(req.CodActividad)
 	if !exists {
-		fmt.Println("you submitted", req.CodActividad)
 		return nil, errors.New("invalid economic activity code")
 	}
 
@@ -77,6 +76,8 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req *models.CreateCo
 	// Store both in database
 	company.CodActividad = req.CodActividad
 	company.DescActividad = descActividad
+	company.DTEAmbiente = req.DTEAmbiente
+	company.NombreComercial = req.NombreComercial
 
 	return company, nil
 }

@@ -11,8 +11,8 @@ import (
 type Company struct {
 	ID                  string    `json:"id"`
 	Name                string    `json:"name"`
-	CodActividad        string    `json:"cod_actividad" binding:"required"` // NEW
-	NombreComercial     *string   `json:"nombre_comercial"`                 // NEW: Optional
+	CodActividad        string    `json:"cod_actividad" binding:"required"`     // NEW
+	NombreComercial     *string   `json:"nombre_comercial" binding: "required"` // NEW: Optional
 	DTEAmbiente         string    `json:"dte_ambiente" binding:"required"`
 	NIT                 int64     `json:"-"`   // Store as int, don't expose directly
 	NITFormatted        string    `json:"nit"` // Expose formatted version
@@ -39,7 +39,7 @@ type CreateCompanyRequest struct {
 	HCPassword       string  `json:"hc_password" binding:"required"`
 	Email            string  `json:"email" binding:"required"`
 	CodActividad     string  `json:"cod_actividad" binding:"required"`
-	NombreComercial  *string `json:"nombre_comercial"`
+	NombreComercial  *string `json:"nombre_comercial" binding:"required"`
 	DTEAmbiente      string  `json:"dte_ambiente" binding:"required"`
 	FirmadorUsername string  `json:"firmador_username" binding:"required"` // NEW
 	FirmadorPassword string  `json:"firmador_password" binding:"required"`

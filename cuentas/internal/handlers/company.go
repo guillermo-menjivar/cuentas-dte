@@ -2,9 +2,7 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -40,19 +38,10 @@ func parseJSONError(err error) string {
 }
 
 func CreateCompanyHandler(c *gin.Context) {
-	// Read the body first to provide better error messages
-	bodyBytes, err := io.ReadAll(c.Request.Body)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
-			Error: "failed to read request body",
-			Code:  "invalid_request",
-		})
-		return
-	}
 
 	// Parse request body with custom error handling
 	var req models.CreateCompanyRequest
-	if err := json.Unmarshal(bodyBytes, &req); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		fmt.Println(err)
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error: parseJSONError(err),
@@ -103,7 +92,6 @@ func CreateCompanyHandler(c *gin.Context) {
 	}
 
 	// Create company
-	fmt.Println(req)
 	company, err := companyService.CreateCompany(c.Request.Context(), &req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{

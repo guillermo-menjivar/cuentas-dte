@@ -13,6 +13,7 @@ import (
 	"cuentas/internal/codigos"
 	"cuentas/internal/database"
 	"cuentas/internal/models"
+	"cuentas/internal/services/dte"
 )
 
 type InvoiceService struct{}
@@ -804,6 +805,7 @@ func (s *InvoiceService) generateCodigoGeneracion() string {
 	return strings.ToUpper(uuid.New().String())
 }
 
+// generateNumeroControl generates the DTE numero control using the validator
 func (s *InvoiceService) generateNumeroControl(ctx context.Context, tx *sql.Tx, posID, tipoDte string) (string, error) {
 	// Get establishment and POS codes
 	query := `
@@ -827,8 +829,11 @@ func (s *InvoiceService) generateNumeroControl(ctx context.Context, tx *sql.Tx, 
 		return "", err
 	}
 
-	// Format: DTE-{tipo}-{8chars}-{15digits}
-	numeroControl := fmt.Sprintf("DTE-%s-%s%s-%015d", tipoDte, codEstable, codPuntoVenta, sequence)
+	// Build numero control using the validator (ensures correctness)
+	numeroControl, err := dte.BuildNumeroControl(tipoDte, codEstable, codPuntoVenta, sequence)
+	if err != nil {
+		return "", fmt.Errorf("failed to build numero control: %w", err)
+	}
 
 	return numeroControl, nil
 }
