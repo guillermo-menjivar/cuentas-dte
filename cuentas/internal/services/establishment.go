@@ -30,7 +30,7 @@ func (s *EstablishmentService) CreateEstablishment(ctx context.Context, companyI
 			departamento, municipio, complemento_direccion,
 			telefono, active, created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
 		) RETURNING id, created_at, updated_at
 	`
 
@@ -308,7 +308,7 @@ func (s *EstablishmentService) CreatePointOfSale(ctx context.Context, companyID,
 			latitude, longitude, is_portable,
 			active, created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+			$1, $2, $3, $4, $5, $6, $7, $8, $9
 		) RETURNING id, created_at, updated_at
 	`
 
