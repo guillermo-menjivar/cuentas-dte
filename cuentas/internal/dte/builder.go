@@ -30,7 +30,7 @@ func (b *DTEBuilder) BuildFromInvoice(ctx context.Context, invoice *models.Invoi
 		return nil, fmt.Errorf("failed to load company: %w", err)
 	}
 
-	establishment, err := b.loadEstablishmentAndPOS(ctx, invoice.EstablishmentID)
+	establishment, err := b.loadEstablishmentAndPOS(ctx, invoice.EstablishmentID, invoice.PointOfSaleID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load establishment: %w", err)
 	}

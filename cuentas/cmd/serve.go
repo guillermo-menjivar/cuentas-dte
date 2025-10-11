@@ -182,6 +182,7 @@ func startServer() {
 		c.Set("redis", database.RedisClient) // Inject Redis client
 		c.Set("vaultService", vaultService)  // Inject Vault service
 		c.Set("firmador", firmadorClient)
+		c.Set("dteService", dteService)
 		c.Next()
 	})
 
