@@ -38,7 +38,7 @@ func (s *DTEService) loadCredentialsFromSource(ctx context.Context, companyID uu
 		SELECT 
 			id, 
 			nit, 
-			nombre, 
+			name, 
 			nombre_comercial,
 			firmador_password_ref
 		FROM companies
@@ -48,7 +48,7 @@ func (s *DTEService) loadCredentialsFromSource(ctx context.Context, companyID uu
 	var (
 		id                  uuid.UUID
 		nit                 int64
-		nombre              string
+		name                string
 		nombreComercial     *string
 		firmadorPasswordRef *string
 	)
@@ -56,7 +56,7 @@ func (s *DTEService) loadCredentialsFromSource(ctx context.Context, companyID uu
 	err := s.db.QueryRowContext(ctx, query, companyID).Scan(
 		&id,
 		&nit,
-		&nombre,
+		&name,
 		&nombreComercial,
 		&firmadorPasswordRef,
 	)
@@ -85,7 +85,7 @@ func (s *DTEService) loadCredentialsFromSource(ctx context.Context, companyID uu
 		CompanyID:       id,
 		NIT:             nitStr,
 		Password:        password,
-		Nombre:          nombre,
+		Name:            name,
 		NombreComercial: nombreComercial,
 	}, nil
 }
