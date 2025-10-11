@@ -12,8 +12,8 @@ import (
 
 	"cuentas/internal/codigos"
 	"cuentas/internal/database"
+	"cuentas/internal/dte"
 	"cuentas/internal/models"
-	"cuentas/internal/services/dte"
 )
 
 type InvoiceService struct{}
