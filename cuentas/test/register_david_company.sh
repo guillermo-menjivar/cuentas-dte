@@ -14,5 +14,6 @@ curl -X POST http://localhost:8080/v1/companies \
     "email": "contact@paredes.com",
     "departamento": "06",
     "municipio": "06.21",
+    "complemento_direccion": "Col Escalón 75 Av Nte No 5245 San Salvador, San Salvador",
     "telefono": "23232323"
   }' | jq .
