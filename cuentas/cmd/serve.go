@@ -5,10 +5,10 @@ import (
 	"log"
 
 	"cuentas/internal/database"
+	"cuentas/internal/dte"
 	"cuentas/internal/handlers"
 	"cuentas/internal/middleware"
 	"cuentas/internal/services"
-	"cuentas/internal/services/dte"
 	"cuentas/internal/services/firmador"
 
 	"github.com/gin-gonic/gin"
