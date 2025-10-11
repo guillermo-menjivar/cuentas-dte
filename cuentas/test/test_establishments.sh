@@ -37,8 +37,7 @@ CREATE_ESTABLISHMENT_RESPONSE=$(curl -s -X POST "$BASE_URL/establishments" \
   -d '{
     "tipo_establecimiento": "02",
     "nombre": "Casa Matriz - San Salvador",
-    "cod_establecimiento_mh": "0001",
-    "cod_establecimiento": "MATRIZ01",
+    "cod_establecimiento": "0001",
     "departamento": "06",
     "municipio": "14",
     "complemento_direccion": "Colonia Escalón, Calle Principal #123, San Salvador",
@@ -65,8 +64,7 @@ CREATE_SUCURSAL_RESPONSE=$(curl -s -X POST "$BASE_URL/establishments" \
   -d '{
     "tipo_establecimiento": "01",
     "nombre": "Sucursal Santa Ana",
-    "cod_establecimiento_mh": "0002",
-    "cod_establecimiento": "SANTA01",
+    "cod_establecimiento": "0002",
     "departamento": "13",
     "municipio": "01",
     "complemento_direccion": "Centro Comercial Metrocentro, Local 45, Santa Ana",
@@ -108,7 +106,7 @@ UPDATE_ESTABLISHMENT_RESPONSE=$(curl -s -X PATCH "$BASE_URL/establishments/$ESTA
   -H "$COMPANY_HEADER" \
   -d '{
     "telefono": "22509999",
-    "cod_establecimiento_mh": "0001"
+    "cod_establecimiento": "0001"
   }')
 
 echo "$UPDATE_ESTABLISHMENT_RESPONSE" | jq '.'
@@ -121,8 +119,7 @@ CREATE_POS_RESPONSE=$(curl -s -X POST "$BASE_URL/establishments/$ESTABLISHMENT_I
   -H "$COMPANY_HEADER" \
   -d '{
     "nombre": "Caja Principal 1",
-    "cod_punto_venta_mh": "0001",
-    "cod_punto_venta": "CAJA001",
+    "cod_punto_venta": "0001",
     "is_portable": false
   }')
 
@@ -144,8 +141,7 @@ CREATE_PORTABLE_POS_RESPONSE=$(curl -s -X POST "$BASE_URL/establishments/$ESTABL
   -H "$COMPANY_HEADER" \
   -d '{
     "nombre": "Food Truck - Mobile POS",
-    "cod_punto_venta_mh": "0002",
-    "cod_punto_venta": "TRUCK001",
+    "cod_punto_venta": "0002",
     "latitude": 13.6989,
     "longitude": -89.1914,
     "is_portable": true
@@ -201,7 +197,7 @@ UPDATE_POS_RESPONSE=$(curl -s -X PATCH "$BASE_URL/pos/$POS_ID" \
   -H "$COMPANY_HEADER" \
   -d '{
     "nombre": "Caja Principal 1 - Actualizada",
-    "cod_punto_venta_mh": "0001"
+    "cod_punto_venta": "0001"
   }')
 
 echo "$UPDATE_POS_RESPONSE" | jq '.'
