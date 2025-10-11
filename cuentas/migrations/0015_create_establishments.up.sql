@@ -3,8 +3,7 @@ CREATE TABLE establishments (
     company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     tipo_establecimiento VARCHAR(2) NOT NULL,
     nombre VARCHAR(100) NOT NULL,
-    cod_establecimiento_mh VARCHAR(4), -- From MH, nullable until assigned
-    cod_establecimiento VARCHAR(10),   -- Company's internal code
+    cod_establecimiento VARCHAR(10),
     -- Address for DTE
     departamento VARCHAR(2) NOT NULL,
     municipio VARCHAR(2) NOT NULL,
