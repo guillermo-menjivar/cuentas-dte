@@ -30,14 +30,9 @@ func (b *DTEBuilder) BuildFromInvoice(ctx context.Context, invoice *models.Invoi
 		return nil, fmt.Errorf("failed to load company: %w", err)
 	}
 
-	establishment, err := b.loadEstablishment(ctx, invoice.EstablishmentID)
+	establishment, err := b.loadEstablishmentAndPOS(ctx, invoice.EstablishmentID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load establishment: %w", err)
-	}
-
-	pos, err := b.loadPointOfSale(ctx, invoice.PointOfSaleID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load point of sale: %w", err)
 	}
 
 	client, err := b.loadClient(ctx, invoice.ClientID)
@@ -93,12 +88,10 @@ func (b *DTEBuilder) buildEmisor(company *CompanyData, establishment *Establishm
 			Municipio:    establishment.Municipio,
 			Complemento:  establishment.ComplementoDireccion,
 		},
-		Telefono:        establishment.Telefono,
-		Correo:          company.Email,
-		CodEstableMH:    &establishment.CodEstablecimiento,
-		CodEstable:      &establishment.CodEstablecimiento,
-		CodPuntoVentaMH: &establishment.CodPuntoVenta,
-		CodPuntoVenta:   &establishment.CodPuntoVenta,
+		Telefono:      establishment.Telefono,
+		Correo:        company.Email,
+		CodEstable:    &establishment.CodEstablecimiento,
+		CodPuntoVenta: &establishment.CodPuntoVenta,
 	}
 }
 
@@ -412,60 +405,6 @@ func (b *DTEBuilder) loadCompany(ctx context.Context, companyID string) (*Compan
 	return &company, nil
 }
 
-func (b *DTEBuilder) loadEstablishment(ctx context.Context, establishmentID string) (*EstablishmentData, error) {
-	query := `
-		SELECT e.id, e.tipo_establecimiento, e.cod_establecimiento, p.cod_punto_venta,
-		       e.departamento, e.municipio, e.complemento_direccion, e.telefono
-		FROM establishments e
-		LEFT JOIN point_of_sale p ON p.establishment_id = e.id
-		WHERE e.id = $1
-	`
-
-	var est EstablishmentData
-	err := b.db.QueryRowContext(ctx, query, establishmentID).Scan(
-		&est.ID,
-		&est.TipoEstablecimiento,
-		&est.CodEstablecimiento,
-		&est.CodPuntoVenta,
-		&est.Departamento,
-		&est.Municipio,
-		&est.ComplementoDireccion,
-		&est.Telefono,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return &est, nil
-}
-
-func (b *DTEBuilder) loadPointOfSale(ctx context.Context, posID string) (*EstablishmentData, error) {
-	query := `
-		SELECT e.id, e.tipo_establecimiento, e.cod_establecimiento, p.cod_punto_venta,
-		       e.departamento, e.municipio, e.complemento_direccion, e.telefono
-		FROM point_of_sale p
-		JOIN establishments e ON e.id = p.establishment_id
-		WHERE p.id = $1
-	`
-
-	var est EstablishmentData
-	err := b.db.QueryRowContext(ctx, query, posID).Scan(
-		&est.ID,
-		&est.TipoEstablecimiento,
-		&est.CodEstablecimiento,
-		&est.CodPuntoVenta,
-		&est.Departamento,
-		&est.Municipio,
-		&est.ComplementoDireccion,
-		&est.Telefono,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return &est, nil
-}
-
 func (b *DTEBuilder) loadClient(ctx context.Context, clientID string) (*ClientData, error) {
 	query := `
 		SELECT id, nit, ncr, dui, business_name, department_code, municipality_code, full_address
@@ -489,4 +428,32 @@ func (b *DTEBuilder) loadClient(ctx context.Context, clientID string) (*ClientDa
 	}
 
 	return &client, nil
+}
+
+// loadEstablishmentAndPOS loads establishment and POS data together
+func (b *DTEBuilder) loadEstablishmentAndPOS(ctx context.Context, establishmentID, posID string) (*EstablishmentData, error) {
+	query := `
+		SELECT e.id, e.tipo_establecimiento, e.cod_establecimiento, p.cod_punto_venta,
+		       e.departamento, e.municipio, e.complemento_direccion, e.telefono
+		FROM establishments e
+		JOIN point_of_sale p ON p.establishment_id = e.id
+		WHERE e.id = $1 AND p.id = $2
+	`
+
+	var est EstablishmentData
+	err := b.db.QueryRowContext(ctx, query, establishmentID, posID).Scan(
+		&est.ID,
+		&est.TipoEstablecimiento,
+		&est.CodEstablecimiento,
+		&est.CodPuntoVenta,
+		&est.Departamento,
+		&est.Municipio,
+		&est.ComplementoDireccion,
+		&est.Telefono,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &est, nil
 }
