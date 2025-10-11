@@ -8,7 +8,6 @@ type Establishment struct {
 	CompanyID            string    `json:"company_id"`
 	TipoEstablecimiento  string    `json:"tipo_establecimiento"`
 	Nombre               string    `json:"nombre"`
-	CodEstablecimientoMH *string   `json:"cod_establecimiento_mh,omitempty"`
 	CodEstablecimiento   *string   `json:"cod_establecimiento,omitempty"`
 	Departamento         string    `json:"departamento"`
 	Municipio            string    `json:"municipio"`
@@ -23,7 +22,6 @@ type Establishment struct {
 type CreateEstablishmentRequest struct {
 	TipoEstablecimiento  string  `json:"tipo_establecimiento" binding:"required"`
 	Nombre               string  `json:"nombre" binding:"required,min=3,max=100"`
-	CodEstablecimientoMH *string `json:"cod_establecimiento_mh,omitempty"`
 	CodEstablecimiento   *string `json:"cod_establecimiento,omitempty"`
 	Departamento         string  `json:"departamento" binding:"required,len=2"`
 	Municipio            string  `json:"municipio" binding:"required,len=2"`
@@ -35,7 +33,6 @@ type CreateEstablishmentRequest struct {
 type UpdateEstablishmentRequest struct {
 	TipoEstablecimiento  *string `json:"tipo_establecimiento,omitempty"`
 	Nombre               *string `json:"nombre,omitempty"`
-	CodEstablecimientoMH *string `json:"cod_establecimiento_mh,omitempty"`
 	CodEstablecimiento   *string `json:"cod_establecimiento,omitempty"`
 	Departamento         *string `json:"departamento,omitempty"`
 	Municipio            *string `json:"municipio,omitempty"`
@@ -61,12 +58,8 @@ func (r *CreateEstablishmentRequest) Validate() error {
 	}
 
 	// Validate MH codes if provided
-	if r.CodEstablecimientoMH != nil && len(*r.CodEstablecimientoMH) != 4 {
+	if r.CodEstablecimiento != nil && len(*r.CodEstablecimiento) != 4 {
 		return ErrInvalidCodEstablecimientoMH
-	}
-
-	if r.CodEstablecimiento != nil && (len(*r.CodEstablecimiento) < 1 || len(*r.CodEstablecimiento) > 10) {
-		return ErrInvalidCodEstablecimiento
 	}
 
 	return nil
@@ -77,7 +70,6 @@ type PointOfSale struct {
 	ID              string    `json:"id"`
 	EstablishmentID string    `json:"establishment_id"`
 	Nombre          string    `json:"nombre"`
-	CodPuntoVentaMH *string   `json:"cod_punto_venta_mh,omitempty"`
 	CodPuntoVenta   *string   `json:"cod_punto_venta,omitempty"`
 	Latitude        *float64  `json:"latitude,omitempty"`
 	Longitude       *float64  `json:"longitude,omitempty"`
@@ -89,22 +81,20 @@ type PointOfSale struct {
 
 // CreatePOSRequest is the request to create a new point of sale
 type CreatePOSRequest struct {
-	Nombre          string   `json:"nombre" binding:"required,min=3,max=100"`
-	CodPuntoVentaMH *string  `json:"cod_punto_venta_mh,omitempty"`
-	CodPuntoVenta   *string  `json:"cod_punto_venta,omitempty"`
-	Latitude        *float64 `json:"latitude,omitempty"`
-	Longitude       *float64 `json:"longitude,omitempty"`
-	IsPortable      bool     `json:"is_portable"`
+	Nombre        string   `json:"nombre" binding:"required,min=3,max=100"`
+	CodPuntoVenta *string  `json:"cod_punto_venta,omitempty"`
+	Latitude      *float64 `json:"latitude,omitempty"`
+	Longitude     *float64 `json:"longitude,omitempty"`
+	IsPortable    bool     `json:"is_portable"`
 }
 
 // UpdatePOSRequest is the request to update a point of sale
 type UpdatePOSRequest struct {
-	Nombre          *string  `json:"nombre,omitempty"`
-	CodPuntoVentaMH *string  `json:"cod_punto_venta_mh,omitempty"`
-	CodPuntoVenta   *string  `json:"cod_punto_venta,omitempty"`
-	Latitude        *float64 `json:"latitude,omitempty"`
-	Longitude       *float64 `json:"longitude,omitempty"`
-	IsPortable      *bool    `json:"is_portable,omitempty"`
+	Nombre        *string  `json:"nombre,omitempty"`
+	CodPuntoVenta *string  `json:"cod_punto_venta,omitempty"`
+	Latitude      *float64 `json:"latitude,omitempty"`
+	Longitude     *float64 `json:"longitude,omitempty"`
+	IsPortable    *bool    `json:"is_portable,omitempty"`
 }
 
 // UpdatePOSLocationRequest is the request to update POS location
@@ -116,12 +106,8 @@ type UpdatePOSLocationRequest struct {
 // Validate validates the CreatePOSRequest
 func (r *CreatePOSRequest) Validate() error {
 	// Validate MH codes if provided
-	if r.CodPuntoVentaMH != nil && len(*r.CodPuntoVentaMH) != 4 {
+	if r.CodPuntoVenta != nil && len(*r.CodPuntoVenta) != 4 {
 		return ErrInvalidCodPuntoVentaMH
-	}
-
-	if r.CodPuntoVenta != nil && (len(*r.CodPuntoVenta) < 1 || len(*r.CodPuntoVenta) > 15) {
-		return ErrInvalidCodPuntoVenta
 	}
 
 	// Validate coordinates if provided
