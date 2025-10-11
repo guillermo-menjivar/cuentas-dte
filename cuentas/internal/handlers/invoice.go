@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
+	"cuentas/internal/dte"
 	"cuentas/internal/models"
 	"cuentas/internal/services"
 
@@ -209,6 +211,35 @@ func (h *InvoiceHandler) FinalizeInvoice(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	// ===== ADD THIS SECTION =====
+	// Process DTE (build, sign, and prepare for transmission)
+	dteServiceInterface, exists := c.Get("dteService")
+	if exists {
+		dteService := dteServiceInterface.(*dte.DTEService)
+
+		fmt.Println("\n=== Starting DTE Processing ===")
+		signedDTE, err := dteService.ProcessInvoice(c.Request.Context(), invoice)
+		if err != nil {
+			// Log the error but don't fail the invoice finalization
+			fmt.Printf("❌ DTE processing failed: %v\n", err)
+			// Update invoice status to indicate DTE issue
+			dteStatus := "failed_signing"
+			invoice.DteStatus = &dteStatus
+		} else {
+			// Successfully signed
+			fmt.Printf("✅ DTE signed successfully for invoice %s\n", invoice.ID)
+			fmt.Printf("📝 Signed DTE length: %d characters\n\n", len(signedDTE))
+			dteStatus := "signed"
+			invoice.DteStatus = &dteStatus
+
+			// TODO: Store signed DTE in database
+			_ = signedDTE
+		}
+	} else {
+		fmt.Println("⚠️  Warning: DTE service not available in context")
+	}
+	// ===== END NEW SECTION =====
 
 	c.JSON(http.StatusOK, invoice)
 }
