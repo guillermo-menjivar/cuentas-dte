@@ -78,8 +78,8 @@ func (s *DTEService) loadCredentialsFromSource(ctx context.Context, companyID uu
 		return nil, fmt.Errorf("failed to load firmador password from Vault: %w", err)
 	}
 
-	// Format NIT as string (14 digits with leading zeros if needed)
-	nitStr := fmt.Sprintf("%014d", nit)
+	// Convert NIT to string (firmador expects string without dashes)
+	nitStr := fmt.Sprintf("%d", nit)
 
 	return &CachedCredentials{
 		CompanyID:       id,
