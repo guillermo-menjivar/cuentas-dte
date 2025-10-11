@@ -811,8 +811,8 @@ func (s *InvoiceService) generateNumeroControl(ctx context.Context, tx *sql.Tx, 
 	// Get establishment and POS codes (no COALESCE - must be set)
 	query := `
 		SELECT 
-			e.cod_establecimiento_mh,
-			pos.cod_punto_venta_mh,
+			e.cod_establecimiento,
+			pos.cod_punto_venta,
 			e.nombre as establishment_name,
 			pos.nombre as pos_name
 		FROM point_of_sale pos
@@ -830,29 +830,29 @@ func (s *InvoiceService) generateNumeroControl(ctx context.Context, tx *sql.Tx, 
 
 	// Strict validation: MH codes must be set
 	if codEstable == nil || *codEstable == "" {
-		return "", fmt.Errorf("establishment '%s' must have cod_establecimiento_mh assigned by Hacienda before finalizing invoices", establishmentName)
+		return "", fmt.Errorf("establishment '%s' must have cod_establecimiento assigned by Hacienda before finalizing invoices", establishmentName)
 	}
 	if codPuntoVenta == nil || *codPuntoVenta == "" {
-		return "", fmt.Errorf("point of sale '%s' must have cod_punto_venta_mh assigned by Hacienda before finalizing invoices", posName)
+		return "", fmt.Errorf("point of sale '%s' must have cod_punto_venta assigned by Hacienda before finalizing invoices", posName)
 	}
 
 	// Validate 4-character format
 	if len(*codEstable) != 4 {
-		return "", fmt.Errorf("establishment '%s' cod_establecimiento_mh must be exactly 4 characters, got %d: '%s'",
+		return "", fmt.Errorf("establishment '%s' cod_establecimiento must be exactly 4 characters, got %d: '%s'",
 			establishmentName, len(*codEstable), *codEstable)
 	}
 	if len(*codPuntoVenta) != 4 {
-		return "", fmt.Errorf("point of sale '%s' cod_punto_venta_mh must be exactly 4 characters, got %d: '%s'",
+		return "", fmt.Errorf("point of sale '%s' cod_punto_venta must be exactly 4 characters, got %d: '%s'",
 			posName, len(*codPuntoVenta), *codPuntoVenta)
 	}
 
 	// Validate codes are alphanumeric (Hacienda uses numeric, but spec allows alphanumeric)
 	if !s.isValidMHCode(*codEstable) {
-		return "", fmt.Errorf("establishment '%s' cod_establecimiento_mh contains invalid characters: '%s'",
+		return "", fmt.Errorf("establishment '%s' cod_establecimiento contains invalid characters: '%s'",
 			establishmentName, *codEstable)
 	}
 	if !s.isValidMHCode(*codPuntoVenta) {
-		return "", fmt.Errorf("point of sale '%s' cod_punto_venta_mh contains invalid characters: '%s'",
+		return "", fmt.Errorf("point of sale '%s' cod_punto_venta contains invalid characters: '%s'",
 			posName, *codPuntoVenta)
 	}
 
