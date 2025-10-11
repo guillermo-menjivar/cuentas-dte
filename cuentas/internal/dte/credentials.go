@@ -73,7 +73,7 @@ func (s *DTEService) loadCredentialsFromSource(ctx context.Context, companyID uu
 	}
 
 	// Load password from Vault
-	password, err := s.vault.GetSecret(*firmadorPasswordRef)
+	password, err := s.vault.GetCompanyPassword(*firmadorPasswordRef)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load firmador password from Vault: %w", err)
 	}
