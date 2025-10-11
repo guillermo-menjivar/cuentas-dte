@@ -26,7 +26,7 @@ func (s *EstablishmentService) CreateEstablishment(ctx context.Context, companyI
 	query := `
 		INSERT INTO establishments (
 			company_id, tipo_establecimiento, nombre,
-			cod_establecimiento_mh, cod_establecimiento,
+			cod_establecimiento,
 			departamento, municipio, complemento_direccion,
 			telefono, active, created_at, updated_at
 		) VALUES (
@@ -38,7 +38,6 @@ func (s *EstablishmentService) CreateEstablishment(ctx context.Context, companyI
 		CompanyID:            companyID,
 		TipoEstablecimiento:  req.TipoEstablecimiento,
 		Nombre:               req.Nombre,
-		CodEstablecimientoMH: req.CodEstablecimientoMH,
 		CodEstablecimiento:   req.CodEstablecimiento,
 		Departamento:         req.Departamento,
 		Municipio:            req.Municipio,
@@ -52,7 +51,6 @@ func (s *EstablishmentService) CreateEstablishment(ctx context.Context, companyI
 		establishment.CompanyID,
 		establishment.TipoEstablecimiento,
 		establishment.Nombre,
-		establishment.CodEstablecimientoMH,
 		establishment.CodEstablecimiento,
 		establishment.Departamento,
 		establishment.Municipio,
@@ -75,7 +73,7 @@ func (s *EstablishmentService) GetEstablishment(ctx context.Context, companyID, 
 	query := `
 		SELECT
 			id, company_id, tipo_establecimiento, nombre,
-			cod_establecimiento_mh, cod_establecimiento,
+			cod_establecimiento,
 			departamento, municipio, complemento_direccion,
 			telefono, active, created_at, updated_at
 		FROM establishments
@@ -88,7 +86,6 @@ func (s *EstablishmentService) GetEstablishment(ctx context.Context, companyID, 
 		&establishment.CompanyID,
 		&establishment.TipoEstablecimiento,
 		&establishment.Nombre,
-		&establishment.CodEstablecimientoMH,
 		&establishment.CodEstablecimiento,
 		&establishment.Departamento,
 		&establishment.Municipio,
@@ -114,7 +111,7 @@ func (s *EstablishmentService) ListEstablishments(ctx context.Context, companyID
 	query := `
 		SELECT
 			id, company_id, tipo_establecimiento, nombre,
-			cod_establecimiento_mh, cod_establecimiento,
+			cod_establecimiento,
 			departamento, municipio, complemento_direccion,
 			telefono, active, created_at, updated_at
 		FROM establishments
@@ -141,7 +138,6 @@ func (s *EstablishmentService) ListEstablishments(ctx context.Context, companyID
 			&est.CompanyID,
 			&est.TipoEstablecimiento,
 			&est.Nombre,
-			&est.CodEstablecimientoMH,
 			&est.CodEstablecimiento,
 			&est.Departamento,
 			&est.Municipio,
@@ -192,16 +188,10 @@ func (s *EstablishmentService) UpdateEstablishment(ctx context.Context, companyI
 		args = append(args, *req.Nombre)
 	}
 
-	if req.CodEstablecimientoMH != nil {
-		if len(*req.CodEstablecimientoMH) != 4 {
-			return nil, models.ErrInvalidCodEstablecimientoMH
-		}
-		argCount++
-		updates = append(updates, fmt.Sprintf("cod_establecimiento_mh = $%d", argCount))
-		args = append(args, *req.CodEstablecimientoMH)
-	}
-
 	if req.CodEstablecimiento != nil {
+		if len(*req.CodEstablecimiento) != 4 {
+			return nil, models.ErrInvalidCodEstablecimiento
+		}
 		argCount++
 		updates = append(updates, fmt.Sprintf("cod_establecimiento = $%d", argCount))
 		args = append(args, *req.CodEstablecimiento)
@@ -245,7 +235,7 @@ func (s *EstablishmentService) UpdateEstablishment(ctx context.Context, companyI
 		SET %s
 		WHERE id = $1 AND company_id = $2
 		RETURNING id, company_id, tipo_establecimiento, nombre,
-			cod_establecimiento_mh, cod_establecimiento,
+			cod_establecimiento,
 			departamento, municipio, complemento_direccion,
 			telefono, active, created_at, updated_at
 	`, joinStrings(updates, ", "))
@@ -256,7 +246,6 @@ func (s *EstablishmentService) UpdateEstablishment(ctx context.Context, companyI
 		&establishment.CompanyID,
 		&establishment.TipoEstablecimiento,
 		&establishment.Nombre,
-		&establishment.CodEstablecimientoMH,
 		&establishment.CodEstablecimiento,
 		&establishment.Departamento,
 		&establishment.Municipio,
@@ -315,7 +304,7 @@ func (s *EstablishmentService) CreatePointOfSale(ctx context.Context, companyID,
 	query := `
 		INSERT INTO point_of_sale (
 			establishment_id, nombre,
-			cod_punto_venta_mh, cod_punto_venta,
+			cod_punto_venta,
 			latitude, longitude, is_portable,
 			active, created_at, updated_at
 		) VALUES (
@@ -326,7 +315,6 @@ func (s *EstablishmentService) CreatePointOfSale(ctx context.Context, companyID,
 	pos := &models.PointOfSale{
 		EstablishmentID: establishmentID,
 		Nombre:          req.Nombre,
-		CodPuntoVentaMH: req.CodPuntoVentaMH,
 		CodPuntoVenta:   req.CodPuntoVenta,
 		Latitude:        req.Latitude,
 		Longitude:       req.Longitude,
@@ -338,7 +326,6 @@ func (s *EstablishmentService) CreatePointOfSale(ctx context.Context, companyID,
 	err = database.DB.QueryRowContext(ctx, query,
 		pos.EstablishmentID,
 		pos.Nombre,
-		pos.CodPuntoVentaMH,
 		pos.CodPuntoVenta,
 		pos.Latitude,
 		pos.Longitude,
@@ -360,7 +347,7 @@ func (s *EstablishmentService) GetPointOfSale(ctx context.Context, companyID, po
 	query := `
 		SELECT
 			pos.id, pos.establishment_id, pos.nombre,
-			pos.cod_punto_venta_mh, pos.cod_punto_venta,
+			pos.cod_punto_venta,
 			pos.latitude, pos.longitude, pos.is_portable,
 			pos.active, pos.created_at, pos.updated_at
 		FROM point_of_sale pos
@@ -373,7 +360,6 @@ func (s *EstablishmentService) GetPointOfSale(ctx context.Context, companyID, po
 		&pos.ID,
 		&pos.EstablishmentID,
 		&pos.Nombre,
-		&pos.CodPuntoVentaMH,
 		&pos.CodPuntoVenta,
 		&pos.Latitude,
 		&pos.Longitude,
@@ -404,7 +390,7 @@ func (s *EstablishmentService) ListPointsOfSale(ctx context.Context, companyID, 
 	query := `
 		SELECT
 			id, establishment_id, nombre,
-			cod_punto_venta_mh, cod_punto_venta,
+			cod_punto_venta,
 			latitude, longitude, is_portable,
 			active, created_at, updated_at
 		FROM point_of_sale
@@ -430,7 +416,6 @@ func (s *EstablishmentService) ListPointsOfSale(ctx context.Context, companyID, 
 			&pos.ID,
 			&pos.EstablishmentID,
 			&pos.Nombre,
-			&pos.CodPuntoVentaMH,
 			&pos.CodPuntoVenta,
 			&pos.Latitude,
 			&pos.Longitude,
@@ -471,16 +456,10 @@ func (s *EstablishmentService) UpdatePointOfSale(ctx context.Context, companyID,
 		args = append(args, *req.Nombre)
 	}
 
-	if req.CodPuntoVentaMH != nil {
-		if len(*req.CodPuntoVentaMH) != 4 {
-			return nil, models.ErrInvalidCodPuntoVentaMH
-		}
-		argCount++
-		updates = append(updates, fmt.Sprintf("cod_punto_venta_mh = $%d", argCount))
-		args = append(args, *req.CodPuntoVentaMH)
-	}
-
 	if req.CodPuntoVenta != nil {
+		if len(*req.CodPuntoVenta) != 4 {
+			return nil, models.ErrInvalidCodPuntoVenta
+		}
 		argCount++
 		updates = append(updates, fmt.Sprintf("cod_punto_venta = $%d", argCount))
 		args = append(args, *req.CodPuntoVenta)
@@ -518,7 +497,7 @@ func (s *EstablishmentService) UpdatePointOfSale(ctx context.Context, companyID,
 		SET %s
 		WHERE id = $1
 		RETURNING id, establishment_id, nombre,
-			cod_punto_venta_mh, cod_punto_venta,
+			cod_punto_venta,
 			latitude, longitude, is_portable,
 			active, created_at, updated_at
 	`, joinStrings(updates, ", "))
@@ -528,7 +507,6 @@ func (s *EstablishmentService) UpdatePointOfSale(ctx context.Context, companyID,
 		&pos.ID,
 		&pos.EstablishmentID,
 		&pos.Nombre,
-		&pos.CodPuntoVentaMH,
 		&pos.CodPuntoVenta,
 		&pos.Latitude,
 		&pos.Longitude,
