@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"cuentas/internal/models/dte"
@@ -122,8 +123,15 @@ func NewClient(cfg *Config) *Client {
 
 // NewClientFromViper creates a firmador client using Viper configuration
 func NewClientFromViper() *Client {
+	baseURL := viper.GetString("firmador_url")
+
+	// Ensure the URL includes the /firmardocumento path
+	if !strings.HasSuffix(baseURL, "/firmardocumento") {
+		baseURL = baseURL + "/firmardocumento"
+	}
+
 	cfg := &Config{
-		BaseURL:      viper.GetString("firmador_url"),
+		BaseURL:      baseURL,
 		Timeout:      viper.GetDuration("firmador_timeout"),
 		RetryMax:     viper.GetInt("firmador_retry_max"),
 		RetryWaitMin: viper.GetDuration("firmador_retry_wait_min"),
