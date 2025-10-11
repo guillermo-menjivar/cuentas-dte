@@ -8,6 +8,7 @@ import (
 	"cuentas/internal/handlers"
 	"cuentas/internal/middleware"
 	"cuentas/internal/services"
+	"cuentas/internal/services/dte"
 	"cuentas/internal/services/firmador"
 
 	"github.com/gin-gonic/gin"
@@ -21,6 +22,7 @@ import (
 var (
 	vaultService   *services.VaultService
 	firmadorClient *firmador.Client
+	dteService     *dte.DTEService
 )
 
 // ServeCmd represents the serve command
@@ -58,9 +60,27 @@ var ServeCmd = &cobra.Command{
 			log.Fatalf("Failed to initialize Firmador: %v", err)
 		}
 
+		if err := initializeDTEService(); err != nil {
+			log.Fatalf("Failed to initialize DTE service: %v", err)
+		}
+
 		fmt.Printf("Server running on port: %s\n", GlobalConfig.Port)
 		startServer()
 	},
+}
+
+func initializeDTEService() error {
+	fmt.Println("Initializing DTE service...")
+
+	dteService = dte.NewDTEService(
+		database.DB,
+		database.RedisClient,
+		firmadorClient,
+		vaultService,
+	)
+
+	fmt.Println("DTE service initialized")
+	return nil
 }
 
 func initializeDatabase() error {
