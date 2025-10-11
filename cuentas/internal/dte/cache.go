@@ -17,7 +17,7 @@ type CachedCredentials struct {
 	CompanyID       uuid.UUID `json:"company_id"`
 	NIT             string    `json:"nit"`
 	Password        string    `json:"password"`
-	Nombre          string    `json:"nombre"`
+	Name            string    `json:"name"`
 	NombreComercial *string   `json:"nombre_comercial"`
 	CachedAt        time.Time `json:"cached_at"`
 }
