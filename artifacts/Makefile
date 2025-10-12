@@ -11,11 +11,10 @@ clean:
 run_firmador: stage_firmador
 	docker-compose -f dte-firmador/dockersinssl/docker/docker-compose.yml up
 
-.phony: stage_firmador
+.PHONY: stage_firmador
 stage_firmador:
-	unzip dte-firmador.zip
+	unzip -o dte-firmador.zip
 	rm -rf dte-firmador/serviciofirmadowindows
 	rm -rf dte-firmador/dockerconssl
-	cp certs/06143005061013.crt dte-firmador/dockersinssl/docker/temp/06143005061013.crt
-	cp certs/PublicteKey_06143005061013.key dte-firmador/dockerSinSSL/docker/temp/PublicteKey_06143005061013.key
+	cp certs/firmador_certs/06143005061013.p12 dte-firmador/dockerSinSSL/docker/temp/06143005061013.p12
 	cp build/custom_docker-compose.yml dte-firmador/dockerSinSSL/docker/docker-compose.yml
