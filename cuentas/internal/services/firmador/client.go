@@ -67,6 +67,7 @@ var firmadorErrorMessages = map[string]string{
 	"813": "Invalid password for certificate",
 	"814": "Certificate expired or invalid",
 	"803": "No existe llave publica para este nit",
+	"812": "Unexpected character '-' (code 45) in prolog; expected '<'\n at [row,col {unknown-source}]: [1,1]",
 	// Add more as we discover them
 }
 
