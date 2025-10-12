@@ -259,6 +259,7 @@ func (c *Client) Sign(ctx context.Context, nit, password string, document interf
 	}
 
 	if resp.StatusCode >= 500 {
+		fmt.Println("the server returned", resp.StatusCode)
 		return "", &FirmadorError{
 			Type:      "server",
 			Code:      fmt.Sprintf("HTTP_%d", resp.StatusCode),
