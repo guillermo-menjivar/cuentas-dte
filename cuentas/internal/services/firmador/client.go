@@ -61,6 +61,14 @@ type FirmadorError struct {
 	Timestamp time.Time
 }
 
+var firmadorErrorMessages = map[string]string{
+	"809": "Invalid NIT format - NIT must be 14 digits",
+	"812": "Certificate file not found on firmador server - certificate needs to be uploaded",
+	"813": "Invalid password for certificate",
+	"814": "Certificate expired or invalid",
+	// Add more as we discover them
+}
+
 func (e *FirmadorError) Error() string {
 	return fmt.Sprintf("[%s] %s: %s", e.Type, e.Code, e.Message)
 }
@@ -259,7 +267,6 @@ func (c *Client) Sign(ctx context.Context, nit, password string, document interf
 	}
 
 	if resp.StatusCode >= 500 {
-		fmt.Println("the server returned", resp.StatusCode)
 		return "", &FirmadorError{
 			Type:      "server",
 			Code:      fmt.Sprintf("HTTP_%d", resp.StatusCode),
@@ -293,10 +300,20 @@ func (c *Client) Sign(ctx context.Context, nit, password string, document interf
 		// Try to parse as error response
 		var errResp SignResponseError
 		if err := json.Unmarshal(signResp.Body, &errResp); err == nil && errResp.Codigo != "" {
+			// Get friendly message if available
+			friendlyMsg := firmadorErrorMessages[errResp.Codigo]
+			if friendlyMsg == "" {
+				// No friendly message, use original
+				friendlyMsg = fmt.Sprintf("Firmador error %s: %v", errResp.Codigo, errResp.Mensaje)
+			} else {
+				// Include both friendly message and original details
+				friendlyMsg = fmt.Sprintf("%s (Details: %v)", friendlyMsg, errResp.Mensaje)
+			}
+
 			return "", &FirmadorError{
 				Type:      "validation",
 				Code:      errResp.Codigo,
-				Message:   fmt.Sprintf("%v", errResp.Mensaje),
+				Message:   friendlyMsg,
 				Timestamp: time.Now(),
 			}
 		}
