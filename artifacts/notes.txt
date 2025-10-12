@@ -1,0 +1,8 @@
+Su certificado ha sido generado exitosamente.
+Comience a firmar sus Documentos Electrónicos para transmitirlos correctamente.
+
+Su certificado es el número: 68ebd5f513d2c02296812b9d
+
+Las directivas de seguridad de su navegador pueden enviarle un mensaje de advertencia previo a descargar su certificado.
+
+Para continuar pulse el botón “Descargar Certificado”.
