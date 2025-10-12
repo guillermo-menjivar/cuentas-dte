@@ -1,3 +1,5 @@
+import hashlib
+
 # The hash from your XML certificate
 target_hash = "0f43fa5142a28cab25c365e5a5d48c457bf8896740907745d11fb54a74bdcb3d2598ac35dd365c40a194a7a31007d443c0e7dc3ff560d236754b7fecc4337f9e"
 
