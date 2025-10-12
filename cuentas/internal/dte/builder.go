@@ -76,7 +76,7 @@ func (b *DTEBuilder) buildIdentificacion(invoice *models.Invoice, company *Compa
 // buildEmisor builds the emisor section
 func (b *DTEBuilder) buildEmisor(company *CompanyData, establishment *EstablishmentData) dte.Emisor {
 	return dte.Emisor{
-		NIT:                 fmt.Sprintf("%014d", company.NIT),
+		NIT:                 company.NIT,
 		NRC:                 fmt.Sprintf("%d", company.NCR),
 		Nombre:              company.Name,
 		CodActividad:        company.CodActividad,
@@ -338,7 +338,7 @@ func (b *DTEBuilder) numberToWords(amount float64) string {
 
 type CompanyData struct {
 	ID                   string
-	NIT                  int64
+	NIT                  string
 	NCR                  int64
 	Name                 string
 	Email                string
