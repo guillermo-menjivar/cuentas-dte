@@ -66,6 +66,7 @@ var firmadorErrorMessages = map[string]string{
 	"812": "Certificate file not found on firmador server - certificate needs to be uploaded",
 	"813": "Invalid password for certificate",
 	"814": "Certificate expired or invalid",
+	"803": "No existe llave publica para este nit",
 	// Add more as we discover them
 }
 
