@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strconv"
 
 	"cuentas/internal/codigos"
 	"cuentas/internal/models"
@@ -38,19 +37,9 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req *models.CreateCo
 	// Generate UUID
 	companyID := uuid.New().String()
 
-	// Strip dashes from NIT and NCR, convert to int64
+	// Strip dashes from NIT and NCR - keep as strings
 	nitStripped := tools.StripNIT(req.NIT)
 	ncrStripped := tools.StripNRC(req.NCR)
-
-	nitInt, err := strconv.ParseInt(nitStripped, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse NIT: %v", err)
-	}
-
-	ncrInt, err := strconv.ParseInt(ncrStripped, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse NCR: %v", err)
-	}
 
 	descActividad, exists := codigos.GetEconomicActivityName(req.CodActividad)
 	if !exists {
@@ -63,21 +52,28 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req *models.CreateCo
 		return nil, fmt.Errorf("failed to store password in vault: %v", err)
 	}
 
+	// Store firmador password in Vault
+	firmadorVaultRef, err := s.vaultService.StoreCompanyPassword(companyID+"_firmador", req.FirmadorPassword)
+	if err != nil {
+		// Cleanup HC password if firmador fails
+		if delErr := s.vaultService.DeleteCompanyPassword(vaultRef); delErr != nil {
+			fmt.Printf("Warning: failed to cleanup HC vault entry: %v\n", delErr)
+		}
+		return nil, fmt.Errorf("failed to store firmador password in vault: %v", err)
+	}
+
 	// Insert into database
-	company, err := s.insertCompany(ctx, companyID, req, nitInt, ncrInt, vaultRef)
+	company, err := s.insertCompany(ctx, companyID, req, nitStripped, ncrStripped, vaultRef, firmadorVaultRef, descActividad)
 	if err != nil {
 		// Cleanup: delete from Vault if DB insert fails
 		if delErr := s.vaultService.DeleteCompanyPassword(vaultRef); delErr != nil {
-			fmt.Printf("Warning: failed to cleanup vault entry: %v\n", delErr)
+			fmt.Printf("Warning: failed to cleanup HC vault entry: %v\n", delErr)
+		}
+		if delErr := s.vaultService.DeleteCompanyPassword(firmadorVaultRef); delErr != nil {
+			fmt.Printf("Warning: failed to cleanup firmador vault entry: %v\n", delErr)
 		}
 		return nil, fmt.Errorf("failed to insert company: %v", err)
 	}
-
-	// Store both in database
-	company.CodActividad = req.CodActividad
-	company.DescActividad = descActividad
-	company.DTEAmbiente = req.DTEAmbiente
-	company.NombreComercial = req.NombreComercial
 
 	return company, nil
 }
@@ -125,15 +121,17 @@ func (s *CompanyService) GetCompanyByID(ctx context.Context, id string) (*models
 		return nil, fmt.Errorf("failed to query company: %v", err)
 	}
 
-	// Format NIT and NCR for JSON response
-	company.NITFormatted = tools.FormatNIT(fmt.Sprintf("%d", company.NIT))
-	company.NCRFormatted = tools.FormatNRC(fmt.Sprintf("%d", company.NCR))
-
 	return &company, nil
 }
 
 // insertCompany inserts a company into the database
-func (s *CompanyService) insertCompany(ctx context.Context, companyID string, req *models.CreateCompanyRequest, nitInt, ncrInt int64, vaultRef string) (*models.Company, error) {
+func (s *CompanyService) insertCompany(
+	ctx context.Context,
+	companyID string,
+	req *models.CreateCompanyRequest,
+	nit, ncr string,
+	vaultRef, firmadorVaultRef, descActividad string,
+) (*models.Company, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %v", err)
@@ -155,20 +153,11 @@ func (s *CompanyService) insertCompany(ctx context.Context, companyID string, re
 		          firmador_username, firmador_password_ref
 	`
 
-	// Get description for economic activity
-	descActividad, _ := codigos.GetEconomicActivityName(req.CodActividad)
-
-	// Store firmador password in Vault
-	firmadorVaultRef, err := s.vaultService.StoreCompanyPassword(companyID+"_firmador", req.FirmadorPassword)
-	if err != nil {
-		return nil, fmt.Errorf("failed to store firmador password in vault: %v", err)
-	}
-
 	err = tx.QueryRowContext(ctx, query,
 		companyID,
 		req.Name,
-		nitInt,
-		ncrInt,
+		nit,
+		ncr,
 		req.HCUsername,
 		vaultRef,
 		req.Email,
@@ -207,20 +196,12 @@ func (s *CompanyService) insertCompany(ctx context.Context, companyID string, re
 	)
 
 	if err != nil {
-		// Cleanup firmador vault entry
-		if delErr := s.vaultService.DeleteCompanyPassword(firmadorVaultRef); delErr != nil {
-			fmt.Printf("Warning: failed to cleanup firmador vault entry: %v\n", delErr)
-		}
 		return nil, err
 	}
 
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %v", err)
 	}
-
-	// Format NIT and NCR for JSON response
-	company.NITFormatted = tools.FormatNIT(fmt.Sprintf("%d", company.NIT))
-	company.NCRFormatted = tools.FormatNRC(fmt.Sprintf("%d", company.NCR))
 
 	return &company, nil
 }
