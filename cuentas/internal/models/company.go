@@ -15,8 +15,7 @@ type Company struct {
 	CodActividad         string    `json:"cod_actividad" binding:"required"`     // NEW
 	NombreComercial      *string   `json:"nombre_comercial" binding: "required"` // NEW: Optional
 	DTEAmbiente          string    `json:"dte_ambiente" binding:"required"`
-	NIT                  int64     `json:"-"`   // Store as int, don't expose directly
-	NITFormatted         string    `json:"nit"` // Expose formatted version
+	NIT                  string    `json:"nit"` // Store as int, don't expose directly
 	NCR                  int64     `json:"-"`   // Store as int, don't expose directly
 	NCRFormatted         string    `json:"ncr"` // Expose formatted version
 	HCUsername           string    `json:"hc_username"`
