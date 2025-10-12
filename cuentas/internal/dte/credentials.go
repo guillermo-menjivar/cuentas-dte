@@ -47,7 +47,7 @@ func (s *DTEService) loadCredentialsFromSource(ctx context.Context, companyID uu
 
 	var (
 		id                  uuid.UUID
-		nit                 int64
+		nit                 string
 		name                string
 		nombreComercial     *string
 		firmadorPasswordRef *string
@@ -78,12 +78,9 @@ func (s *DTEService) loadCredentialsFromSource(ctx context.Context, companyID uu
 		return nil, fmt.Errorf("failed to load firmador password from Vault: %w", err)
 	}
 
-	// Convert NIT to string (firmador expects string without dashes)
-	nitStr := fmt.Sprintf("%d", nit)
-
 	return &CachedCredentials{
 		CompanyID:       id,
-		NIT:             nitStr,
+		NIT:             nit,
 		Password:        password,
 		Name:            name,
 		NombreComercial: nombreComercial,
