@@ -6,6 +6,7 @@ import (
 
 	"cuentas/internal/database"
 	"cuentas/internal/dte"
+	"cuentas/internal/hacienda"
 	"cuentas/internal/handlers"
 	"cuentas/internal/middleware"
 	"cuentas/internal/services"
@@ -22,6 +23,7 @@ import (
 var (
 	vaultService   *services.VaultService
 	firmadorClient *firmador.Client
+	haciendaClient *hacienda.Client
 	dteService     *dte.DTEService
 )
 
@@ -60,6 +62,11 @@ var ServeCmd = &cobra.Command{
 			log.Fatalf("Failed to initialize Firmador: %v", err)
 		}
 
+		// Initialize Hacienda client (ADD THIS)
+		if err := initializeHacienda(); err != nil {
+			log.Fatalf("Failed to initialize Hacienda: %v", err)
+		}
+
 		if err := initializeDTEService(); err != nil {
 			log.Fatalf("Failed to initialize DTE service: %v", err)
 		}
@@ -67,6 +74,16 @@ var ServeCmd = &cobra.Command{
 		fmt.Printf("Server running on port: %s\n", GlobalConfig.Port)
 		startServer()
 	},
+}
+
+func initializeHacienda() error {
+	fmt.Println("Initializing Hacienda client...")
+
+	// Create hacienda client from viper config
+	haciendaClient = hacienda.NewClientFromViper()
+
+	fmt.Printf("Hacienda client initialized (URL: %s)\n", haciendaClient.GetBaseURL())
+	return nil
 }
 
 func initializeDTEService() error {
@@ -77,6 +94,7 @@ func initializeDTEService() error {
 		database.RedisClient,
 		firmadorClient,
 		vaultService,
+		haciendaClient,
 	)
 
 	fmt.Println("DTE service initialized")
