@@ -10,7 +10,7 @@ curl -X POST http://localhost:8080/v1/companies \
     "firmador_password": "sdKC4uLduegSPT",
     "hc_username": "06143005061013",
     "hc_password": "MF7HwttFuZ.*3RY",
-    "cod_actividad": "69100",
+    "cod_actividad": "69200",
     "email": "contact@paredes.com",
     "departamento": "06",
     "municipio": "21",
