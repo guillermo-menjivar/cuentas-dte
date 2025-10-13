@@ -14,7 +14,7 @@
       "tipoContingencia": null,
       "motivoContin": null,
       "fecEmi": "2025-10-13",
-      "horEmi": "17:20:00",
+      "horEmi": "17:36:00",
       "tipoMoneda": "USD"
     },
     "documentoRelacionado": null,
@@ -60,20 +60,20 @@
         "numItem": 1,
         "tipoItem": 1,
         "numeroDocumento": null,
-        "cantidad": 1.00,
+        "cantidad": 1,
         "codigo": "PROD-001",
         "codTributo": null,
         "uniMedida": 59,
         "descripcion": "Servicio de consultoria",
-        "precioUni": 10.00,
-        "montoDescu": 0.00,
-        "ventaNoSuj": 0.00,
-        "ventaExenta": 0.00,
-        "ventaGravada": 8.85,
+        "precioUni": 8.84955752,
+        "montoDescu": 0,
+        "ventaNoSuj": 0,
+        "ventaExenta": 0,
+        "ventaGravada": 8.84955752,
         "tributos": null,
-        "psv": 0.00,
-        "noGravado": 0.00,
-        "ivaItem": 1.15
+        "psv": 0,
+        "noGravado": 0,
+        "ivaItem": 1.15044248
       }
     ],
     "resumen": {
