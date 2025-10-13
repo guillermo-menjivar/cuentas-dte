@@ -14,7 +14,7 @@
       "tipoContingencia": null,
       "motivoContin": null,
       "fecEmi": "2025-01-13",
-      "horEmi": "01:17:22",
+      "horEmi": "15:43:00",
       "tipoMoneda": "USD"
     },
     "documentoRelacionado": null,
@@ -70,7 +70,7 @@
         "ventaNoSuj": 0,
         "ventaExenta": 0,
         "ventaGravada": 2.85,
-        "tributos": ["20"],
+        "tributos": null,
         "psv": 0,
         "noGravado": 0,
         "ivaItem": 0.37
@@ -86,13 +86,7 @@
       "descuGravada": 0.15,
       "porcentajeDescuento": 0,
       "totalDescu": 0.15,
-      "tributos": [
-        {
-          "codigo": "20",
-          "descripcion": "Impuesto al Valor Agregado 13%",
-          "valor": 0.37
-        }
-      ],
+      "tributos": null,
       "subTotal": 3.22,
       "ivaRete1": 0,
       "reteRenta": 0,
