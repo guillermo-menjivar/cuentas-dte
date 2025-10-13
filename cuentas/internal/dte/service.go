@@ -46,7 +46,7 @@ func NewDTEService(
 }
 
 // ProcessInvoice builds DTE from invoice, signs it, and prepares for transmission
-func (s *DTEService) ProcessInvoice(ctx context.Context, invoice *models.Invoice) (string, error) {
+func (s *DTEService) ProcessInvoice(ctx context.Context, invoice *models.Invoice) (*hacienda.ReceptionResponse, error) {
 	// Step 1: Build DTE from invoice
 	fmt.Println("Step 1: Building DTE from invoice...")
 	factura, err := s.builder.BuildFromInvoice(ctx, invoice)
@@ -120,9 +120,6 @@ func (s *DTEService) ProcessInvoice(ctx context.Context, invoice *models.Invoice
 	}
 
 	// TODO: Step 6: Log transaction to database
-
-	return response, nil
-	// TODO: Step 5: Log transaction
 
 	return signedDTE, nil
 }
