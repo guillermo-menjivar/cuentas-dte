@@ -137,9 +137,10 @@ func NewClientFromViper() *Client {
 	baseURL := viper.GetString("firmador_url")
 
 	// Ensure the URL includes the /firmardocumento path
-	if !strings.HasSuffix(baseURL, "/firmardocumento/") {
-		if strings.HasSuffix(baseURL, "/firmardocumento") {
-			baseURL = baseURL + "/"
+
+	if !strings.Contains(baseURL, "/firmardocumento") {
+		if strings.HasSuffix(baseURL, "/") {
+			baseURL = baseURL + "firmardocumento/"
 		} else {
 			baseURL = baseURL + "/firmardocumento/"
 		}
