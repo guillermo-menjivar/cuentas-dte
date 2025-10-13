@@ -120,8 +120,7 @@ func (s *DTEService) ProcessInvoice(ctx context.Context, invoice *models.Invoice
 	}
 
 	// TODO: Step 6: Log transaction to database
-
-	return signedDTE, nil
+	return response, nil
 }
 
 // SignDTE signs a DTE document for a company (existing method - keep for flexibility)
