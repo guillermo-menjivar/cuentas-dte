@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"cuentas/internal/hacienda"
 	"cuentas/internal/models"
 	"cuentas/internal/services"
 	"cuentas/internal/services/firmador"
@@ -21,6 +22,7 @@ type DTEService struct {
 	firmador  *firmador.Client
 	vault     *services.VaultService
 	credCache *CredentialCache
+	hacienda  *hacienda.Client
 	builder   *DTEBuilder
 }
 
@@ -30,9 +32,11 @@ func NewDTEService(
 	redis *redis.Client,
 	firmador *firmador.Client,
 	vault *services.VaultService,
+	haciendaClient *hacienda.Client,
 ) *DTEService {
 	return &DTEService{
 		db:        db,
+		hacienda:  haciendaClient,
 		redis:     redis,
 		firmador:  firmador,
 		vault:     vault,
@@ -85,7 +89,39 @@ func (s *DTEService) ProcessInvoice(ctx context.Context, invoice *models.Invoice
 	}
 	fmt.Printf("\nSigned DTE length: %d characters\n", len(signedDTE))
 
-	// TODO: Step 4: Transmit to Hacienda (not implemented yet)
+	// Step 4: Transmit to Hacienda 🚀
+	fmt.Println("\nStep 4: Submitting to Ministerio de Hacienda...")
+	response, err := s.hacienda.SubmitDTE(ctx, creds.NIT, creds.Password, signedDTE)
+	if err != nil {
+		// Check if it's a rejection error (we still got a response)
+		if hacErr, ok := err.(*hacienda.HaciendaError); ok && hacErr.Type == "rejection" {
+			fmt.Printf("\n❌ DTE REJECTED by Hacienda!\n")
+			fmt.Printf("Code: %s\n", response.CodigoMsg)
+			fmt.Printf("Message: %s\n", response.DescripcionMsg)
+			if len(response.Observaciones) > 0 {
+				fmt.Println("Observations:")
+				for _, obs := range response.Observaciones {
+					fmt.Printf("  - %s\n", obs)
+				}
+			}
+			return response, err
+		}
+		return nil, fmt.Errorf("failed to submit to Hacienda: %w", err)
+	}
+
+	// Step 5: Success! 🎉
+	fmt.Println("\n✅ SUCCESS! DTE ACCEPTED BY HACIENDA!")
+	fmt.Printf("Estado: %s\n", response.Estado)
+	fmt.Printf("Código de Generación: %s\n", response.CodigoGeneracion)
+	fmt.Printf("Sello Recibido: %s\n", response.SelloRecibido)
+	fmt.Printf("Fecha Procesamiento: %s\n", response.FhProcesamiento)
+	if response.DescripcionMsg != "" {
+		fmt.Printf("Message: %s\n", response.DescripcionMsg)
+	}
+
+	// TODO: Step 6: Log transaction to database
+
+	return response, nil
 	// TODO: Step 5: Log transaction
 
 	return signedDTE, nil
