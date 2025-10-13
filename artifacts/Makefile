@@ -16,5 +16,5 @@ stage_firmador:
 	unzip -o dte-firmador.zip
 	rm -rf dte-firmador/serviciofirmadowindows
 	rm -rf dte-firmador/dockerconssl
-	cp certs/firmador_certs/06143005061013.p12 dte-firmador/dockerSinSSL/docker/temp/06143005061013.p12
+	cp certs/firmador_certs/06143005061013.crt dte-firmador/dockerSinSSL/docker/temp/06143005061013.crt
 	cp build/custom_docker-compose.yml dte-firmador/dockerSinSSL/docker/docker-compose.yml
