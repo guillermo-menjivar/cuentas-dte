@@ -1,6 +1,23 @@
 #!/bin/bash
 set -e
 
+# ... [previous usage and argument parsing code] ...
+
+echo "=== Testing Full DTE Flow ==="
+echo ""
+
+# Step 0: Validate DTE against schema
+echo "Step 0: Validating DTE structure..."
+if ! ./validate_dte_schema.sh; then
+    echo "❌ DTE validation failed. Fix errors before submitting."
+    exit 1
+fi
+echo "✅ DTE structure is valid!"
+echo ""
+
+# Step 1: Sign the DTE
+echo "Step 1: Signing DTE with Firmador..."
+
 # Usage function
 usage() {
     echo "Usage: $0 [OPTIONS]"
