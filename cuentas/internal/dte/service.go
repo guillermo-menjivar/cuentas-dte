@@ -51,13 +51,13 @@ func (s *DTEService) ProcessInvoice(ctx context.Context, invoice *models.Invoice
 	fmt.Println("Step 1: Building DTE from invoice...")
 	factura, err := s.builder.BuildFromInvoice(ctx, invoice)
 	if err != nil {
-		return "", fmt.Errorf("failed to build DTE: %w", err)
+		return nil, fmt.Errorf("failed to build DTE: %w", err)
 	}
 
 	// Pretty print the DTE for debugging
 	dteJSON, err := json.MarshalIndent(factura, "", "  ")
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal DTE: %w", err)
+		return nil, fmt.Errorf("failed to marshal DTE: %w", err)
 	}
 	fmt.Println("DTE Generated:")
 	fmt.Println(string(dteJSON))
@@ -66,17 +66,17 @@ func (s *DTEService) ProcessInvoice(ctx context.Context, invoice *models.Invoice
 	fmt.Println("\nStep 2: Loading credentials and signing DTE...")
 	companyID, err := uuid.Parse(invoice.CompanyID)
 	if err != nil {
-		return "", fmt.Errorf("invalid company ID: %w", err)
+		return nil, fmt.Errorf("invalid company ID: %w", err)
 	}
 
 	creds, err := s.LoadCredentials(ctx, companyID)
 	if err != nil {
-		return "", fmt.Errorf("failed to load credentials: %w", err)
+		return nil, fmt.Errorf("failed to load credentials: %w", err)
 	}
 
 	signedDTE, err := s.firmador.Sign(ctx, creds.NIT, creds.Password, factura)
 	if err != nil {
-		return "", fmt.Errorf("failed to sign DTE: %w", err)
+		return nil, fmt.Errorf("failed to sign DTE: %w", err)
 	}
 
 	// Step 3: Print signed DTE
