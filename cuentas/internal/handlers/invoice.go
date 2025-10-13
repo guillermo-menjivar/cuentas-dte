@@ -230,10 +230,10 @@ func (h *InvoiceHandler) FinalizeInvoice(c *gin.Context) {
 			// Successfully signed
 			fmt.Printf("✅ DTE signed successfully for invoice %s\n", invoice.ID)
 
-			fmt.Printf("Estado: %s\n", response.Estado)
-			fmt.Printf("Código de Generación: %s\n", response.CodigoGeneracion)
-			if response.SelloRecibido != "" {
-				fmt.Printf("Sello Recibido: %s\n", response.SelloRecibido)
+			fmt.Printf("Estado: %s\n", signedDTE.Estado)
+			fmt.Printf("Código de Generación: %s\n", signedDTE.CodigoGeneracion)
+			if signedDTE.SelloRecibido != "" {
+				fmt.Printf("Sello Recibido: %s\n", signedDTE.SelloRecibido)
 			}
 
 			dteStatus := "signed"
