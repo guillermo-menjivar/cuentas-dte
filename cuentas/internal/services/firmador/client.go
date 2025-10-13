@@ -67,7 +67,7 @@ var firmadorErrorMessages = map[string]string{
 	"813": "Invalid password for certificate",
 	"814": "Certificate expired or invalid",
 	"803": "No existe llave publica para este nit - inspect the certificata was properly given to firmador",
-	"812": "Unexpected character '-' (code 45) in prolog; expected '<'\n at [row,col {unknown-source}]: [1,1]  - bad formatted certificate",
+	"812": "Certificate file not found or cannot be read",
 	"811": "Problemas al convertir String a Json",
 	// Add more as we discover them
 }
