@@ -10,11 +10,6 @@ import (
 	"cuentas/internal/models/dte"
 )
 
-// DTEBuilder builds DTE documents from invoices
-type DTEBuilder struct {
-	db *sql.DB
-}
-
 // NewDTEBuilder creates a new DTE builder
 func NewDTEBuilder(db *sql.DB) *DTEBuilder {
 	return &DTEBuilder{
@@ -335,44 +330,6 @@ func (b *DTEBuilder) numberToWords(amount float64) string {
 }
 
 // Data loading functions
-
-type CompanyData struct {
-	ID                   string
-	NIT                  string
-	NCR                  int64
-	Name                 string
-	Email                string
-	CodActividad         string
-	DescActividad        string
-	NombreComercial      *string
-	DTEAmbiente          string
-	Departamento         string
-	Municipio            string
-	ComplementoDireccion string
-	Telefono             string
-}
-
-type EstablishmentData struct {
-	ID                   string
-	TipoEstablecimiento  string
-	CodEstablecimiento   string
-	CodPuntoVenta        string
-	Departamento         string
-	Municipio            string
-	ComplementoDireccion string
-	Telefono             string
-}
-
-type ClientData struct {
-	ID               string
-	NIT              *int64
-	NCR              *int64
-	DUI              *int64
-	BusinessName     string
-	DepartmentCode   string
-	MunicipalityCode string
-	FullAddress      string
-}
 
 func (b *DTEBuilder) loadCompany(ctx context.Context, companyID string) (*CompanyData, error) {
 	query := `
