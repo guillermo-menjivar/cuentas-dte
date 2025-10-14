@@ -194,16 +194,6 @@ func (c *Client) SubmitDTE(
 		}
 	}
 
-	reqBody, err := json.Marshal(reqPayload)
-	if err != nil {
-		return nil, &HaciendaError{
-			Type:      "validation",
-			Code:      "MARSHAL_ERROR",
-			Message:   fmt.Sprintf("failed to marshal request: %v", err),
-			Timestamp: time.Now(),
-		}
-	}
-
 	// ⭐ ADD DEBUG OUTPUT HERE
 	fmt.Println("\n🔍 DEBUG INFO:")
 	fmt.Printf("URL: %s\n", c.baseURL)
