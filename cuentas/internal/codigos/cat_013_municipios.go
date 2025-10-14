@@ -287,3 +287,53 @@ func IsValidMunicipalityInDepartment(departmentCode, municipalityCode string) bo
 	fullCode := departmentCode + "." + municipalityCode
 	return IsValidMunicipality(fullCode)
 }
+
+// ExtractMunicipalityCode extracts the 2-digit municipality code from either format
+// Input: "06.20" or "20"
+// Output: "20"
+func ExtractMunicipalityCode(municipio string) string {
+	// If it contains a dot, it's in full format (DD.MM)
+	if strings.Contains(municipio, ".") {
+		parts := strings.Split(municipio, ".")
+		if len(parts) == 2 {
+			return parts[1] // Return just the MM part
+		}
+	}
+	// Already in short format or invalid
+	return municipio
+}
+
+// ValidateAndExtractMunicipality validates a municipality code and extracts the 2-digit code
+// Returns the 2-digit code and whether it's valid
+func ValidateAndExtractMunicipality(municipio string) (string, bool) {
+	// If it's in full format (DD.MM), validate it exists
+	if strings.Contains(municipio, ".") {
+		if !IsValidMunicipality(municipio) {
+			return "", false
+		}
+		parts := strings.Split(municipio, ".")
+		if len(parts) == 2 {
+			return parts[1], true // Return the MM part
+		}
+		return "", false
+	}
+
+	// If it's just 2 digits, assume it's already extracted
+	// We can't validate it without knowing the department
+	return municipio, true
+}
+
+// ValidateMunicipalityWithDepartment validates that a municipality code belongs to a department
+// Accepts municipality in either format: "20" or "06.20"
+// Returns the 2-digit code if valid
+func ValidateMunicipalityWithDepartment(departmentCode, municipio string) (string, bool) {
+	// Extract the municipality code
+	munCode := ExtractMunicipalityCode(municipio)
+
+	// Validate it exists for this department
+	if IsValidMunicipalityInDepartment(departmentCode, munCode) {
+		return munCode, true
+	}
+
+	return "", false
+}
