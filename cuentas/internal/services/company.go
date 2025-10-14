@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"cuentas/internal/codigos"
+	"cuentas/internal/dte" // ⭐ Add this import
 	"cuentas/internal/models"
 	"cuentas/internal/tools"
 
@@ -34,6 +35,11 @@ func NewCompanyService(db *sql.DB, vaultService *VaultService) (*CompanyService,
 
 // CreateCompany handles the complete company creation flow
 func (s *CompanyService) CreateCompany(ctx context.Context, req *models.CreateCompanyRequest) (*models.Company, error) {
+	// ⭐ Validate DTEAmbiente
+	if err := s.validateDTEAmbiente(req.DTEAmbiente); err != nil {
+		return nil, err
+	}
+
 	// Generate UUID
 	companyID := uuid.New().String()
 
@@ -76,6 +82,16 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req *models.CreateCo
 	}
 
 	return company, nil
+}
+
+// ⭐ Add validation function
+func (s *CompanyService) validateDTEAmbiente(ambiente string) error {
+	switch ambiente {
+	case dte.AmbienteTest, dte.AmbienteProduction:
+		return nil
+	default:
+		return fmt.Errorf("invalid dte_ambiente: '%s'. Must be '00' (test) or '01' (production)", ambiente)
+	}
 }
 
 // GetCompanyByID retrieves a company by ID
