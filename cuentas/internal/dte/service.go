@@ -45,7 +45,6 @@ func NewDTEService(
 	}
 }
 
-// ProcessInvoice builds DTE from invoice, signs it, and prepares for transmission
 func (s *DTEService) ProcessInvoice(ctx context.Context, invoice *models.Invoice) (*hacienda.ReceptionResponse, error) {
 	// Step 1: Build DTE from invoice
 	fmt.Println("Step 1: Building DTE from invoice...")
@@ -91,7 +90,14 @@ func (s *DTEService) ProcessInvoice(ctx context.Context, invoice *models.Invoice
 
 	// Step 4: Transmit to Hacienda 🚀
 	fmt.Println("\nStep 4: Submitting to Ministerio de Hacienda...")
-	response, err := s.hacienda.SubmitDTE(ctx, creds.NIT, creds.Password, signedDTE)
+
+	response, err := s.hacienda.SubmitDTE(
+		ctx,
+		factura.Identificacion.Ambiente,         // "00" or "01"
+		factura.Identificacion.TipoDte,          // "01" for Factura
+		factura.Identificacion.CodigoGeneracion, // UUID
+		signedDTE,                               // JWT from Firmador
+	)
 	if err != nil {
 		// Check if it's a rejection error (we still got a response)
 		if hacErr, ok := err.(*hacienda.HaciendaError); ok && hacErr.Type == "rejection" {
@@ -120,6 +126,7 @@ func (s *DTEService) ProcessInvoice(ctx context.Context, invoice *models.Invoice
 	}
 
 	// TODO: Step 6: Log transaction to database
+
 	return response, nil
 }
 
