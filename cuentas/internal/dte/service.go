@@ -76,6 +76,7 @@ func (s *DTEService) ProcessInvoice(ctx context.Context, invoice *models.Invoice
 	if err != nil {
 		return nil, fmt.Errorf("failed to load credentials: %w", err)
 	}
+	factura.Identificacion.CodigoGeneracion = strings.ToUpper(factura.Identificacion.CodigoGeneracion)
 
 	signedDTE, err := s.firmador.Sign(ctx, creds.NIT, creds.Password, factura)
 	if err != nil {
