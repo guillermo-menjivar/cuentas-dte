@@ -291,7 +291,6 @@ func (s *EstablishmentService) DeactivateEstablishment(ctx context.Context, comp
 	return nil
 }
 
-// CreatePointOfSale creates a new point of sale for an establishment
 func (s *EstablishmentService) CreatePointOfSale(ctx context.Context, companyID, establishmentID string, req *models.CreatePOSRequest) (*models.PointOfSale, error) {
 	// Validate request
 	if err := req.Validate(); err != nil {
@@ -302,6 +301,17 @@ func (s *EstablishmentService) CreatePointOfSale(ctx context.Context, companyID,
 	_, err := s.GetEstablishment(ctx, companyID, establishmentID)
 	if err != nil {
 		return nil, err
+	}
+
+	var codPuntoVenta string
+	if req.CodPuntoVenta != nil && *req.CodPuntoVenta != "" {
+		// Extract number from user input ("0001" -> 1, "1" -> 1)
+		number, err := strconv.Atoi(strings.TrimLeft(*req.CodPuntoVenta, "0"))
+		if err != nil {
+			return nil, fmt.Errorf("invalid cod_punto_venta: must be numeric")
+		}
+		// Format with P prefix: 1 -> "P001"
+		codPuntoVenta = dte.FormatPOSCode(number)
 	}
 
 	query := `
@@ -318,7 +328,7 @@ func (s *EstablishmentService) CreatePointOfSale(ctx context.Context, companyID,
 	pos := &models.PointOfSale{
 		EstablishmentID: establishmentID,
 		Nombre:          req.Nombre,
-		CodPuntoVenta:   req.CodPuntoVenta,
+		CodPuntoVenta:   &codPuntoVenta, // ⭐ Use formatted code
 		Latitude:        req.Latitude,
 		Longitude:       req.Longitude,
 		IsPortable:      req.IsPortable,
