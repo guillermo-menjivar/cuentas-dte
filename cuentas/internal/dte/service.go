@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"cuentas/internal/hacienda"
 	"cuentas/internal/models"
@@ -114,7 +115,7 @@ func (s *DTEService) ProcessInvoice(ctx context.Context, invoice *models.Invoice
 		authResponse.Body.Token,
 		factura.Identificacion.Ambiente,
 		factura.Identificacion.TipoDte,
-		factura.Identificacion.CodigoGeneracion,
+		strings.ToUpper(factura.Identificacion.CodigoGeneracion),
 		signedDTE,
 	)
 
