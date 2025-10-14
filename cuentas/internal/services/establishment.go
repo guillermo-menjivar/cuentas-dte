@@ -4,9 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"cuentas/internal/database"
+	"cuentas/internal/dte"
 	"cuentas/internal/models"
 )
 
@@ -22,23 +25,23 @@ func (s *EstablishmentService) CreateEstablishment(ctx context.Context, companyI
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
+	var codEstablecimiento string
 
-	query := `
-		INSERT INTO establishments (
-			company_id, tipo_establecimiento, nombre,
-			cod_establecimiento,
-			departamento, municipio, complemento_direccion,
-			telefono, active, created_at, updated_at
-		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-		) RETURNING id, created_at, updated_at
-	`
+	if req.CodEstablecimiento != nil && *req.CodEstablecimiento != "" {
+		// Parse the number from whatever format user sent ("0001", "1", etc.)
+		number, err := strconv.Atoi(strings.TrimLeft(*req.CodEstablecimiento, "0"))
+		if err != nil {
+			return nil, fmt.Errorf("invalid cod_establecimiento: must be numeric")
+		}
+		// Format with proper prefix based on tipo
+		codEstablecimiento = dte.FormatEstablishmentCode(req.TipoEstablecimiento, number)
+	}
 
 	establishment := &models.Establishment{
 		CompanyID:            companyID,
 		TipoEstablecimiento:  req.TipoEstablecimiento,
 		Nombre:               req.Nombre,
-		CodEstablecimiento:   req.CodEstablecimiento,
+		CodEstablecimiento:   &codEstablecimiento,
 		Departamento:         req.Departamento,
 		Municipio:            req.Municipio,
 		ComplementoDireccion: req.ComplementoDireccion,
