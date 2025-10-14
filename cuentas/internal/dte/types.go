@@ -1,14 +1,7 @@
 package dte
 
-import "database/sql"
-
 // InvoiceType represents the type of invoice
 type InvoiceType string
-
-// DTEBuilder builds DTE documents from invoices
-type DTEBuilder struct {
-	db *sql.DB
-}
 
 type CompanyData struct {
 	ID                   string

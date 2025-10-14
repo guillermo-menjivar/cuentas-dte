@@ -10,6 +10,11 @@ import (
 	"cuentas/internal/models/dte"
 )
 
+// DTEBuilder builds DTE documents from invoices
+type DTEBuilder struct {
+	db *sql.DB
+}
+
 // NewDTEBuilder creates a new DTE builder
 func NewDTEBuilder(db *sql.DB) *DTEBuilder {
 	return &DTEBuilder{
