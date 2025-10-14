@@ -17,13 +17,14 @@ import (
 
 // DTEService handles DTE signing and submission
 type DTEService struct {
-	db        *sql.DB
-	redis     *redis.Client
-	firmador  *firmador.Client
-	vault     *services.VaultService
-	credCache *CredentialCache
-	hacienda  *hacienda.Client
-	builder   *Builder
+	db              *sql.DB
+	redis           *redis.Client
+	firmador        *firmador.Client
+	vault           *services.VaultService
+	credCache       *CredentialCache
+	hacienda        *hacienda.Client
+	haciendaService *services.HaciendaService
+	builder         *Builder
 }
 
 // NewDTEService creates a new DTE service (singleton)
@@ -33,15 +34,17 @@ func NewDTEService(
 	firmador *firmador.Client,
 	vault *services.VaultService,
 	haciendaClient *hacienda.Client,
+	haciendaService *services.HaciendaService,
 ) *DTEService {
 	return &DTEService{
-		db:        db,
-		hacienda:  haciendaClient,
-		redis:     redis,
-		firmador:  firmador,
-		vault:     vault,
-		credCache: NewCredentialCache(redis),
-		builder:   NewBuilder(db),
+		db:              db,
+		hacienda:        haciendaClient,
+		redis:           redis,
+		firmador:        firmador,
+		vault:           vault,
+		credCache:       NewCredentialCache(redis),
+		builder:         NewBuilder(db),
+		haciendaService: haciendaService,
 	}
 }
 
@@ -91,7 +94,7 @@ func (s *DTEService) ProcessInvoice(ctx context.Context, invoice *models.Invoice
 	// Step 4: Transmit to Hacienda 🚀
 	fmt.Println("\nStep 4: Authenticating with Hacienda...")
 
-	companyID, err := uuid.Parse(invoice.CompanyID)
+	companyID, err = uuid.Parse(invoice.CompanyID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid company ID: %w", err)
 	}
