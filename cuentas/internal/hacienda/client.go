@@ -17,7 +17,6 @@ import (
 type Client struct {
 	baseURL    string
 	httpClient *retryablehttp.Client
-	apiToken   string // Optional: for production environment
 }
 
 // Config holds the hacienda client configuration
@@ -27,11 +26,9 @@ type Config struct {
 	RetryMax     int
 	RetryWaitMin time.Duration
 	RetryWaitMax time.Duration
-	APIToken     string // Optional: for production
 }
 
 // ReceptionRequest represents the request to submit a DTE to Hacienda
-// This is the format Hacienda expects, NOT the Firmador format!
 type ReceptionRequest struct {
 	Ambiente         string `json:"ambiente"`         // "00" = test, "01" = production
 	IDEnvio          int    `json:"idEnvio"`          // Sequential ID for this submission
@@ -111,7 +108,6 @@ func NewClient(cfg *Config) *Client {
 	return &Client{
 		baseURL:    cfg.BaseURL,
 		httpClient: retryClient,
-		apiToken:   cfg.APIToken,
 	}
 }
 
@@ -123,7 +119,6 @@ func NewClientFromViper() *Client {
 		RetryMax:     viper.GetInt("hacienda_retry_max"),
 		RetryWaitMin: viper.GetDuration("hacienda_retry_wait_min"),
 		RetryWaitMax: viper.GetDuration("hacienda_retry_wait_max"),
-		APIToken:     viper.GetString("hacienda_api_token"),
 	}
 
 	return NewClient(cfg)
@@ -163,6 +158,7 @@ func customRetryPolicy(ctx context.Context, resp *http.Response, err error) (boo
 //
 // Parameters:
 //   - ctx: Context for cancellation and timeout
+//   - authToken: The authentication token from HaciendaService
 //   - ambiente: "00" for test, "01" for production
 //   - tipoDte: "01" for Factura, "03" for CCF, etc.
 //   - codigoGeneracion: UUID from the DTE identificacion
@@ -171,6 +167,7 @@ func customRetryPolicy(ctx context.Context, resp *http.Response, err error) (boo
 // Returns the reception response or an error
 func (c *Client) SubmitDTE(
 	ctx context.Context,
+	authToken string,
 	ambiente string,
 	tipoDte string,
 	codigoGeneracion string,
@@ -180,7 +177,7 @@ func (c *Client) SubmitDTE(
 	reqPayload := ReceptionRequest{
 		Ambiente:         ambiente,
 		IDEnvio:          1, // TODO: Make this sequential per company
-		Version:          2, // Always 2 per Hacienda spec
+		Version:          1, // Use version 1 (your bash script uses 1, not 2)
 		TipoDte:          tipoDte,
 		Documento:        signedJWT,
 		CodigoGeneracion: codigoGeneracion,
@@ -213,13 +210,10 @@ func (c *Client) SubmitDTE(
 		}
 	}
 
-	// Set headers
+	// Set headers - based on your working bash script
 	req.Header.Set("Content-Type", "application/json")
-
-	// Only add Authorization header if token is provided (production)
-	if c.apiToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.apiToken)
-	}
+	req.Header.Set("User-Agent", "CuentasApp/1.0")
+	req.Header.Set("Authorization", authToken) // No "Bearer " prefix - just the token!
 
 	// Execute request with retries
 	resp, err := c.httpClient.Do(req)
@@ -284,9 +278,4 @@ func (c *Client) SubmitDTE(
 // GetBaseURL returns the configured base URL
 func (c *Client) GetBaseURL() string {
 	return c.baseURL
-}
-
-// SetAPIToken updates the API token (useful for switching environments)
-func (c *Client) SetAPIToken(token string) {
-	c.apiToken = token
 }
