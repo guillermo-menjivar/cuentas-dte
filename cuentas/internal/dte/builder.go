@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"cuentas/internal/codigos"
 	"cuentas/internal/models"
 )
 
@@ -116,17 +117,13 @@ func (b *Builder) buildEmisor(company *CompanyData, establishment *Establishment
 		DescActividad:       company.DescActividad,
 		NombreComercial:     company.NombreComercial,
 		TipoEstablecimiento: establishment.TipoEstablecimiento,
-		Direccion: Direccion{
-			Departamento: establishment.Departamento,
-			Municipio:    establishment.Municipio,
-			Complemento:  establishment.ComplementoDireccion,
-		},
-		Telefono:        establishment.Telefono,
-		Correo:          company.Email,
-		CodEstableMH:    nil,
-		CodEstable:      &establishment.CodEstablecimiento,
-		CodPuntoVentaMH: nil,
-		CodPuntoVenta:   &establishment.CodPuntoVenta,
+		Direccion:           b.buildEmisorDireccion(establishment),
+		Telefono:            establishment.Telefono,
+		Correo:              company.Email,
+		CodEstableMH:        nil,
+		CodEstable:          &establishment.CodEstablecimiento,
+		CodPuntoVentaMH:     nil,
+		CodPuntoVenta:       &establishment.CodPuntoVenta,
 	}
 }
 
@@ -159,11 +156,8 @@ func (b *Builder) buildReceptor(client *ClientData) *Receptor {
 	// Build direccion
 	var direccion *Direccion
 	if client.DepartmentCode != "" && client.MunicipalityCode != "" {
-		direccion = &Direccion{
-			Departamento: client.DepartmentCode,
-			Municipio:    client.MunicipalityCode,
-			Complemento:  client.FullAddress,
-		}
+		dir := b.buildReceptorDireccion(client)
+		direccion = &dir
 	}
 
 	return &Receptor{
@@ -448,4 +442,61 @@ func (b *Builder) loadEstablishmentAndPOS(ctx context.Context, establishmentID, 
 	}
 
 	return &est, nil
+}
+
+func (b *Builder) _buildEmisorDireccion(company *CompanyData) Direccion {
+	// Validate and extract municipality code
+	munCode, valid := codigos.ValidateMunicipalityWithDepartment(
+		company.Departamento,
+		company.Municipio,
+	)
+	if !valid {
+		// Log warning but don't fail - use as-is
+		fmt.Printf("Warning: Invalid municipality code for emisor: dept=%s, mun=%s\n",
+			company.Departamento, company.Municipio)
+		munCode = codigos.ExtractMunicipalityCode(company.Municipio)
+	}
+
+	return Direccion{
+		Departamento: company.Departamento,
+		Municipio:    munCode,
+		Complemento:  company.ComplementoDireccion,
+	}
+}
+
+func (b *Builder) buildEmisorDireccion(establishment *EstablishmentData) Direccion {
+	munCode, valid := codigos.ValidateMunicipalityWithDepartment(
+		establishment.Departamento,
+		establishment.Municipio,
+	)
+	if !valid {
+		fmt.Printf("Warning: Invalid municipality code for emisor: dept=%s, mun=%s\n",
+			establishment.Departamento, establishment.Municipio)
+		munCode = codigos.ExtractMunicipalityCode(establishment.Municipio)
+	}
+
+	return Direccion{
+		Departamento: establishment.Departamento,
+		Municipio:    munCode,
+		Complemento:  establishment.ComplementoDireccion,
+	}
+}
+
+// For Receptor
+func (b *Builder) buildReceptorDireccion(client *ClientData) Direccion {
+	munCode, valid := codigos.ValidateMunicipalityWithDepartment(
+		client.DepartmentCode,
+		client.MunicipalityCode,
+	)
+	if !valid {
+		fmt.Printf("Warning: Invalid municipality code for receptor: dept=%s, mun=%s\n",
+			client.DepartmentCode, client.MunicipalityCode)
+		munCode = codigos.ExtractMunicipalityCode(client.MunicipalityCode)
+	}
+
+	return Direccion{
+		Departamento: client.DepartmentCode,
+		Municipio:    munCode,
+		Complemento:  client.FullAddress,
+	}
 }
