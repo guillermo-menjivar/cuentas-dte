@@ -99,14 +99,14 @@ GET_ESTABLISHMENT_RESPONSE=$(curl -s -X GET "$BASE_URL/establishments/$ESTABLISH
 echo "$GET_ESTABLISHMENT_RESPONSE" | jq '.'
 echo -e "${GREEN}✓ Retrieved establishment details${NC}\n"
 
-# Test 5: Update establishment
-echo -e "${BLUE}Test 5: Updating Establishment${NC}"
+# Test 5: Update establishment (WITHOUT changing cod_establecimiento)
+echo -e "${BLUE}Test 5: Updating Establishment (phone and address only)${NC}"
 UPDATE_ESTABLISHMENT_RESPONSE=$(curl -s -X PATCH "$BASE_URL/establishments/$ESTABLISHMENT_ID" \
   -H "$CONTENT_TYPE" \
   -H "$COMPANY_HEADER" \
   -d '{
     "telefono": "22509999",
-    "cod_establecimiento": "0001"
+    "complemento_direccion": "Colonia Escalón, Calle Principal #123, Edificio A, San Salvador"
   }')
 
 echo "$UPDATE_ESTABLISHMENT_RESPONSE" | jq '.'
@@ -190,14 +190,13 @@ if [ "$PORTABLE_POS_ID" != "null" ] && [ -n "$PORTABLE_POS_ID" ]; then
     echo -e "${GREEN}✓ POS location updated${NC}\n"
 fi
 
-# Test 11: Update POS details
-echo -e "${BLUE}Test 11: Updating Point of Sale${NC}"
+# Test 11: Update POS details (WITHOUT changing cod_punto_venta)
+echo -e "${BLUE}Test 11: Updating Point of Sale (name only)${NC}"
 UPDATE_POS_RESPONSE=$(curl -s -X PATCH "$BASE_URL/pos/$POS_ID" \
   -H "$CONTENT_TYPE" \
   -H "$COMPANY_HEADER" \
   -d '{
-    "nombre": "Caja Principal 1 - Actualizada",
-    "cod_punto_venta": "0001"
+    "nombre": "Caja Principal 1 - Actualizada"
   }')
 
 echo "$UPDATE_POS_RESPONSE" | jq '.'
@@ -227,24 +226,24 @@ read -r CLEANUP
 
 if [ "$CLEANUP" = "y" ]; then
     echo -e "${BLUE}Deactivating test POS...${NC}"
-    
+
     curl -s -X DELETE "$BASE_URL/pos/$POS_ID" \
       -H "$COMPANY_HEADER" | jq '.'
-    
+
     if [ "$PORTABLE_POS_ID" != "null" ]; then
         curl -s -X DELETE "$BASE_URL/pos/$PORTABLE_POS_ID" \
           -H "$COMPANY_HEADER" | jq '.'
     fi
-    
+
     echo -e "${BLUE}Deactivating test establishments...${NC}"
-    
+
     curl -s -X DELETE "$BASE_URL/establishments/$ESTABLISHMENT_ID" \
       -H "$COMPANY_HEADER" | jq '.'
-    
+
     if [ "$SUCURSAL_ID" != "null" ]; then
         curl -s -X DELETE "$BASE_URL/establishments/$SUCURSAL_ID" \
           -H "$COMPANY_HEADER" | jq '.'
     fi
-    
+
     echo -e "${GREEN}✓ Test data deactivated${NC}"
 fi
