@@ -1,11 +1,45 @@
 package codigos
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // EstablishmentType represents the type of establishment
 type EstablishmentType struct {
 	Code  string
 	Value string
+}
+
+const (
+	EstablishmentPrefixMatriz   = "M" // Casa Matriz
+	EstablishmentPrefixSucursal = "S" // Sucursal
+	EstablishmentPrefixBodega   = "B" // Bodega
+	EstablishmentPrefixPatio    = "P" // Patio
+	PointOfSalePrefixPOS        = "P" // Punto de Venta
+)
+
+// FormatEstablishmentCode formats establishment code with proper prefix
+func FormatEstablishmentCode(tipoEstablecimiento string, number int) string {
+	var prefix string
+	switch tipoEstablecimiento {
+	case EstablishmentCasaMatriz: // "02"
+		prefix = EstablishmentPrefixMatriz // "M"
+	case EstablishmentSucursal: // "01"
+		prefix = EstablishmentPrefixSucursal // "S"
+	case EstablishmentBodega: // "04"
+		prefix = EstablishmentPrefixBodega // "B"
+	case EstablishmentPatio: // "07"
+		prefix = EstablishmentPrefixPatio // "P"
+	default:
+		prefix = EstablishmentPrefixMatriz // Default to Matriz
+	}
+	return fmt.Sprintf("%s%03d", prefix, number)
+}
+
+// FormatPOSCode formats point of sale code
+func FormatPOSCode(number int) string {
+	return fmt.Sprintf("%s%03d", PointOfSalePrefixPOS, number)
 }
 
 // Establishment type codes
