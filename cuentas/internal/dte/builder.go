@@ -167,28 +167,6 @@ func (b *DTEBuilder) buildCuerpoDocumento(invoice *models.Invoice) []dte.CuerpoD
 	return items
 }
 
-// buildTributos extracts tributo codes from line item taxes
-func (b *DTEBuilder) buildTributos(taxes []models.InvoiceLineItemTax) []string {
-	tributos := make([]string, 0)
-	for _, tax := range taxes {
-		// Extract the code part after the dot (e.g., "S1.20" -> "20")
-		// For now, just use the full code - we'll refine this
-		tributos = append(tributos, tax.TributoCode)
-	}
-	return tributos
-}
-
-// calculateIVA calculates IVA amount from taxes
-func (b *DTEBuilder) calculateIVA(taxes []models.InvoiceLineItemTax) float64 {
-	for _, tax := range taxes {
-		// IVA 13% is typically code "20" or similar
-		if tax.TaxRate == 0.13 {
-			return tax.TaxAmount
-		}
-	}
-	return 0
-}
-
 // buildResumen builds the summary section
 func (b *DTEBuilder) buildResumen(invoice *models.Invoice) dte.ResumenFactura {
 	return dte.ResumenFactura{
