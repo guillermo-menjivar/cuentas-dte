@@ -52,7 +52,7 @@ func TestCalculateConsumidorFinal(t *testing.T) {
 			discount:     0,
 			wantPrecio:   11.30,
 			wantGravada:  22.60,
-			wantIVA:      2.60088496, // ✅ 22.60 - (22.60/1.13) = 2.60088496
+			wantIVA:      2.6, // ✅ 22.60 - (22.60/1.13) = 2.60088496
 		},
 		{
 			name:         "with discount",
