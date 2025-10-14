@@ -89,32 +89,32 @@ func (s *DTEService) ProcessInvoice(ctx context.Context, invoice *models.Invoice
 	fmt.Printf("\nSigned DTE length: %d characters\n", len(signedDTE))
 
 	// Step 4: Transmit to Hacienda 🚀
-	fmt.Println("\nStep 4: Submitting to Ministerio de Hacienda...")
+	fmt.Println("\nStep 4: Authenticating with Hacienda...")
+
+	companyID, err := uuid.Parse(invoice.CompanyID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid company ID: %w", err)
+	}
+
+	authResponse, err := s.haciendaService.AuthenticateCompany(ctx, companyID.String())
+	if err != nil {
+		return nil, fmt.Errorf("failed to authenticate with Hacienda: %w", err)
+	}
+
+	fmt.Printf("✅ Authenticated! Token: %s...\n", authResponse.Body.Token[:50])
+
+	// Step 5: Submit to Hacienda (using the hacienda.Client)
+	fmt.Println("\nStep 5: Submitting to Ministerio de Hacienda...")
 
 	response, err := s.hacienda.SubmitDTE(
 		ctx,
-		factura.Identificacion.Ambiente,         // "00" or "01"
-		factura.Identificacion.TipoDte,          // "01" for Factura
-		factura.Identificacion.CodigoGeneracion, // UUID
-		signedDTE,                               // JWT from Firmador
+		authResponse.Body.Token,
+		factura.Identificacion.Ambiente,
+		factura.Identificacion.TipoDte,
+		factura.Identificacion.CodigoGeneracion,
+		signedDTE,
 	)
-	if err != nil {
-		// Check if it's a rejection error (we still got a response)
-		if hacErr, ok := err.(*hacienda.HaciendaError); ok && hacErr.Type == "rejection" {
-			fmt.Printf("\n❌ DTE REJECTED by Hacienda!\n")
-			fmt.Printf("Code: %s\n", response.CodigoMsg)
-			fmt.Printf("Message: %s\n", response.DescripcionMsg)
-			if len(response.Observaciones) > 0 {
-				fmt.Println("Observations:")
-				for _, obs := range response.Observaciones {
-					fmt.Printf("  - %s\n", obs)
-				}
-			}
-			return response, err
-		}
-		return nil, fmt.Errorf("failed to submit to Hacienda: %w", err)
-	}
-
+	fmt.Println(response)
 	// Step 5: Success! 🎉
 	fmt.Println("\n✅ SUCCESS! DTE ACCEPTED BY HACIENDA!")
 	fmt.Printf("Estado: %s\n", response.Estado)
