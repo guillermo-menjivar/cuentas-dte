@@ -6,8 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"cuentas/internal/codigos"
-	"cuentas/internal/dte" // ⭐ Add this import
+	"cuentas/internal/codigos" // ⭐ Add this import
 	"cuentas/internal/models"
 	"cuentas/internal/tools"
 
@@ -87,7 +86,7 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req *models.CreateCo
 // ⭐ Add validation function
 func (s *CompanyService) validateDTEAmbiente(ambiente string) error {
 	switch ambiente {
-	case dte.AmbienteTest, dte.AmbienteProduction:
+	case codigos.MODE_PRUEBA, codigos.MODE_PRODUCTION:
 		return nil
 	default:
 		return fmt.Errorf("invalid dte_ambiente: '%s'. Must be '00' (test) or '01' (production)", ambiente)
