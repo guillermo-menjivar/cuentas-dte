@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"cuentas/internal/codigos"
 	"cuentas/internal/database"
-	"cuentas/internal/dte"
 	"cuentas/internal/models"
 )
 
@@ -34,7 +34,7 @@ func (s *EstablishmentService) CreateEstablishment(ctx context.Context, companyI
 			return nil, fmt.Errorf("invalid cod_establecimiento: must be numeric")
 		}
 		// Format with proper prefix based on tipo
-		codEstablecimiento = dte.FormatEstablishmentCode(req.TipoEstablecimiento, number)
+		codEstablecimiento = codigos.FormatEstablishmentCode(req.TipoEstablecimiento, number)
 	}
 
 	establishment := &models.Establishment{
@@ -311,7 +311,7 @@ func (s *EstablishmentService) CreatePointOfSale(ctx context.Context, companyID,
 			return nil, fmt.Errorf("invalid cod_punto_venta: must be numeric")
 		}
 		// Format with P prefix: 1 -> "P001"
-		codPuntoVenta = dte.FormatPOSCode(number)
+		codPuntoVenta = codigos.FormatPOSCode(number)
 	}
 
 	query := `
