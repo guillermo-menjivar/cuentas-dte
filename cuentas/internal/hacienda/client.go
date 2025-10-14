@@ -194,6 +194,27 @@ func (c *Client) SubmitDTE(
 		}
 	}
 
+	reqBody, err := json.Marshal(reqPayload)
+	if err != nil {
+		return nil, &HaciendaError{
+			Type:      "validation",
+			Code:      "MARSHAL_ERROR",
+			Message:   fmt.Sprintf("failed to marshal request: %v", err),
+			Timestamp: time.Now(),
+		}
+	}
+
+	// ⭐ ADD DEBUG OUTPUT HERE
+	fmt.Println("\n🔍 DEBUG INFO:")
+	fmt.Printf("URL: %s\n", c.baseURL)
+	fmt.Printf("Request Body: %s\n", string(reqBody))
+	fmt.Printf("Auth Token (first 50): %s...\n", authToken[:50])
+	fmt.Println("Headers:")
+	fmt.Println("  Content-Type: application/json")
+	fmt.Println("  User-Agent: CuentasApp/1.0")
+	fmt.Printf("  Authorization: %s...\n", authToken[:50])
+	fmt.Println()
+
 	// Create HTTP request
 	req, err := retryablehttp.NewRequestWithContext(
 		ctx,
