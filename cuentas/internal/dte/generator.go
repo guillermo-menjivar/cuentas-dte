@@ -53,11 +53,11 @@ func (g *Generator) GenerateUUID() string {
 // Total length: 31 characters
 func (g *Generator) GenerateNumeroControl(tipoDte, codEstable, codPuntoVenta string, sequence int64) string {
 	return fmt.Sprintf(
-		"DTE-%s-M%sP%s-%015d",
+		"DTE-%s-%s%s-%015d", // Just concatenate them!
 		tipoDte,
-		codEstable,    // Already 4 digits: "0001"
-		codPuntoVenta, // Already 4 digits: "0001"
-		sequence,      // Zero-padded to 15 digits
+		codEstable,    // Already "M001", "S042", etc.
+		codPuntoVenta, // Already "P001", "P003", etc.
+		sequence,
 	)
 }
 
