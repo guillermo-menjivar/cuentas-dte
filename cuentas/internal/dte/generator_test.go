@@ -63,10 +63,10 @@ func TestFormatEstablishmentCode(t *testing.T) {
 		number int
 		want   string
 	}{
-		{"01", 1, "M001"},  // Casa Matriz
-		{"02", 42, "S042"}, // Sucursal
-		{"03", 5, "B005"},  // Bodega
-		{"04", 12, "P012"}, // Patio
+		{"02", 1, "M001"},  // Casa Matriz = "02" → M
+		{"01", 42, "S042"}, // Sucursal = "01" → S
+		{"04", 5, "B005"},  // Bodega = "04" → B
+		{"07", 12, "P012"}, // Patio = "07" → P
 	}
 
 	for _, tt := range tests {

@@ -2,6 +2,7 @@
 package dte
 
 import (
+	"cuentas/internal/codigos"
 	"errors"
 	"fmt"
 )
@@ -19,17 +20,16 @@ const (
 )
 
 // FormatEstablishmentCode formats establishment code with proper prefix
-// Example: FormatEstablishmentCode("01", 1) -> "M001"
 func FormatEstablishmentCode(tipoEstablecimiento string, number int) string {
 	var prefix string
 	switch tipoEstablecimiento {
-	case TipoEstablecimientoCasaMatriz: // "01"
+	case codigos.EstablishmentCasaMatriz: // "02"
 		prefix = EstablishmentPrefixMatriz // "M"
-	case TipoEstablecimientoSucursal: // "02"
+	case codigos.EstablishmentSucursal: // "01"
 		prefix = EstablishmentPrefixSucursal // "S"
-	case TipoEstablecimientoBodega: // "03" (assuming)
+	case codigos.EstablishmentBodega: // "04"
 		prefix = EstablishmentPrefixBodega // "B"
-	case TipoEstablecimientoPatio: // "04" (assuming)
+	case codigos.EstablishmentPatio: // "07"
 		prefix = EstablishmentPrefixPatio // "P"
 	default:
 		prefix = EstablishmentPrefixMatriz // Default to Matriz
