@@ -23,7 +23,7 @@ type DTEService struct {
 	vault     *services.VaultService
 	credCache *CredentialCache
 	hacienda  *hacienda.Client
-	builder   *DTEBuilder
+	builder   *Builder
 }
 
 // NewDTEService creates a new DTE service (singleton)
@@ -41,7 +41,7 @@ func NewDTEService(
 		firmador:  firmador,
 		vault:     vault,
 		credCache: NewCredentialCache(redis),
-		builder:   NewDTEBuilder(db),
+		builder:   NewBuilder(db),
 	}
 }
 
