@@ -34,6 +34,7 @@ func (s *EstablishmentService) CreateEstablishment(ctx context.Context, companyI
 		}
 		// Format with proper prefix based on tipo
 		codEstablecimiento = codigos.FormatEstablishmentCode(req.TipoEstablecimiento, number)
+		fmt.Println("this is what we got back from FormatEstablishmeneCode handler", codEstablecimiento)
 	}
 
 	// ⭐ ADD THIS BACK:

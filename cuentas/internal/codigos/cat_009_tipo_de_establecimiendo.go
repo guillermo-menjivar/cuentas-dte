@@ -38,6 +38,7 @@ func FormatEstablishmentCode(tipoEstablecimiento string, number int) string {
 		prefix = EstablishmentPrefixMatriz // Default to Matriz
 	}
 	fmt.Println("we are returning", prefix)
+	fmt.Println(fmt.Sprintf("%s%03d", prefix, number))
 	return fmt.Sprintf("%s%03d", prefix, number)
 }
 
