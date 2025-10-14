@@ -1,11 +1,47 @@
 // internal/dte/constants.go
 package dte
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // ============================================
 // IVA (TAX) CONSTANTS
 // ============================================
+
+const (
+	EstablishmentPrefixMatriz   = "M" // Casa Matriz
+	EstablishmentPrefixSucursal = "S" // Sucursal
+	EstablishmentPrefixBodega   = "B" // Bodega
+	EstablishmentPrefixPatio    = "P" // Patio
+	PointOfSalePrefixPOS        = "P" // Punto de Venta
+)
+
+// FormatEstablishmentCode formats establishment code with proper prefix
+// Example: FormatEstablishmentCode("01", 1) -> "M001"
+func FormatEstablishmentCode(tipoEstablecimiento string, number int) string {
+	var prefix string
+	switch tipoEstablecimiento {
+	case TipoEstablecimientoCasaMatriz: // "01"
+		prefix = EstablishmentPrefixMatriz // "M"
+	case TipoEstablecimientoSucursal: // "02"
+		prefix = EstablishmentPrefixSucursal // "S"
+	case TipoEstablecimientoBodega: // "03" (assuming)
+		prefix = EstablishmentPrefixBodega // "B"
+	case TipoEstablecimientoPatio: // "04" (assuming)
+		prefix = EstablishmentPrefixPatio // "P"
+	default:
+		prefix = EstablishmentPrefixMatriz // Default to Matriz
+	}
+	return fmt.Sprintf("%s%03d", prefix, number)
+}
+
+// FormatPOSCode formats point of sale code
+// Example: FormatPOSCode(1) -> "P001"
+func FormatPOSCode(number int) string {
+	return fmt.Sprintf("%s%03d", PointOfSalePrefixPOS, number)
+}
 
 const (
 	// IVARate is the tax rate in El Salvador (13%)
