@@ -17,7 +17,7 @@ import (
 type Client struct {
 	baseURL    string
 	httpClient *retryablehttp.Client
-	apiToken   string // Optional: if they require authentication
+	apiToken   string // Optional: for production environment
 }
 
 // Config holds the hacienda client configuration
@@ -27,15 +27,18 @@ type Config struct {
 	RetryMax     int
 	RetryWaitMin time.Duration
 	RetryWaitMax time.Duration
-	APIToken     string // Optional
+	APIToken     string // Optional: for production
 }
 
-// ReceptionRequest represents the request to submit a DTE
+// ReceptionRequest represents the request to submit a DTE to Hacienda
+// This is the format Hacienda expects, NOT the Firmador format!
 type ReceptionRequest struct {
-	NIT         string `json:"nit"`
-	Activo      bool   `json:"activo"`
-	PasswordPri string `json:"passwordPri"`
-	DteJson     string `json:"dteJson"` // The signed JWT
+	Ambiente         string `json:"ambiente"`         // "00" = test, "01" = production
+	IDEnvio          int    `json:"idEnvio"`          // Sequential ID for this submission
+	Version          int    `json:"version"`          // Always 2
+	TipoDte          string `json:"tipoDte"`          // "01" = Factura, "03" = CCF, etc.
+	Documento        string `json:"documento"`        // The signed JWT from Firmador
+	CodigoGeneracion string `json:"codigoGeneracion"` // UUID from the DTE
 }
 
 // ReceptionResponse represents the response from Hacienda
@@ -55,11 +58,11 @@ type ReceptionResponse struct {
 
 // HaciendaError represents an error from the Hacienda service
 type HaciendaError struct {
-	Type      string // "network", "validation", "rejection", "server"
-	Code      string
-	Message   string
-	Details   interface{}
-	Timestamp time.Time
+	Type      string      // "network", "validation", "rejection", "server"
+	Code      string      // Error code
+	Message   string      // Human-readable message
+	Details   interface{} // Additional details
+	Timestamp time.Time   // When the error occurred
 }
 
 func (e *HaciendaError) Error() string {
@@ -70,7 +73,7 @@ func (e *HaciendaError) Error() string {
 func NewClient(cfg *Config) *Client {
 	if cfg == nil {
 		cfg = &Config{
-			// Test environment
+			// Test environment defaults
 			BaseURL:      "https://apitest.dtes.mh.gob.sv/fesv/recepciondte",
 			Timeout:      60 * time.Second,
 			RetryMax:     3,
@@ -89,6 +92,12 @@ func NewClient(cfg *Config) *Client {
 	if cfg.RetryMax == 0 {
 		cfg.RetryMax = 3
 	}
+	if cfg.RetryWaitMin == 0 {
+		cfg.RetryWaitMin = 2 * time.Second
+	}
+	if cfg.RetryWaitMax == 0 {
+		cfg.RetryWaitMax = 10 * time.Second
+	}
 
 	// Create retryable HTTP client
 	retryClient := retryablehttp.NewClient()
@@ -97,7 +106,7 @@ func NewClient(cfg *Config) *Client {
 	retryClient.RetryWaitMax = cfg.RetryWaitMax
 	retryClient.HTTPClient.Timeout = cfg.Timeout
 	retryClient.CheckRetry = customRetryPolicy
-	retryClient.Logger = nil
+	retryClient.Logger = nil // Disable default logging
 
 	return &Client{
 		baseURL:    cfg.BaseURL,
@@ -132,12 +141,12 @@ func customRetryPolicy(ctx context.Context, resp *http.Response, err error) (boo
 		return false, ctx.Err()
 	}
 
-	// Retry on 5xx errors
+	// Retry on 5xx errors (server errors)
 	if resp.StatusCode >= 500 {
 		return true, nil
 	}
 
-	// Retry on 429
+	// Retry on 429 (rate limit)
 	if resp.StatusCode == 429 {
 		return true, nil
 	}
@@ -151,15 +160,33 @@ func customRetryPolicy(ctx context.Context, resp *http.Response, err error) (boo
 }
 
 // SubmitDTE submits a signed DTE to Hacienda
-func (c *Client) SubmitDTE(ctx context.Context, nit, password, signedJWT string) (*ReceptionResponse, error) {
-	// Prepare request
+//
+// Parameters:
+//   - ctx: Context for cancellation and timeout
+//   - ambiente: "00" for test, "01" for production
+//   - tipoDte: "01" for Factura, "03" for CCF, etc.
+//   - codigoGeneracion: UUID from the DTE identificacion
+//   - signedJWT: The JWT token returned from Firmador
+//
+// Returns the reception response or an error
+func (c *Client) SubmitDTE(
+	ctx context.Context,
+	ambiente string,
+	tipoDte string,
+	codigoGeneracion string,
+	signedJWT string,
+) (*ReceptionResponse, error) {
+	// Prepare request in Hacienda's expected format
 	reqPayload := ReceptionRequest{
-		NIT:         nit,
-		Activo:      true,
-		PasswordPri: password,
-		DteJson:     signedJWT,
+		Ambiente:         ambiente,
+		IDEnvio:          1, // TODO: Make this sequential per company
+		Version:          2, // Always 2 per Hacienda spec
+		TipoDte:          tipoDte,
+		Documento:        signedJWT,
+		CodigoGeneracion: codigoGeneracion,
 	}
 
+	// Marshal request
 	reqBody, err := json.Marshal(reqPayload)
 	if err != nil {
 		return nil, &HaciendaError{
@@ -170,8 +197,13 @@ func (c *Client) SubmitDTE(ctx context.Context, nit, password, signedJWT string)
 		}
 	}
 
-	// Create request
-	req, err := retryablehttp.NewRequestWithContext(ctx, http.MethodPost, c.baseURL, bytes.NewBuffer(reqBody))
+	// Create HTTP request
+	req, err := retryablehttp.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		c.baseURL,
+		bytes.NewBuffer(reqBody),
+	)
 	if err != nil {
 		return nil, &HaciendaError{
 			Type:      "network",
@@ -181,12 +213,15 @@ func (c *Client) SubmitDTE(ctx context.Context, nit, password, signedJWT string)
 		}
 	}
 
+	// Set headers
 	req.Header.Set("Content-Type", "application/json")
+
+	// Only add Authorization header if token is provided (production)
 	if c.apiToken != "" {
 		req.Header.Set("Authorization", "Bearer "+c.apiToken)
 	}
 
-	// Execute request
+	// Execute request with retries
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, &HaciendaError{
@@ -198,7 +233,7 @@ func (c *Client) SubmitDTE(ctx context.Context, nit, password, signedJWT string)
 	}
 	defer resp.Body.Close()
 
-	// Read response
+	// Read response body
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, &HaciendaError{
@@ -209,7 +244,7 @@ func (c *Client) SubmitDTE(ctx context.Context, nit, password, signedJWT string)
 		}
 	}
 
-	// Check status code
+	// Check HTTP status code
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return nil, &HaciendaError{
 			Type:      "server",
@@ -220,7 +255,7 @@ func (c *Client) SubmitDTE(ctx context.Context, nit, password, signedJWT string)
 		}
 	}
 
-	// Parse response
+	// Parse JSON response
 	var recepResp ReceptionResponse
 	if err := json.Unmarshal(respBody, &recepResp); err != nil {
 		return nil, &HaciendaError{
@@ -232,7 +267,7 @@ func (c *Client) SubmitDTE(ctx context.Context, nit, password, signedJWT string)
 		}
 	}
 
-	// Check if DTE was rejected
+	// Check if DTE was rejected by Hacienda
 	if recepResp.Estado == "RECHAZADO" {
 		return &recepResp, &HaciendaError{
 			Type:      "rejection",
@@ -249,4 +284,9 @@ func (c *Client) SubmitDTE(ctx context.Context, nit, password, signedJWT string)
 // GetBaseURL returns the configured base URL
 func (c *Client) GetBaseURL() string {
 	return c.baseURL
+}
+
+// SetAPIToken updates the API token (useful for switching environments)
+func (c *Client) SetAPIToken(token string) {
+	c.apiToken = token
 }
