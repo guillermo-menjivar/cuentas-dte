@@ -53,13 +53,14 @@ func (s *EstablishmentService) CreateEstablishment(ctx context.Context, companyI
 		CompanyID:            companyID,
 		TipoEstablecimiento:  req.TipoEstablecimiento,
 		Nombre:               req.Nombre,
-		CodEstablecimiento:   &codEstablecimiento,
+		CodEstablecimiento:   codEstablecimiento,
 		Departamento:         req.Departamento,
 		Municipio:            req.Municipio,
 		ComplementoDireccion: req.ComplementoDireccion,
 		Telefono:             req.Telefono,
 		Active:               true,
 	}
+	fmt.Println("this is the establishment", establishment)
 
 	now := time.Now()
 	err := database.DB.QueryRowContext(ctx, query,

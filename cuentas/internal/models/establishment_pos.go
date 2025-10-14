@@ -8,7 +8,7 @@ type Establishment struct {
 	CompanyID            string    `json:"company_id"`
 	TipoEstablecimiento  string    `json:"tipo_establecimiento"`
 	Nombre               string    `json:"nombre"`
-	CodEstablecimiento   *string   `json:"cod_establecimiento,omitempty"`
+	CodEstablecimiento   string    `json:"cod_establecimiento,omitempty"`
 	Departamento         string    `json:"departamento"`
 	Municipio            string    `json:"municipio"`
 	ComplementoDireccion string    `json:"complemento_direccion"`
