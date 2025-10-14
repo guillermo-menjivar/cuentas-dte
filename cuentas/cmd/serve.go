@@ -21,10 +21,11 @@ import (
 )
 
 var (
-	vaultService   *services.VaultService
-	firmadorClient *firmador.Client
-	haciendaClient *hacienda.Client
-	dteService     *dte.DTEService
+	vaultService    *services.VaultService
+	haciendaService *services.HaciendaService // ⭐ Add this!
+	firmadorClient  *firmador.Client
+	haciendaClient  *hacienda.Client
+	dteService      *dte.DTEService
 )
 
 // ServeCmd represents the serve command
@@ -62,11 +63,17 @@ var ServeCmd = &cobra.Command{
 			log.Fatalf("Failed to initialize Firmador: %v", err)
 		}
 
-		// Initialize Hacienda client (ADD THIS)
+		// Initialize Hacienda client
 		if err := initializeHacienda(); err != nil {
 			log.Fatalf("Failed to initialize Hacienda: %v", err)
 		}
 
+		// Initialize Hacienda service (authentication & token caching) ⭐ Add this!
+		if err := initializeHaciendaService(); err != nil {
+			log.Fatalf("Failed to initialize Hacienda service: %v", err)
+		}
+
+		// Initialize DTE service
 		if err := initializeDTEService(); err != nil {
 			log.Fatalf("Failed to initialize DTE service: %v", err)
 		}
@@ -86,6 +93,25 @@ func initializeHacienda() error {
 	return nil
 }
 
+// ⭐ Add this function!
+func initializeHaciendaService() error {
+	fmt.Println("Initializing Hacienda service...")
+
+	// Create hacienda service (handles authentication & token caching)
+	hs, err := services.NewHaciendaService(
+		database.DB,
+		vaultService,
+		database.RedisClient,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create Hacienda service: %v", err)
+	}
+
+	haciendaService = hs
+	fmt.Println("Hacienda service initialized")
+	return nil
+}
+
 func initializeDTEService() error {
 	fmt.Println("Initializing DTE service...")
 
@@ -95,6 +121,7 @@ func initializeDTEService() error {
 		firmadorClient,
 		vaultService,
 		haciendaClient,
+		haciendaService, // ⭐ Pass it here!
 	)
 
 	fmt.Println("DTE service initialized")
