@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"cuentas/internal/codigos"
@@ -92,7 +93,7 @@ func (b *Builder) buildIdentificacion(invoice *models.Invoice, company *CompanyD
 		Version:          1,
 		Ambiente:         company.DTEAmbiente,
 		TipoDte:          TipoDteFactura,
-		NumeroControl:    *invoice.DteNumeroControl,
+		NumeroControl:    strings.ToUpper(*invoice.DteNumeroControl),
 		CodigoGeneracion: *invoice.DteCodigoGeneracion,
 		TipoModelo:       1,
 		TipoOperacion:    1,
