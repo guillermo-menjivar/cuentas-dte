@@ -1,21 +1,25 @@
-package test
+// internal/dte/builder_test.go
+package dte
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
 	"testing"
 
-	"cuentas/internal/dte"
 	"cuentas/internal/models"
 )
 
-func TestDTEBuilderProducesCorrectJSON(t *testing.T) {
-	// Skip if no database connection
+func TestBuilderIntegration(t *testing.T) {
+	// Skip if no database
 	if os.Getenv("DATABASE_URL") == "" {
 		t.Skip("DATABASE_URL not set, skipping integration test")
 	}
+
+	db := getTestDB(t)
+	defer db.Close()
 
 	// Create test invoice
 	codigoGen := "B8AF117B-D8B1-0E60-E6D0-1B0CA6645D68"
@@ -41,18 +45,15 @@ func TestDTEBuilderProducesCorrectJSON(t *testing.T) {
 				ItemSku:        "PROD-001",
 				ItemName:       "Servicio de consultoria",
 				Quantity:       1,
-				UnitPrice:      11.30, // WITH IVA for consumidor final
+				UnitPrice:      11.30, // WITH IVA
 				DiscountAmount: 0,
 				UnitOfMeasure:  "servicio",
-				TaxableAmount:  10.00, // This will be IGNORED by calculator
-				TotalTaxes:     1.30,  // This will be IGNORED by calculator
 			},
 		},
 	}
 
 	// Build DTE
-	db := getTestDB(t) // You'll need to implement this
-	builder := dte.NewBuilder(db)
+	builder := NewBuilder(db)
 
 	factura, err := builder.BuildFromInvoice(context.Background(), invoice)
 	if err != nil {
@@ -89,6 +90,28 @@ func TestDTEBuilderProducesCorrectJSON(t *testing.T) {
 	fmt.Println("\n✅ All assertions passed! DTE matches expected format.")
 }
 
+// Helper to get test database connection
+func getTestDB(t *testing.T) *sql.DB {
+	t.Helper()
+
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		t.Fatal("DATABASE_URL environment variable not set")
+	}
+
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+
+	if err := db.Ping(); err != nil {
+		t.Fatalf("Failed to ping database: %v", err)
+	}
+
+	return db
+}
+
+// Helper for float comparison
 func assertEqual(t *testing.T, got, want float64, field string) {
 	t.Helper()
 	if got != want {
