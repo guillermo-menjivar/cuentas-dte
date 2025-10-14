@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"cuentas/internal/database"
 	"cuentas/internal/dte"
@@ -86,8 +87,16 @@ var ServeCmd = &cobra.Command{
 func initializeHacienda() error {
 	fmt.Println("Initializing Hacienda client...")
 
-	// Create hacienda client from viper config
-	haciendaClient = hacienda.NewClientFromViper()
+	// Temporary fix - explicitly set the URL
+	cfg := &hacienda.Config{
+		BaseURL:      "https://apitest.dtes.mh.gob.sv/fesv/recepciondte",
+		Timeout:      60 * time.Second,
+		RetryMax:     3,
+		RetryWaitMin: 2 * time.Second,
+		RetryWaitMax: 10 * time.Second,
+	}
+
+	haciendaClient = hacienda.NewClient(cfg)
 
 	fmt.Printf("Hacienda client initialized (URL: %s)\n", haciendaClient.GetBaseURL())
 	return nil
