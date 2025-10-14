@@ -117,8 +117,33 @@ func (s *DTEService) ProcessInvoice(ctx context.Context, invoice *models.Invoice
 		factura.Identificacion.CodigoGeneracion,
 		signedDTE,
 	)
+
+	if err != nil {
+		// Check if it's a rejection error (we still got a response)
+		if hacErr, ok := err.(*hacienda.HaciendaError); ok && hacErr.Type == "rejection" {
+			fmt.Printf("\n❌ DTE REJECTED by Hacienda!\n")
+			if response != nil {
+				fmt.Printf("Code: %s\n", response.CodigoMsg)
+				fmt.Printf("Message: %s\n", response.DescripcionMsg)
+				if len(response.Observaciones) > 0 {
+					fmt.Println("Observations:")
+					for _, obs := range response.Observaciones {
+						fmt.Printf("  - %s\n", obs)
+					}
+				}
+			}
+			return response, err
+		}
+		return nil, fmt.Errorf("failed to submit to Hacienda: %w", err)
+	}
+
+	// ⭐ NOW check if response is nil (shouldn't be, but defensive programming)
+	if response == nil {
+		return nil, fmt.Errorf("no response received from Hacienda")
+	}
 	fmt.Println(response)
-	// Step 5: Success! 🎉
+
+	// Step 6: Success! 🎉
 	fmt.Println("\n✅ SUCCESS! DTE ACCEPTED BY HACIENDA!")
 	fmt.Printf("Estado: %s\n", response.Estado)
 	fmt.Printf("Código de Generación: %s\n", response.CodigoGeneracion)
