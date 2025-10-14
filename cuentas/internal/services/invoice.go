@@ -807,7 +807,7 @@ func (s *InvoiceService) generateCodigoGeneracion() string {
 
 // generateNumeroControl generates the DTE numero control using the validator
 // generateNumeroControl generates the DTE numero control with strict validation
-func (s *InvoiceService) generateNumeroControl(ctx context.Context, tx *sql.Tx, posID, tipoDte string) (string, error) {
+func (s *InvoiceService) generateNumeroControl(ctx context.Context, tx *sql.Tx, establishmentID, pointOfSaleID, posID, tipoDte string) (string, error) {
 	// Get establishment and POS codes (no COALESCE - must be set)
 	query := `
 		SELECT 
@@ -820,40 +820,42 @@ func (s *InvoiceService) generateNumeroControl(ctx context.Context, tx *sql.Tx, 
 		WHERE pos.id = $1
 	`
 
-	var codEstable, codPuntoVenta *string
+	var MHEstablishmentCode, MHPOSCode *string
 	var establishmentName, posName string
+	fmt.Println("these are the detaisl you sent the generate numero control")
+	fmt.Println(establishmentID, pointOfSaleID)
 
-	err := tx.QueryRowContext(ctx, query, posID).Scan(&codEstable, &codPuntoVenta, &establishmentName, &posName)
+	err := tx.QueryRowContext(ctx, query, posID).Scan(&MHEstablishmentCode, &MHPOSCode, &establishmentName, &posName)
 	if err != nil {
 		return "", fmt.Errorf("failed to get establishment codes: %w", err)
 	}
 
 	// Strict validation: MH codes must be set
-	if codEstable == nil || *codEstable == "" {
+	if MHEstablishmentCode == nil || *MHEstablishmentCode == "" {
 		return "", fmt.Errorf("establishment '%s' must have cod_establecimiento assigned by Hacienda before finalizing invoices", establishmentName)
 	}
-	if codPuntoVenta == nil || *codPuntoVenta == "" {
+	if MHPOSCode == nil || *MHPOSCode == "" {
 		return "", fmt.Errorf("point of sale '%s' must have cod_punto_venta assigned by Hacienda before finalizing invoices", posName)
 	}
 
 	// Validate 4-character format
-	if len(*codEstable) != 4 {
+	if len(*MHEstablishmentCode) != 4 {
 		return "", fmt.Errorf("establishment '%s' cod_establecimiento must be exactly 4 characters, got %d: '%s'",
-			establishmentName, len(*codEstable), *codEstable)
+			establishmentName, len(*MHEstablishmentCode), *MHEstablishmentCode)
 	}
-	if len(*codPuntoVenta) != 4 {
+	if len(*MHPOSCode) != 4 {
 		return "", fmt.Errorf("point of sale '%s' cod_punto_venta must be exactly 4 characters, got %d: '%s'",
-			posName, len(*codPuntoVenta), *codPuntoVenta)
+			posName, len(*MHPOSCode), *MHPOSCode)
 	}
 
 	// Validate codes are alphanumeric (Hacienda uses numeric, but spec allows alphanumeric)
-	if !s.isValidMHCode(*codEstable) {
+	if !s.isValidMHCode(*MHEstablishmentCode) {
 		return "", fmt.Errorf("establishment '%s' cod_establecimiento contains invalid characters: '%s'",
-			establishmentName, *codEstable)
+			establishmentName, *MHEstablishmentCode)
 	}
-	if !s.isValidMHCode(*codPuntoVenta) {
+	if !s.isValidMHCode(*MHPOSCode) {
 		return "", fmt.Errorf("point of sale '%s' cod_punto_venta contains invalid characters: '%s'",
-			posName, *codPuntoVenta)
+			posName, *MHPOSCode)
 	}
 
 	// Get next sequence for this POS and tipoDte
@@ -863,7 +865,7 @@ func (s *InvoiceService) generateNumeroControl(ctx context.Context, tx *sql.Tx, 
 	}
 
 	// Build numero control using the validator (ensures correctness)
-	numeroControl, err := dte.BuildNumeroControl(tipoDte, *codEstable, *codPuntoVenta, sequence)
+	numeroControl, err := dte.BuildNumeroControl(tipoDte, *MHEstablishmentCode, *MHPOSCode, sequence)
 	if err != nil {
 		return "", fmt.Errorf("failed to build numero control: %w", err)
 	}
@@ -984,6 +986,7 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(invoice)
 
 	if invoice.Status != "draft" {
 		return nil, ErrInvoiceNotDraft
@@ -1006,7 +1009,8 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 
 	// 4. Generate DTE identifiers
 	codigoGeneracion := s.generateCodigoGeneracion()
-	numeroControl, err := s.generateNumeroControl(ctx, tx, invoice.PointOfSaleID, tipoDte)
+	numeroControl, err := s.generateNumeroControl(ctx, tx, invoice.EstablishmentID, invoice.PointOfSaleID, invoice.PointOfSaleID, tipoDte)
+	fmt.Println("this is the numerocontrol I build", numeroControl)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate numero control: %w", err)
 	}

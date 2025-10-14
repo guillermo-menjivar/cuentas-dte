@@ -53,7 +53,7 @@ echo "$ESTABLISHMENTS_RESPONSE" | jq -c '.establishments[]' | while read -r esta
     EST_MUN=$(echo "$establishment" | jq -r '.municipio')
     EST_ADDRESS=$(echo "$establishment" | jq -r '.complemento_direccion')
     EST_PHONE=$(echo "$establishment" | jq -r '.telefono')
-    COD_MH=$(echo "$establishment" | jq -r '.cod_establecimiento_mh // "N/A"')
+    COD_MH=$(echo "$establishment" | jq -r '.cod_establecimiento // "N/A"')
     COD_INTERNAL=$(echo "$establishment" | jq -r '.cod_establecimiento // "N/A"')
     
     # Determine establishment type name
@@ -96,7 +96,7 @@ echo "$ESTABLISHMENTS_RESPONSE" | jq -c '.establishments[]' | while read -r esta
             POS_PORTABLE=$(echo "$pos" | jq -r '.is_portable')
             POS_LAT=$(echo "$pos" | jq -r '.latitude // "N/A"')
             POS_LON=$(echo "$pos" | jq -r '.longitude // "N/A"')
-            POS_COD_MH=$(echo "$pos" | jq -r '.cod_punto_venta_mh // "N/A"')
+            POS_COD_MH=$(echo "$pos" | jq -r '.cod_punto_venta // "N/A"')
             POS_COD_INTERNAL=$(echo "$pos" | jq -r '.cod_punto_venta // "N/A"')
             
             echo -e "   ├─ ${GREEN}🖥️  $POS_NAME${NC}"

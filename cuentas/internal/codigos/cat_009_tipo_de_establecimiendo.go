@@ -21,6 +21,9 @@ const (
 
 // FormatEstablishmentCode formats establishment code with proper prefix
 func FormatEstablishmentCode(tipoEstablecimiento string, number int) string {
+	fmt.Println("this is what you are sending FormatEstablishmentCode")
+	fmt.Println(tipoEstablecimiento)
+	fmt.Println("this is the number", number)
 	var prefix string
 	switch tipoEstablecimiento {
 	case EstablishmentCasaMatriz: // "02"
@@ -34,6 +37,7 @@ func FormatEstablishmentCode(tipoEstablecimiento string, number int) string {
 	default:
 		prefix = EstablishmentPrefixMatriz // Default to Matriz
 	}
+	fmt.Println("we are returning", prefix)
 	return fmt.Sprintf("%s%03d", prefix, number)
 }
 
