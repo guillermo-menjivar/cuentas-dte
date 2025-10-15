@@ -1017,6 +1017,16 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 	// 6. Update invoice to finalized
 	now := time.Now()
 
+	fmt.Printf("DEBUG UPDATE VALUES:\n")
+	fmt.Printf("  payment.PaymentMethod: %v\n", payment.PaymentMethod)
+	fmt.Printf("  paymentStatus: %v\n", paymentStatus)
+	fmt.Printf("  payment.Amount: %v\n", payment.Amount)
+	fmt.Printf("  balanceDue: %v\n", balanceDue)
+	fmt.Printf("  numeroControl: %v\n", numeroControl)
+	fmt.Printf("  now: %v\n", now)
+	fmt.Printf("  userID: %v\n", userID)
+	fmt.Printf("  invoiceID: %v\n", invoiceID)
+	fmt.Printf("  companyID: %v\n", companyID)
 	updateQuery := `
 		UPDATE invoices
 		SET status = 'finalized',
