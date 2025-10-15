@@ -9,9 +9,12 @@ UPDATE invoices SET new_id = UPPER(id::text);
 -- Step 3: Make new_id NOT NULL
 ALTER TABLE invoices ALTER COLUMN new_id SET NOT NULL;
 
--- Step 4: Drop foreign key constraints that reference invoices.id
+-- Step 4: Drop ALL foreign key constraints that reference invoices.id
 ALTER TABLE invoice_line_items DROP CONSTRAINT IF EXISTS invoice_line_items_invoice_id_fkey;
 ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_invoice_id_fkey;
+ALTER TABLE invoice_payments DROP CONSTRAINT IF EXISTS invoice_payments_invoice_id_fkey;
+ALTER TABLE dte_submission_attempts DROP CONSTRAINT IF EXISTS dte_submission_attempts_invoice_id_fkey;
+ALTER TABLE invoices DROP CONSTRAINT IF EXISTS invoices_references_invoice_id_fkey;
 
 -- Step 5: Drop old primary key
 ALTER TABLE invoices DROP CONSTRAINT invoices_pkey;
@@ -25,7 +28,7 @@ ALTER TABLE invoices DROP COLUMN id;
 -- Step 8: Rename new_id to id
 ALTER TABLE invoices RENAME COLUMN new_id TO id;
 
--- Step 9: Recreate foreign key constraints
+-- Step 9: Recreate ALL foreign key constraints
 ALTER TABLE invoice_line_items 
 ADD CONSTRAINT invoice_line_items_invoice_id_fkey 
 FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE;
@@ -33,6 +36,18 @@ FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE;
 ALTER TABLE payments 
 ADD CONSTRAINT payments_invoice_id_fkey 
 FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE;
+
+ALTER TABLE invoice_payments 
+ADD CONSTRAINT invoice_payments_invoice_id_fkey 
+FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE;
+
+ALTER TABLE dte_submission_attempts 
+ADD CONSTRAINT dte_submission_attempts_invoice_id_fkey 
+FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE;
+
+ALTER TABLE invoices 
+ADD CONSTRAINT invoices_references_invoice_id_fkey 
+FOREIGN KEY (references_invoice_id) REFERENCES invoices(id);
 
 -- Step 10: Update references_invoice_id to VARCHAR(36)
 ALTER TABLE invoices ALTER COLUMN references_invoice_id TYPE VARCHAR(36);
