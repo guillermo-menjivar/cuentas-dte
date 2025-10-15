@@ -1,2 +1,4 @@
 ALTER TABLE invoices ALTER COLUMN id TYPE VARCHAR(36);
+ALTER TABLE invoices ALTER COLUMN references_invoice_id TYPE VARCHAR(36);
+
 
