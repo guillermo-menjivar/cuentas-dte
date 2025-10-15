@@ -166,7 +166,14 @@ func (s *DTEService) ProcessInvoice(ctx context.Context, invoice *models.Invoice
 			fmt.Println("✅ Hacienda response saved to invoice")
 		}
 	}
-	// TODO: Step 6: Log transaction to database
+	// Step 7 submit commitlog
+	err = s.logToCommitLog(ctx, invoice, factura, signedDTE, response)
+	if err != nil {
+		// Log error but don't fail - DTE was already accepted
+		fmt.Printf("⚠️  Warning: failed to log to commit log: %v\n", err)
+	} else {
+		fmt.Println("✅ DTE submission logged to commit log")
+	}
 
 	return response, nil
 }
