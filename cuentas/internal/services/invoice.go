@@ -71,7 +71,8 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 	}
 
 	// 3. Generate invoice number
-	invoiceNumber, err := s.generateInvoiceNumber(ctx, tx, req.PointOfSaleID)
+	invoiceNumber, err := s.generateInvoiceNumber(ctx, tx, companyID)
+	fmt.Println("this is the invoice number I got", invoiceNumber)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate invoice number: %w", err)
 	}
@@ -223,7 +224,6 @@ func (s *InvoiceService) snapshotClient(ctx context.Context, tx *sql.Tx, company
 
 // generateInvoiceNumber generates a sequential invoice number
 func (s *InvoiceService) generateInvoiceNumber(ctx context.Context, tx *sql.Tx, companyID string) (string, error) {
-	// Get the last invoice number for this company
 	var lastNumber sql.NullString
 	query := `
 		SELECT invoice_number
@@ -237,13 +237,19 @@ func (s *InvoiceService) generateInvoiceNumber(ctx context.Context, tx *sql.Tx, 
 		return "", fmt.Errorf("failed to query last invoice number: %w", err)
 	}
 
-	// Parse sequence or start at 1
+	fmt.Printf("🔍 DEBUG generateInvoiceNumber:\n")
+	fmt.Printf("  companyID: %s\n", companyID)
+	fmt.Printf("  lastNumber.Valid: %v\n", lastNumber.Valid)
+	if lastNumber.Valid {
+		fmt.Printf("  lastNumber.String: %s\n", lastNumber.String)
+	}
+
 	var sequence int64 = 1
 	if lastNumber.Valid {
-		// Format: INV-2025-00001
-		// Extract the sequence number (last part)
 		var year int
 		n, err := fmt.Sscanf(lastNumber.String, "INV-%d-%d", &year, &sequence)
+		fmt.Printf("  Sscanf result: n=%d, err=%v, year=%d, sequence=%d\n", n, err, year, sequence)
+
 		if err != nil || n != 2 {
 			parts := strings.Split(lastNumber.String, "-")
 			if len(parts) == 3 {
@@ -253,9 +259,9 @@ func (s *InvoiceService) generateInvoiceNumber(ctx context.Context, tx *sql.Tx, 
 		sequence++
 	}
 
-	// Generate new number
 	currentYear := time.Now().Year()
 	invoiceNumber := fmt.Sprintf("INV-%d-%05d", currentYear, sequence)
+	fmt.Printf("  Generated: %s\n\n", invoiceNumber)
 
 	return invoiceNumber, nil
 }
