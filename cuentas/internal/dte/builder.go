@@ -94,7 +94,7 @@ func (b *Builder) buildIdentificacion(invoice *models.Invoice, company *CompanyD
 		Ambiente:         company.DTEAmbiente,
 		TipoDte:          TipoDteFactura,
 		NumeroControl:    strings.ToUpper(*invoice.DteNumeroControl),
-		CodigoGeneracion: *invoice.DteCodigoGeneracion,
+		CodigoGeneracion: invoice.ID,
 		TipoModelo:       1,
 		TipoOperacion:    1,
 		TipoContingencia: nil,
