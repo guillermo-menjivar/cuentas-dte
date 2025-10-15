@@ -622,8 +622,10 @@ func round(val float64) float64 {
 // / new
 // Update insertInvoice to include establishment_id
 func (s *InvoiceService) insertInvoice(ctx context.Context, tx *sql.Tx, invoice *models.Invoice) (string, error) {
+	id := strings.ToUpper(uuid.New().String())
 	query := `
 		INSERT INTO invoices (
+            id,
 			company_id, establishment_id, point_of_sale_id, client_id, invoice_number, invoice_type,
 			client_name, client_legal_name, client_nit, client_ncr, client_dui,
 			client_address, client_tipo_contribuyente, client_tipo_persona,
@@ -636,19 +638,19 @@ func (s *InvoiceService) insertInvoice(ctx context.Context, tx *sql.Tx, invoice 
 			$12, $13, $14,
 			$15, $16, $17, $18,
 			$19, $20, $21, $22, $23, $24,
-			$25, $26, $27, $28, $29, $30
+			$25, $26, $27, $28, $29, $30, $31
 		) RETURNING id
 	`
 
-	var id string
-	err := tx.QueryRowContext(ctx, query,
+	_, err := tx.ExecContext(ctx, query,
+		id,
 		invoice.CompanyID, invoice.EstablishmentID, invoice.PointOfSaleID, invoice.ClientID, invoice.InvoiceNumber, invoice.InvoiceType,
 		invoice.ClientName, invoice.ClientLegalName, invoice.ClientNit, invoice.ClientNcr, invoice.ClientDui,
 		invoice.ClientAddress, invoice.ClientTipoContribuyente, invoice.ClientTipoPersona,
 		invoice.Subtotal, invoice.TotalDiscount, invoice.TotalTaxes, invoice.Total,
 		invoice.Currency, invoice.PaymentTerms, invoice.PaymentMethod, invoice.PaymentStatus, invoice.AmountPaid, invoice.BalanceDue, invoice.DueDate,
 		invoice.Status, invoice.Notes, invoice.ContactEmail, invoice.ContactWhatsapp, invoice.CreatedAt,
-	).Scan(&id)
+	)
 
 	if err != nil {
 		return "", err
@@ -670,7 +672,7 @@ func (s *InvoiceService) getInvoiceHeader(ctx context.Context, companyID, invoic
 			currency,
 			payment_terms, payment_method, payment_status, amount_paid, balance_due, due_date,
 			status,
-			dte_codigo_generacion, dte_numero_control, dte_status, dte_hacienda_response, dte_submitted_at,
+			dte_numero_control, dte_status, dte_hacienda_response, dte_submitted_at,
 			created_at, finalized_at, voided_at,
 			created_by, voided_by, notes,
 			contact_email, contact_whatsapp
@@ -689,12 +691,11 @@ func (s *InvoiceService) getInvoiceHeader(ctx context.Context, companyID, invoic
 		&invoice.Currency,
 		&invoice.PaymentTerms, &invoice.PaymentMethod, &invoice.PaymentStatus, &invoice.AmountPaid, &invoice.BalanceDue, &invoice.DueDate,
 		&invoice.Status,
-		&invoice.DteCodigoGeneracion, &invoice.DteNumeroControl, &invoice.DteStatus, &invoice.DteHaciendaResponse, &invoice.DteSubmittedAt,
+		&invoice.DteNumeroControl, &invoice.DteStatus, &invoice.DteHaciendaResponse, &invoice.DteSubmittedAt, // ⭐ Removed DteCodigoGeneracion
 		&invoice.CreatedAt, &invoice.FinalizedAt, &invoice.VoidedAt,
 		&invoice.CreatedBy, &invoice.VoidedBy, &invoice.Notes,
 		&invoice.ContactEmail, &invoice.ContactWhatsapp,
 	)
-
 	if err == sql.ErrNoRows {
 		return nil, ErrInvoiceNotFound
 	}
@@ -715,7 +716,7 @@ func (s *InvoiceService) ListInvoices(ctx context.Context, companyID string, fil
 			subtotal, total_discount, total_taxes, total,
 			payment_terms, payment_status, amount_paid, balance_due, due_date,
 			status,
-			dte_status, dte_codigo_generacion, dte_numero_control,
+			dte_status, dte_numero_control,
 			created_at, finalized_at,
 			notes
 		FROM invoices
@@ -781,7 +782,7 @@ func (s *InvoiceService) ListInvoices(ctx context.Context, companyID string, fil
 			&inv.Subtotal, &inv.TotalDiscount, &inv.TotalTaxes, &inv.Total,
 			&inv.PaymentTerms, &inv.PaymentStatus, &inv.AmountPaid, &inv.BalanceDue, &inv.DueDate,
 			&inv.Status,
-			&inv.DteStatus, &inv.DteCodigoGeneracion, &inv.DteNumeroControl,
+			&inv.DteStatus, &inv.DteNumeroControl,
 			&inv.CreatedAt, &inv.FinalizedAt,
 			&inv.Notes,
 		)
@@ -801,11 +802,6 @@ func (s *InvoiceService) determineDTEType(tipoPersona string) string {
 	return "01" // Factura for individuals (default)
 }
 
-func (s *InvoiceService) generateCodigoGeneracion() string {
-	return strings.ToUpper(uuid.New().String())
-}
-
-// generateNumeroControl generates the DTE numero control using the validator
 // generateNumeroControl generates the DTE numero control with strict validation
 func (s *InvoiceService) generateNumeroControl(ctx context.Context, tx *sql.Tx, establishmentID, pointOfSaleID, posID, tipoDte string) (string, error) {
 	// Get establishment and POS codes (no COALESCE - must be set)
@@ -1008,7 +1004,6 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 	}
 
 	// 4. Generate DTE identifiers
-	codigoGeneracion := s.generateCodigoGeneracion()
 	numeroControl, err := s.generateNumeroControl(ctx, tx, invoice.EstablishmentID, invoice.PointOfSaleID, invoice.PointOfSaleID, tipoDte)
 	fmt.Println("this is the numerocontrol I build", numeroControl)
 	if err != nil {
@@ -1029,7 +1024,6 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 		    payment_status = $2,
 		    amount_paid = $3,
 		    balance_due = $4,
-		    dte_codigo_generacion = $5,
 		    dte_numero_control = $6,
 		    dte_status = 'not_submitted',
 		    finalized_at = $7,
@@ -1042,7 +1036,6 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 		paymentStatus,
 		payment.Amount,
 		balanceDue,
-		codigoGeneracion,
 		numeroControl,
 		now,
 		userID,

@@ -55,7 +55,6 @@ type Invoice struct {
 	Status string `json:"status"`
 
 	// DTE tracking
-	DteCodigoGeneracion *string    `json:"dte_codigo_generacion,omitempty"`
 	DteNumeroControl    *string    `json:"dte_numero_control,omitempty"`
 	DteStatus           *string    `json:"dte_status,omitempty"`
 	DteHaciendaResponse *string    `json:"dte_hacienda_response,omitempty"`
