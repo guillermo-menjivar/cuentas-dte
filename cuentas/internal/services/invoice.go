@@ -243,7 +243,13 @@ func (s *InvoiceService) generateInvoiceNumber(ctx context.Context, tx *sql.Tx, 
 		// Format: INV-2025-00001
 		// Extract the sequence number (last part)
 		var year int
-		fmt.Sscanf(lastNumber.String, "INV-%d-%d", &year, &sequence)
+		n, err := fmt.Sscanf(lastNumber.String, "INV-%d-%d", &year, &sequence)
+		if err != nil || n != 2 {
+			parts := strings.Split(lastNumber.String, "-")
+			if len(parts) == 3 {
+				fmt.Sscanf(parts[2], "%d", &sequence)
+			}
+		}
 		sequence++
 	}
 
