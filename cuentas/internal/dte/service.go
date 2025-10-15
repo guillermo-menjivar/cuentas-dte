@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"cuentas/internal/hacienda"
 	"cuentas/internal/models"
@@ -13,6 +14,7 @@ import (
 	"cuentas/internal/services/firmador"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -139,7 +141,7 @@ func (s *DTEService) ProcessInvoice(ctx context.Context, invoice *models.Invoice
 		return nil, fmt.Errorf("failed to submit to Hacienda: %w", err)
 	}
 
-	// ⭐ NOW check if response is nil (shouldn't be, but defensive programming)
+	// NOW check if response is nil (shouldn't be, but defensive programming)
 	if response == nil {
 		return nil, fmt.Errorf("no response received from Hacienda")
 	}
@@ -155,9 +157,50 @@ func (s *DTEService) ProcessInvoice(ctx context.Context, invoice *models.Invoice
 		fmt.Printf("Message: %s\n", response.DescripcionMsg)
 	}
 
+	if response.Estado == "PROCESADO" {
+		err = s.saveHaciendaResponse(ctx, invoice.ID, response)
+		if err != nil {
+			// Log error but don't fail - DTE was accepted
+			fmt.Printf("⚠️  Warning: failed to save Hacienda response: %v\n", err)
+		} else {
+			fmt.Println("✅ Hacienda response saved to invoice")
+		}
+	}
 	// TODO: Step 6: Log transaction to database
 
 	return response, nil
+}
+
+// saveHaciendaResponse saves Hacienda's response to the invoice
+func (s *DTEService) saveHaciendaResponse(ctx context.Context, invoiceID string, response *hacienda.ReceptionResponse) error {
+	query := `
+		UPDATE invoices
+		SET 
+			dte_sello_recibido = $1,
+			dte_fecha_procesamiento = $2,
+			dte_observaciones = $3,
+			dte_status = $4
+		WHERE id = $5
+	`
+
+	// Parse the date from Hacienda format: "14/10/2025 20:50:21"
+	var fechaProcesamiento *time.Time
+	if response.FhProcesamiento != "" {
+		t, err := time.Parse("02/01/2006 15:04:05", response.FhProcesamiento)
+		if err == nil {
+			fechaProcesamiento = &t
+		}
+	}
+
+	_, err := s.db.ExecContext(ctx, query,
+		response.SelloRecibido,
+		fechaProcesamiento,
+		pq.Array(response.Observaciones),
+		response.Estado,
+		invoiceID,
+	)
+
+	return err
 }
 
 // SignDTE signs a DTE document for a company (existing method - keep for flexibility)
