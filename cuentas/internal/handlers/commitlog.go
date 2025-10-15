@@ -49,9 +49,17 @@ type DTECommitLogEntry struct {
 
 // ListDTECommitLogHandler handles GET /v1/dte/commit-log
 func ListDTECommitLogHandler(c *gin.Context) {
-	companyID := c.MustGet("company_id").(string)
-	db := c.MustGet("db").(*sql.DB)
+	companyIDValue, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error: "company_id not found in context",
+			Code:  "unauthorized",
+		})
+		return
+	}
+	companyID := companyIDValue.(string)
 
+	db := c.MustGet("db").(*sql.DB)
 	// Build query with filters
 	query := `
 		SELECT 
@@ -213,7 +221,18 @@ func ListDTECommitLogHandler(c *gin.Context) {
 // GetDTECommitLogEntryHandler handles GET /v1/dte/commit-log/:codigo_generacion
 func GetDTECommitLogEntryHandler(c *gin.Context) {
 	codigoGeneracion := c.Param("codigo_generacion")
-	companyID := c.MustGet("company_id").(string)
+
+	// Get company_id from context
+	companyIDValue, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Error: "company_id not found in context",
+			Code:  "unauthorized",
+		})
+		return
+	}
+	companyID := companyIDValue.(string)
+
 	db := c.MustGet("db").(*sql.DB)
 
 	query := `
