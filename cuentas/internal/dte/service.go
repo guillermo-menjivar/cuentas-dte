@@ -224,3 +224,90 @@ func (s *DTEService) SignDTE(ctx context.Context, companyID uuid.UUID, dteJSON i
 func (s *DTEService) InvalidateCredentials(ctx context.Context, companyID uuid.UUID) error {
 	return s.credCache.Invalidate(ctx, companyID)
 }
+
+func (s *DTEService) logToCommitLog(ctx context.Context, invoice *models.Invoice, factura *DTE, signedDTE string, response *hacienda.ReceptionResponse) error {
+	// Marshal unsigned DTE to JSON
+	dteUnsigned, err := json.Marshal(factura)
+	if err != nil {
+		return fmt.Errorf("failed to marshal unsigned DTE: %w", err)
+	}
+
+	// Marshal full Hacienda response to JSON
+	haciendaResponseFull, err := json.Marshal(response)
+	if err != nil {
+		return fmt.Errorf("failed to marshal Hacienda response: %w", err)
+	}
+
+	// Parse the processing date
+	var fechaProcesamiento *time.Time
+	if response != nil && response.FhProcesamiento != "" {
+		t, err := time.Parse("02/01/2006 15:04:05", response.FhProcesamiento)
+		if err == nil {
+			fechaProcesamiento = &t
+		}
+	}
+
+	// Parse fecha_emision from factura (format: "2025-10-15")
+	fechaEmision, err := time.Parse("2006-01-02", factura.Identificacion.FecEmi)
+	if err != nil {
+		return fmt.Errorf("failed to parse fecha emision: %w", err)
+	}
+
+	// Generate receipt URL
+	receiptURL := fmt.Sprintf(
+		"https://admin.factura.gob.sv/consultaPublica?ambiente=%s&codGen=%s&fechaEmi=%s",
+		factura.Identificacion.Ambiente,
+		factura.Identificacion.CodigoGeneracion,
+		factura.Identificacion.FecEmi,
+	)
+
+	query := `
+		INSERT INTO dte_commit_log (
+			codigo_generacion, invoice_id, company_id, numero_control,
+			tipo_dte, ambiente, fecha_emision, receipt_url,
+			dte_unsigned, dte_signed,
+			hacienda_estado, hacienda_sello_recibido, hacienda_fh_procesamiento,
+			hacienda_codigo_msg, hacienda_descripcion_msg, hacienda_observaciones,
+			hacienda_response_full
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+	`
+
+	var estado, selloRecibido, codigoMsg, descripcionMsg *string
+	var observaciones []string
+
+	if response != nil {
+		estado = &response.Estado
+		if response.SelloRecibido != "" {
+			selloRecibido = &response.SelloRecibido
+		}
+		if response.CodigoMsg != "" {
+			codigoMsg = &response.CodigoMsg
+		}
+		if response.DescripcionMsg != "" {
+			descripcionMsg = &response.DescripcionMsg
+		}
+		observaciones = response.Observaciones
+	}
+
+	_, err = s.db.ExecContext(ctx, query,
+		factura.Identificacion.CodigoGeneracion,
+		invoice.ID,
+		invoice.CompanyID,
+		factura.Identificacion.NumeroControl,
+		factura.Identificacion.TipoDte,
+		factura.Identificacion.Ambiente,
+		fechaEmision,
+		receiptURL,
+		dteUnsigned,
+		signedDTE,
+		estado,
+		selloRecibido,
+		fechaProcesamiento,
+		codigoMsg,
+		descripcionMsg,
+		pq.Array(observaciones),
+		haciendaResponseFull,
+	)
+
+	return err
+}
