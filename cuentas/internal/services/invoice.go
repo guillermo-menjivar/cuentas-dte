@@ -1024,11 +1024,11 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 		    payment_status = $2,
 		    amount_paid = $3,
 		    balance_due = $4,
-		    dte_numero_control = $6,
+		    dte_numero_control = $5,
 		    dte_status = 'not_submitted',
-		    finalized_at = $7,
-		    created_by = $8
-		WHERE id = $9 AND company_id = $10
+		    finalized_at = $6,
+		    created_by = $7
+		WHERE id = $8 AND company_id = $9
 	`
 
 	_, err = tx.ExecContext(ctx, updateQuery,
