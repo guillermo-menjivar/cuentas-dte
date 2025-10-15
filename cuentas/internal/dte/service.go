@@ -232,6 +232,7 @@ func (s *DTEService) InvalidateCredentials(ctx context.Context, companyID uuid.U
 	return s.credCache.Invalidate(ctx, companyID)
 }
 
+// logToCommitLog creates an immutable audit record of the DTE submission
 func (s *DTEService) logToCommitLog(ctx context.Context, invoice *models.Invoice, factura *DTE, signedDTE string, response *hacienda.ReceptionResponse) error {
 	// Marshal unsigned DTE to JSON
 	dteUnsigned, err := json.Marshal(factura)
@@ -260,7 +261,11 @@ func (s *DTEService) logToCommitLog(ctx context.Context, invoice *models.Invoice
 		return fmt.Errorf("failed to parse fecha emision: %w", err)
 	}
 
-	// Generate receipt URL
+	// Extract fiscal period
+	fiscalYear := fechaEmision.Year()
+	fiscalMonth := int(fechaEmision.Month())
+
+	// Generate DTE URL
 	dteURL := fmt.Sprintf(
 		"https://admin.factura.gob.sv/consultaPublica?ambiente=%s&codGen=%s&fechaEmi=%s",
 		factura.Identificacion.Ambiente,
@@ -268,15 +273,22 @@ func (s *DTEService) logToCommitLog(ctx context.Context, invoice *models.Invoice
 		factura.Identificacion.FecEmi,
 	)
 
+	// Calculate IVA amount from total taxes
+	ivaAmount := invoice.TotalTaxes
+
 	query := `
 		INSERT INTO dte_commit_log (
-			codigo_generacion, invoice_id, company_id, numero_control,
-			tipo_dte, ambiente, fecha_emision, dte_url,
+			codigo_generacion, invoice_id, invoice_number, company_id, client_id,
+			establishment_id, point_of_sale_id,
+			subtotal, total_discount, total_taxes, iva_amount, total_amount, currency,
+			payment_method, payment_terms, references_invoice_id,
+			numero_control, tipo_dte, ambiente, fecha_emision,
+			fiscal_year, fiscal_month, dte_url,
 			dte_unsigned, dte_signed,
 			hacienda_estado, hacienda_sello_recibido, hacienda_fh_procesamiento,
 			hacienda_codigo_msg, hacienda_descripcion_msg, hacienda_observaciones,
-			hacienda_response_full
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+			hacienda_response_full, created_by
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)
 	`
 
 	var estado, selloRecibido, codigoMsg, descripcionMsg *string
@@ -299,11 +311,26 @@ func (s *DTEService) logToCommitLog(ctx context.Context, invoice *models.Invoice
 	_, err = s.db.ExecContext(ctx, query,
 		factura.Identificacion.CodigoGeneracion,
 		invoice.ID,
+		invoice.InvoiceNumber,
 		invoice.CompanyID,
+		invoice.ClientID,
+		invoice.EstablishmentID,
+		invoice.PointOfSaleID,
+		invoice.Subtotal,
+		invoice.TotalDiscount,
+		invoice.TotalTaxes,
+		ivaAmount,
+		invoice.Total,
+		invoice.Currency,
+		invoice.PaymentMethod,
+		invoice.PaymentTerms,
+		invoice.ReferencesInvoiceID,
 		factura.Identificacion.NumeroControl,
 		factura.Identificacion.TipoDte,
 		factura.Identificacion.Ambiente,
 		fechaEmision,
+		fiscalYear,
+		fiscalMonth,
 		dteURL,
 		dteUnsigned,
 		signedDTE,
@@ -314,6 +341,7 @@ func (s *DTEService) logToCommitLog(ctx context.Context, invoice *models.Invoice
 		descripcionMsg,
 		pq.Array(observaciones),
 		haciendaResponseFull,
+		invoice.CreatedBy,
 	)
 
 	return err
