@@ -80,3 +80,7 @@ clean:
 	rm -rf bin/
 	docker-compose down -v --rmi all --remove-orphans
 	docker system prune -f
+
+.PHONY: db-connect
+db-connect:
+	docker exec -it cuentas-postgres psql -U cuentas_user -d cuentas
