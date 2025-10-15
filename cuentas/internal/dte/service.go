@@ -254,7 +254,7 @@ func (s *DTEService) logToCommitLog(ctx context.Context, invoice *models.Invoice
 	}
 
 	// Generate receipt URL
-	receiptURL := fmt.Sprintf(
+	dteURL := fmt.Sprintf(
 		"https://admin.factura.gob.sv/consultaPublica?ambiente=%s&codGen=%s&fechaEmi=%s",
 		factura.Identificacion.Ambiente,
 		factura.Identificacion.CodigoGeneracion,
@@ -264,7 +264,7 @@ func (s *DTEService) logToCommitLog(ctx context.Context, invoice *models.Invoice
 	query := `
 		INSERT INTO dte_commit_log (
 			codigo_generacion, invoice_id, company_id, numero_control,
-			tipo_dte, ambiente, fecha_emision, receipt_url,
+			tipo_dte, ambiente, fecha_emision, dte_url,
 			dte_unsigned, dte_signed,
 			hacienda_estado, hacienda_sello_recibido, hacienda_fh_procesamiento,
 			hacienda_codigo_msg, hacienda_descripcion_msg, hacienda_observaciones,
@@ -297,7 +297,7 @@ func (s *DTEService) logToCommitLog(ctx context.Context, invoice *models.Invoice
 		factura.Identificacion.TipoDte,
 		factura.Identificacion.Ambiente,
 		fechaEmision,
-		receiptURL,
+		dteURL,
 		dteUnsigned,
 		signedDTE,
 		estado,
