@@ -299,6 +299,9 @@ func startServer() {
 		v1.PATCH("/pos/:id", establishmentHandler.UpdatePointOfSale)
 		v1.PATCH("/pos/:id/location", establishmentHandler.UpdatePOSLocation)
 		v1.DELETE("/pos/:id", establishmentHandler.DeactivatePointOfSale)
+		// commitlog
+		v1.GET("/dte/commit-log", handlers.ListDTECommitLogHandler)
+		v1.GET("/dte/commit-log/:codigo_generacion", handlers.GetDTECommitLogEntryHandler)
 	}
 
 	// Start server
