@@ -157,7 +157,7 @@ func (b *Builder) buildEmisor(company *CompanyData, establishment *Establishment
 func (b *Builder) buildReceptor(invoiceType InvoiceType, client *ClientData) *Receptor {
 	switch invoiceType {
 	case codigos.DocTypeComprobanteCredito:
-		return buildCCFReceptor(client)
+		return b.buildCCFReceptor(client)
 	default:
 		// Determine document type and number
 		var tipoDocumento *string
