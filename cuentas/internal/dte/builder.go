@@ -87,7 +87,10 @@ func (b *Builder) determineInvoiceType(client *ClientData) InvoiceType {
 // ============================================
 
 func (b *Builder) buildIdentificacion(invoice *models.Invoice, company *CompanyData) Identificacion {
-	now := time.Now()
+	emissionTime := time.Now()
+	if invoice.FinalizedAt != nil {
+		emissionTime = *invoice.FinalizedAt
+	}
 
 	return Identificacion{
 		Version:          1,
@@ -99,8 +102,8 @@ func (b *Builder) buildIdentificacion(invoice *models.Invoice, company *CompanyD
 		TipoOperacion:    1,
 		TipoContingencia: nil,
 		MotivoContin:     nil,
-		FecEmi:           now.Format("2006-01-02"),
-		HorEmi:           now.Format("15:04:05"),
+		FecEmi:           emissionTime.Format("2006-01-02"),
+		HorEmi:           emissionTime.Format("15:04:05"),
 		TipoMoneda:       "USD",
 	}
 }
