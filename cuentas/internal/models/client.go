@@ -4,7 +4,17 @@ import (
 	"cuentas/internal/codigos"
 	"cuentas/internal/tools"
 	"fmt"
+	"regexp"
+	"strings"
 	"time"
+)
+
+var (
+	// Regex patterns
+	nitPattern                  = regexp.MustCompile(`^([0-9]{14}|[0-9]{9})$`)
+	codigoGeneracionPattern     = regexp.MustCompile(`^[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}$`)
+	numeroControlFacturaPattern = regexp.MustCompile(`^DTE-01-[A-Z0-9]{8}-[0-9]{15}$`)
+	numeroControlCCFPattern     = regexp.MustCompile(`^DTE-03-[A-Z0-9]{8}-[0-9]{15}$`)
 )
 
 // Client represents a client in the system
@@ -44,7 +54,111 @@ type CreateClientRequest struct {
 	CountryCode       string `json:"country_code" binding:"required"`
 	DepartmentCode    string `json:"department_code" binding:"required"`
 	TipoPersona       string `json:"tipo_persona" binding:"required"`
-	MunicipalityCode  string `json:"municipality_code" binding:"required"` // Just 2 digits like "23"
+	MunicipalityCode  string `json:"municipality_code" binding:"required"`
+
+	// CCF-specific fields
+	CodActividad  *string `json:"cod_actividad"`
+	DescActividad *string `json:"desc_actividad"`
+	Telefono      *string `json:"telefono"`
+	Correo        *string `json:"correo"`
+}
+
+// ValidateForCCF validates that a business client (tipo_persona="2") has all required CCF fields
+// according to the Hacienda CCF schema v3
+func (r *CreateClientRequest) ValidateForCCF() error {
+	// Only validate if this is a business client (Crédito Fiscal)
+	if r.TipoPersona != codigos.PersonTypeJuridica {
+		return nil
+	}
+
+	var errors []string
+
+	// Required: NIT (must be 14 or 9 digits)
+	if r.NIT == "" {
+		errors = append(errors, "nit is required for CCF clients")
+	} else {
+		nitDigits := strings.ReplaceAll(r.NIT, "-", "")
+		if matched, _ := regexp.MatchString(`^[0-9]{14}$|^[0-9]{9}$`, nitDigits); !matched {
+			errors = append(errors, "nit must be 14 or 9 digits")
+		}
+	}
+
+	// Required: NCR (must be 1-8 digits)
+	if r.NCR == "" {
+		errors = append(errors, "ncr is required for CCF clients")
+	} else {
+		ncrDigits := strings.ReplaceAll(r.NCR, "-", "")
+		if matched, _ := regexp.MatchString(`^[0-9]{1,8}$`, ncrDigits); !matched {
+			errors = append(errors, "ncr must be 1-8 digits")
+		}
+	}
+
+	// Required: BusinessName (1-250 chars)
+	if len(r.BusinessName) == 0 || len(r.BusinessName) > 250 {
+		errors = append(errors, "business_name must be between 1 and 250 characters")
+	}
+
+	// Required: CodActividad (2-6 digits)
+	if r.CodActividad == nil || *r.CodActividad == "" {
+		errors = append(errors, "cod_actividad is required for CCF clients")
+	} else {
+		_, exist := codigos.GetEconomicActivityName(r.CodActividad)
+		if !exist {
+			errors = append(errors, "cod_actividad must be 2-6 digits")
+		}
+	}
+
+	// Required: DescActividad (1-150 chars)
+	if r.DescActividad == nil || *r.DescActividad == "" {
+		errors = append(errors, "desc_actividad is required for CCF clients")
+	} else if len(*r.DescActividad) > 150 {
+		errors = append(errors, "desc_actividad must not exceed 150 characters")
+	}
+
+	// Required: NombreComercial (can be null, but if provided must be 1-150 chars)
+	if r.NombreComercial != nil && *r.NombreComercial != "" {
+		if len(*r.NombreComercial) > 150 {
+			errors = append(errors, "nombre_comercial must not exceed 150 characters")
+		}
+	}
+
+	// Required: Direccion (already validated by existing fields)
+	if r.DepartmentCode == "" {
+		errors = append(errors, "department_code is required for CCF clients")
+	}
+	if r.MunicipalityCode == "" {
+		errors = append(errors, "municipality_code is required for CCF clients")
+	}
+	if r.FullAddress == "" {
+		errors = append(errors, "full_address is required for CCF clients")
+	}
+
+	// Required: Telefono (can be null, but if provided must be 8-30 chars)
+	if r.Telefono != nil && *r.Telefono != "" {
+		if len(*r.Telefono) < 8 || len(*r.Telefono) > 30 {
+			errors = append(errors, "telefono must be between 8 and 30 characters")
+		}
+	}
+
+	// Required: Correo (email format, max 100 chars) - NOT NULLABLE for CCF
+	if r.Correo == nil || *r.Correo == "" {
+		errors = append(errors, "correo (email) is required for CCF clients")
+	} else {
+		if len(*r.Correo) > 100 {
+			errors = append(errors, "correo must not exceed 100 characters")
+		}
+		// Validate email format
+		emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+		if !emailRegex.MatchString(*r.Correo) {
+			errors = append(errors, "correo must be a valid email address")
+		}
+	}
+
+	if len(errors) > 0 {
+		return fmt.Errorf("CCF validation failed: %s", strings.Join(errors, "; "))
+	}
+
+	return nil
 }
 
 // Validate validates the create client request
