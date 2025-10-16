@@ -430,11 +430,10 @@ func (b *Builder) loadCompany(ctx context.Context, companyID string) (*CompanyDa
 
 func (b *Builder) loadClient(ctx context.Context, clientID string) (*ClientData, error) {
 	query := `
-		SELECT id, nit, ncr, dui, business_name, department_code, municipality_code, full_address, tipo_persona
+		SELECT id, nit, ncr, dui, business_name, department_code, municipality_code, full_address, tipo_persona, cod_actividad, desc_actividad, nombre_comercial, telefono, correo
 		FROM clients
 		WHERE id = $1
 	`
-
 	var client ClientData
 	err := b.db.QueryRowContext(ctx, query, clientID).Scan(
 		&client.ID,
@@ -446,6 +445,11 @@ func (b *Builder) loadClient(ctx context.Context, clientID string) (*ClientData,
 		&client.MunicipalityCode,
 		&client.FullAddress,
 		&client.TipoPersona,
+		&client.CodActividad,
+		&client.DescActividad,
+		&client.LegalBusinessName,
+		&client.Telefono,
+		&client.Correo,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("query client: %w", err)
