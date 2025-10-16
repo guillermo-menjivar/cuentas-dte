@@ -75,8 +75,8 @@ func (b *Builder) BuildFromInvoice(ctx context.Context, invoice *models.Invoice)
 // determineInvoiceType determines if this is B2C or B2B based on client
 func (b *Builder) determineInvoiceType(client *ClientData) InvoiceType {
 	// If client has NIT, it's a business (Crédito Fiscal / B2B)
-	if client.NIT != nil {
-		return InvoiceTypeCreditoFiscal
+	if client.TipoPersona != nil && *client.TipoPersona == codigos.PersonTypeJuridica {
+		return InvoiceTypeCreditoFiscal // Business (CCF)
 	}
 	// Otherwise it's a consumer (Consumidor Final / B2C)
 	return InvoiceTypeConsumidorFinal
@@ -410,7 +410,7 @@ func (b *Builder) loadCompany(ctx context.Context, companyID string) (*CompanyDa
 
 func (b *Builder) loadClient(ctx context.Context, clientID string) (*ClientData, error) {
 	query := `
-		SELECT id, nit, ncr, dui, business_name, department_code, municipality_code, full_address
+		SELECT id, nit, ncr, dui, business_name, department_code, municipality_code, full_address, tipo_contribuyente
 		FROM clients
 		WHERE id = $1
 	`
@@ -422,6 +422,7 @@ func (b *Builder) loadClient(ctx context.Context, clientID string) (*ClientData,
 		&client.NCR,
 		&client.DUI,
 		&client.BusinessName,
+		&client.TipoPersona,
 		&client.DepartmentCode,
 		&client.MunicipalityCode,
 		&client.FullAddress,

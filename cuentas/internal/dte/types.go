@@ -77,6 +77,7 @@ type EstablishmentData struct {
 // ClientData represents client (receptor) data from database
 type ClientData struct {
 	ID               string
+	TipoPersona      string
 	NIT              *int64
 	NCR              *int64
 	DUI              *int64
