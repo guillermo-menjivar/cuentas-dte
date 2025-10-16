@@ -28,7 +28,7 @@ CCF_CLIENTS = [
         "full_address": "Boulevard Constitucion, Edificio Comercial, San Salvador",
         "country_code": "SV",
         "department_code": "06",
-        "municipality_code": "06.14",
+        "municipality_code": "14",
     },
     {
         "nit": "0614-200300-102-4",
@@ -46,7 +46,7 @@ CCF_CLIENTS = [
         "full_address": "Avenida Revolucion, Torre Empresarial, Piso 3, San Salvador",
         "country_code": "SV",
         "department_code": "06",
-        "municipality_code": "06.14",
+        "municipality_code": "14",
     },
     {
         "nit": "0614-300400-001-5",
@@ -64,7 +64,7 @@ CCF_CLIENTS = [
         "full_address": "Centro Comercial Galerias, Torre B, Oficina 501, Antiguo Cuscatlan",
         "country_code": "SV",
         "department_code": "05",
-        "municipality_code": "05.26",
+        "municipality_code": "26",
     },
     {
         "nit": "0614-400500-103-6",
@@ -82,7 +82,7 @@ CCF_CLIENTS = [
         "full_address": "Colonia Escalon, Calle Reforma, Edificio Profesional, San Salvador",
         "country_code": "SV",
         "department_code": "06",
-        "municipality_code": "06.14",
+        "municipality_code": "14",
     },
     {
         "nit": "0214-500600-001-7",
@@ -100,7 +100,7 @@ CCF_CLIENTS = [
         "full_address": "Carretera Panamericana KM 65, Santa Ana",
         "country_code": "SV",
         "department_code": "02",
-        "municipality_code": "02.15",
+        "municipality_code": "15",
     },
 ]
 
