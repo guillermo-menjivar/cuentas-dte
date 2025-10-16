@@ -52,8 +52,20 @@ class FacturaGenerator:
         try:
             response = requests.get(f"{BASE_URL}/clients", headers=self.headers)
             response.raise_for_status()
-            self.clients = response.json().get("clients", [])
-            print(f"  ✓ Found {len(self.clients)} clients")
+            all_clients = response.json().get("clients", [])
+
+            # ⭐ FILTER: Only tipo_persona = "1" (individuals/Consumidor Final)
+            self.clients = [c for c in all_clients if c.get("tipo_persona") == "1"]
+
+            print(f"  ✓ Found {len(all_clients)} total clients")
+            print(
+                f"  ✓ Using {len(self.clients)} Consumidor Final clients (tipo_persona=1)"
+            )
+
+            if not self.clients:
+                print(f"  ⚠ No tipo_persona=1 clients found! Need to create some.")
+                return False
+
         except Exception as e:
             print(f"  ✗ Failed to fetch clients: {e}")
             return False
@@ -187,8 +199,24 @@ class FacturaGenerator:
             response.raise_for_status()
             result = response.json()
 
+            # ⭐ CHECK DTE STATUS IN RESPONSE
+            dte_status = result.get("dte_status")
+
             if result.get("status") == "finalized":
-                return True
+                # Check if DTE was successfully submitted
+                if dte_status == "signed":
+                    return True
+                elif dte_status == "failed_signing":
+                    error_msg = result.get("dte_hacienda_response", "Unknown error")
+                    print(
+                        f"    ⚠️  Invoice finalized but DTE submission failed: {error_msg}"
+                    )
+                    return False
+                else:
+                    print(
+                        f"    ⚠️  Invoice finalized but DTE status unclear: {dte_status}"
+                    )
+                    return False
             else:
                 print(
                     f"    ✗ Invoice not finalized: {result.get('error', 'Unknown error')}"
