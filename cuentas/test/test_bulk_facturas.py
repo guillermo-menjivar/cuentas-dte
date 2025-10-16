@@ -62,14 +62,14 @@ class FacturaGenerator:
         try:
             response = requests.get(f"{BASE_URL}/establishments", headers=self.headers)
             response.raise_for_status()
-            self.establishments = response.json().get("establishments", [])
-            print(f"  ✓ Found {len(self.establishments)} establishments")
+            all_establishments = response.json().get("establishments", [])
+            print(f"  ✓ Found {len(all_establishments)} establishments")
         except Exception as e:
             print(f"  ✗ Failed to fetch establishments: {e}")
             return False
 
-        # Fetch POS for each establishment
-        for est in self.establishments:
+        # Fetch POS for each establishment and only keep establishments with POS
+        for est in all_establishments:
             est_id = est["id"]
             try:
                 response = requests.get(
@@ -77,11 +77,15 @@ class FacturaGenerator:
                 )
                 response.raise_for_status()
                 pos_list = response.json().get("points_of_sale", [])
+                # Only add establishment if it has at least one POS
                 if pos_list:
+                    self.establishments.append(est)  # ⭐ Add to list only if has POS
                     self.pos_by_establishment[est_id] = pos_list
                     print(
                         f"  ✓ Found {len(pos_list)} POS for establishment {est['nombre']}"
                     )
+                else:
+                    print(f"  ⚠ Skipping establishment {est['nombre']} - no POS found")
             except Exception as e:
                 print(f"  ✗ Failed to fetch POS for establishment {est_id}: {e}")
 
@@ -100,16 +104,14 @@ class FacturaGenerator:
             print("  ✗ No clients found!")
             return False
         if not self.establishments:
-            print("  ✗ No establishments found!")
-            return False
-        if not self.pos_by_establishment:
-            print("  ✗ No points of sale found!")
+            print("  ✗ No establishments with POS found!")
             return False
         if not self.items:
             print("  ✗ No items found!")
             return False
 
-        print("\n✅ Data fetching complete!\n")
+        print("\n✅ Data fetching complete!")
+        print(f"  Using {len(self.establishments)} establishments with POS\n")
         return True
 
     def get_random_payment_method(self) -> str:
