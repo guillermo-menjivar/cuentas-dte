@@ -410,7 +410,7 @@ func (b *Builder) loadCompany(ctx context.Context, companyID string) (*CompanyDa
 
 func (b *Builder) loadClient(ctx context.Context, clientID string) (*ClientData, error) {
 	query := `
-		SELECT id, nit, ncr, dui, business_name, department_code, municipality_code, full_address, tipo_contribuyente
+		SELECT id, nit, ncr, dui, business_name, department_code, municipality_code, full_address, tipo_persona
 		FROM clients
 		WHERE id = $1
 	`
