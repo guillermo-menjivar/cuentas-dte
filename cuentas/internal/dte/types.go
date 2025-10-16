@@ -3,12 +3,21 @@ package dte
 
 import (
 	"cuentas/internal/codigos"
+	"regexp"
 	"strings"
 )
 
 // ============================================
 // INVOICE TYPE & CALCULATION RESULTS
 // ============================================
+
+var (
+	// Regex patterns
+	nitPattern                  = regexp.MustCompile(`^([0-9]{14}|[0-9]{9})$`)
+	codigoGeneracionPattern     = regexp.MustCompile(`^[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}$`)
+	numeroControlFacturaPattern = regexp.MustCompile(`^DTE-01-[A-Z0-9]{8}-[0-9]{15}$`)
+	numeroControlCCFPattern     = regexp.MustCompile(`^DTE-03-[A-Z0-9]{8}-[0-9]{15}$`)
+)
 
 // InvoiceType represents the type of invoice
 type InvoiceType string
