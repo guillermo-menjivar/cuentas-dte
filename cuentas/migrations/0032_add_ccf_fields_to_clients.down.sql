@@ -1,0 +1,6 @@
+ALTER TABLE clients 
+DROP COLUMN IF EXISTS cod_actividad,
+DROP COLUMN IF EXISTS desc_actividad,
+DROP COLUMN IF EXISTS nombre_comercial,
+DROP COLUMN IF EXISTS telefono,
+DROP COLUMN IF EXISTS correo;
