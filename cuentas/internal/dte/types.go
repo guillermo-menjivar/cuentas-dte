@@ -81,17 +81,20 @@ type EstablishmentData struct {
 
 // ClientData represents client (receptor) data from database
 type ClientData struct {
-	ID               string
-	TipoPersona      string
-	NIT              *int64
-	NCR              *int64
-	DUI              *int64
-	BusinessName     string
-	DepartmentCode   string
-	MunicipalityCode string
-	FullAddress      string
-	Correo           string
-	Telefono         string
+	ID                string
+	TipoPersona       string
+	NIT               *int64
+	NCR               *int64
+	DUI               *int64
+	BusinessName      string
+	DepartmentCode    string
+	MunicipalityCode  string
+	FullAddress       string
+	Correo            string
+	Telefono          string
+	CodActividad      string
+	DescActividad     string
+	LegalBusinessName string
 }
 
 func (c *ClientData) GetMunicipalityCode() (string, bool) {
