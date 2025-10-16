@@ -1,3 +1,5 @@
+DROP INDEX IF EXISTS idx_clients_correo;
+
 ALTER TABLE clients 
 DROP COLUMN IF EXISTS cod_actividad,
 DROP COLUMN IF EXISTS desc_actividad,
