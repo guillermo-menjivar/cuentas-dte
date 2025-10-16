@@ -235,7 +235,7 @@ func (b *Builder) buildCuerpoDocumento(invoice *models.Invoice, invoiceType Invo
 			Tributos:        nil,                     // No special tributos for regular IVA
 			Psv:             0,
 			NoGravado:       0,
-			IvaItem:         itemAmount.IvaItem, // ✅ From calculator
+			IvaItem:         RoundToItemPrecision(itemAmount.IvaItem), // ✅ From calculator
 		}
 	}
 

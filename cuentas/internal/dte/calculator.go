@@ -50,8 +50,8 @@ func (c *Calculator) CalculateConsumidorFinal(
 	return ItemAmounts{
 		PrecioUni:    RoundToItemPrecision(precioUni),
 		VentaGravada: RoundToItemPrecision(ventaGravada),
-		IvaItem:      RoundToItemPrecision(ivaItem),
-		MontoDescu:   RoundToItemPrecision(discount), // ⭐ ADD THIS
+		IvaItem:      ivaItem,
+		MontoDescu:   RoundToItemPrecision(discount), //
 	}
 }
 
