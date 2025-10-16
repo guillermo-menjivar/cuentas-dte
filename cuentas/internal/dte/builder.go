@@ -423,10 +423,10 @@ func (b *Builder) loadClient(ctx context.Context, clientID string) (*ClientData,
 		&client.NCR,
 		&client.DUI,
 		&client.BusinessName,
-		&client.TipoPersona,
 		&client.DepartmentCode,
 		&client.MunicipalityCode,
 		&client.FullAddress,
+		&client.TipoPersona,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("query client: %w", err)
@@ -502,14 +502,11 @@ func (b *Builder) buildEmisorDireccion(establishment *EstablishmentData) Direcci
 
 // For Receptor
 func (b *Builder) buildReceptorDireccion(client *ClientData) Direccion {
-	munCode, valid := codigos.ValidateMunicipalityWithDepartment(
-		client.DepartmentCode,
-		client.MunicipalityCode,
-	)
+	munCode, valid := client.GetMunicipalityCode()
+
 	if !valid {
 		fmt.Printf("Warning: Invalid municipality code for receptor: dept=%s, mun=%s\n",
-			client.DepartmentCode, client.MunicipalityCode)
-		munCode = codigos.ExtractMunicipalityCode(client.MunicipalityCode)
+			client.DepartmentCode, munCode)
 	}
 
 	return Direccion{

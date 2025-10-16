@@ -37,8 +37,7 @@ RETURNS TRIGGER AS $$
 BEGIN
     INSERT INTO clients (
         company_id,
-        nit,
-        ncr,
+        dui,
         business_name,
         legal_business_name,
         giro,
@@ -51,8 +50,7 @@ BEGIN
         active
     ) VALUES (
         NEW.id,
-        '9999999999999',
-        '999999',  -- Added NCR
+        999999999,  -- Generic DUI as bigint
         'Consumidor Final',
         'Consumidor Final',
         'Consumidor Final',
@@ -67,10 +65,3 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trigger_create_consumidor_final
-    AFTER INSERT ON companies
-    FOR EACH ROW
-    EXECUTE FUNCTION create_consumidor_final_for_company();
-
-COMMENT ON FUNCTION create_consumidor_final_for_company IS 'Automatically creates a Consumidor Final client for each new company';

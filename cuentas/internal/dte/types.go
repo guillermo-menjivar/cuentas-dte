@@ -1,6 +1,11 @@
 // internal/dte/types.go
 package dte
 
+import (
+	"cuentas/internal/codigos"
+	"strings"
+)
+
 // ============================================
 // INVOICE TYPE & CALCULATION RESULTS
 // ============================================
@@ -85,6 +90,26 @@ type ClientData struct {
 	DepartmentCode   string
 	MunicipalityCode string
 	FullAddress      string
+}
+
+func (c *ClientData) GetMunicipalityCode() (string, bool) {
+	munCode := c.MunicipalityCode
+
+	// Extract municipality code from "05.26" format
+	if strings.Contains(munCode, ".") {
+		parts := strings.Split(munCode, ".")
+		if len(parts) == 2 {
+			munCode = parts[1] // Get "26" from "05.26"
+		}
+	}
+
+	// Validate against codigos
+	_, valid := codigos.ValidateMunicipalityWithDepartment(
+		c.DepartmentCode,
+		munCode,
+	)
+
+	return munCode, valid
 }
 
 // ============================================
