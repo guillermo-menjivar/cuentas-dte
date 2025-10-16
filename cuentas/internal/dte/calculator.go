@@ -31,6 +31,7 @@ func NewCalculator() *Calculator {
 //	- precioUni: 11.30 (includes IVA)
 //	- ventaGravada: 11.30 (also includes IVA)
 //	- ivaItem: 11.30 - (11.30 / 1.13) = 11.30 - 10.00 = 1.30
+
 func (c *Calculator) CalculateConsumidorFinal(
 	priceWithIVA float64,
 	quantity float64,
@@ -50,6 +51,7 @@ func (c *Calculator) CalculateConsumidorFinal(
 		PrecioUni:    RoundToItemPrecision(precioUni),
 		VentaGravada: RoundToItemPrecision(ventaGravada),
 		IvaItem:      RoundToItemPrecision(ivaItem),
+		MontoDescu:   RoundToItemPrecision(discount), // ⭐ ADD THIS
 	}
 }
 
@@ -86,6 +88,7 @@ func (c *Calculator) CalculateCreditoFiscal(
 		PrecioUni:    RoundToItemPrecision(precioUni),
 		VentaGravada: RoundToItemPrecision(ventaGravada),
 		IvaItem:      RoundToItemPrecision(ivaItem),
+		MontoDescu:   RoundToItemPrecision(discount), // ⭐ ADD THIS
 	}
 }
 
@@ -110,38 +113,33 @@ func (c *Calculator) CalculateResumen(
 	invoiceType InvoiceType,
 ) ResumenAmounts {
 	// Sum all item amounts (keep precision during summation)
-	var totalGravada, totalIva float64
+	var totalGravada, totalIva, totalDescu float64
 
 	for _, item := range items {
 		totalGravada += item.VentaGravada
 		totalIva += item.IvaItem
+		totalDescu += item.MontoDescu // ⭐ ADD THIS LINE
 	}
 
 	// Round totals to resumen precision (2 decimals)
 	totalGravada = RoundToResumenPrecision(totalGravada)
 	totalIva = RoundToResumenPrecision(totalIva)
+	totalDescu = RoundToResumenPrecision(totalDescu) // ⭐ ADD THIS LINE
 
 	// Calculate subTotal based on invoice type
 	var subTotal float64
 	if invoiceType == InvoiceTypeConsumidorFinal {
-		// For consumidor final: subTotal = totalGravada (already includes IVA)
-		// DO NOT add totalIva again!
 		subTotal = totalGravada
 	} else {
-		// For credito fiscal: subTotal = totalGravada + totalIva
 		subTotal = RoundToResumenPrecision(totalGravada + totalIva)
 	}
 
-	// For simple invoices with no retentions or other charges:
-	// montoTotalOperacion = subTotal
-	// totalPagar = subTotal
-
 	return ResumenAmounts{
-		TotalNoSuj:          0, // Not taxable
-		TotalExenta:         0, // Exempt
+		TotalNoSuj:          0,
+		TotalExenta:         0,
 		TotalGravada:        totalGravada,
-		SubTotalVentas:      totalGravada, // Same as totalGravada
-		TotalDescu:          0,            // Global discounts (not item-level)
+		SubTotalVentas:      totalGravada,
+		TotalDescu:          totalDescu, // ⭐ CHANGED FROM 0
 		TotalIva:            totalIva,
 		SubTotal:            subTotal,
 		MontoTotalOperacion: subTotal,
