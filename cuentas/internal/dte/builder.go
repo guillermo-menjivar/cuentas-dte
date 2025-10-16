@@ -619,11 +619,11 @@ func (b *Builder) buildCCFReceptor(client *ClientData) *Receptor {
 		NIT:             &nitStr,
 		NRC:             &nrcStr,
 		Nombre:          &client.BusinessName,
-		CodActividad:    client.CodActividad,
-		DescActividad:   client.DescActividad,
+		CodActividad:    &client.CodActividad,
+		DescActividad:   &client.DescActividad,
 		NombreComercial: client.LegalBusinessName,
 		Direccion:       &direccion,
-		Telefono:        client.Telefono,
-		Correo:          client.Correo,
+		Telefono:        &client.Telefono,
+		Correo:          &client.Correo,
 	}
 }
