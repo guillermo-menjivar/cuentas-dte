@@ -15,6 +15,7 @@ services:
       POSTGRES_DB: cuentas
       POSTGRES_USER: cuentas_user
       POSTGRES_PASSWORD: cuentas_password
+      TZ: "America/El_Salvador"
     ports:
       - "5432:5432"
     volumes:
