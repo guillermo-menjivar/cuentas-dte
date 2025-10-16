@@ -87,9 +87,20 @@ func (b *Builder) determineInvoiceType(client *ClientData) InvoiceType {
 // ============================================
 
 func (b *Builder) buildIdentificacion(invoice *models.Invoice, company *CompanyData) Identificacion {
-	emissionTime := time.Now()
+	// Load El Salvador timezone
+	loc, err := time.LoadLocation("America/El_Salvador")
+	if err != nil {
+		// Fallback to CST offset if timezone data not available
+		loc = time.FixedZone("CST", -6*3600)
+	}
+
+	// Use finalized_at as the emission date/time
+	// Convert to El Salvador timezone
+	var emissionTime time.Time
 	if invoice.FinalizedAt != nil {
-		emissionTime = *invoice.FinalizedAt
+		emissionTime = invoice.FinalizedAt.In(loc)
+	} else {
+		emissionTime = time.Now().In(loc)
 	}
 
 	return Identificacion{
