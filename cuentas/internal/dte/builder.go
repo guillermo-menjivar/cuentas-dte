@@ -87,12 +87,12 @@ func (b *Builder) determineInvoiceType(client *ClientData) InvoiceType {
 // BUILD IDENTIFICACION
 // ============================================
 
-func (b *Builder) buildIdentificacion(invoiceType string, invoice *models.Invoice, company *CompanyData) Identificacion {
+func (b *Builder) buildIdentificacion(invoiceType InvoiceType, invoice *models.Invoice, company *CompanyData) Identificacion {
 	// Load El Salvador timezone
 
 	switch InvoiceType {
 	case codigos.DocTypeComprobanteCredito:
-		return b.buildCCFIdentificacion
+		return b.buildCCFIdentificacion(invoice, company)
 	default:
 
 		loc, err := time.LoadLocation("America/El_Salvador")
@@ -154,7 +154,7 @@ func (b *Builder) buildEmisor(company *CompanyData, establishment *Establishment
 // BUILD RECEPTOR
 // ============================================
 
-func (b *Builder) buildReceptor(invoiceType string, client *ClientData) *Receptor {
+func (b *Builder) buildReceptor(invoiceType InvoiceType, client *ClientData) *Receptor {
 	switch invoiceType {
 	case codigos.DocTypeComprobanteCredito:
 		return buildCCFReceptor(client)
