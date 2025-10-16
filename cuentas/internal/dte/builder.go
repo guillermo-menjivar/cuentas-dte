@@ -88,13 +88,13 @@ func (b *Builder) determineInvoiceType(client *ClientData) InvoiceType {
 // ============================================
 
 func (b *Builder) buildIdentificacion(invoiceType InvoiceType, invoice *models.Invoice, company *CompanyData) Identificacion {
-	// Load El Salvador timezone
 
-	switch InvoiceType {
+	switch invoiceType {
 	case codigos.DocTypeComprobanteCredito:
 		return b.buildCCFIdentificacion(invoice, company)
 	default:
 
+		// Load El Salvador timezone
 		loc, err := time.LoadLocation("America/El_Salvador")
 		if err != nil {
 			// Fallback to CST offset if timezone data not available
