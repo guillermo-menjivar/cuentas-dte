@@ -90,6 +90,8 @@ type ClientData struct {
 	DepartmentCode   string
 	MunicipalityCode string
 	FullAddress      string
+	Correo           string
+	Telefono         string
 }
 
 func (c *ClientData) GetMunicipalityCode() (string, bool) {

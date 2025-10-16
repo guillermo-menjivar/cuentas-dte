@@ -617,7 +617,7 @@ func (b *Builder) buildCCFReceptor(client *ClientData) *Receptor {
 		Nombre:          &client.BusinessName,
 		CodActividad:    client.CodActividad,
 		DescActividad:   client.DescActividad,
-		NombreComercial: client.NombreComercial,
+		NombreComercial: client.LegalBusinessName,
 		Direccion:       &direccion,
 		Telefono:        client.Telefono,
 		Correo:          client.Correo,
