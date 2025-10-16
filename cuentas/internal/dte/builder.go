@@ -554,10 +554,10 @@ func (b *Builder) buildCCFCuerpoDocumento(invoice *models.Invoice) ([]CuerpoDocu
 		amounts[i] = itemAmount
 
 		// Tributos required for CCF
-		var tributos *[]string
+		var tributos []string
 		if itemAmount.VentaGravada > 0 {
 			tribs := []string{"20"} // IVA 13%
-			tributos = &tribs
+			tributos = tribs
 		}
 
 		items[i] = CuerpoDocumentoItem{
@@ -621,7 +621,7 @@ func (b *Builder) buildCCFReceptor(client *ClientData) *Receptor {
 		Nombre:          &client.BusinessName,
 		CodActividad:    &client.CodActividad,
 		DescActividad:   &client.DescActividad,
-		NombreComercial: client.LegalBusinessName,
+		NombreComercial: &client.LegalBusinessName,
 		Direccion:       &direccion,
 		Telefono:        &client.Telefono,
 		Correo:          &client.Correo,
