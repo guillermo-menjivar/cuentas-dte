@@ -53,10 +53,10 @@ func (b *Builder) BuildFromInvoice(ctx context.Context, invoice *models.Invoice)
 	resumen := b.buildResumen(invoice, itemAmounts, invoiceType)
 
 	factura := &DTE{
-		Identificacion:       b.buildIdentificacion(invoice, company),
+		Identificacion:       b.buildIdentificacion(invoiceType, invoice, company),
 		DocumentoRelacionado: nil,
 		Emisor:               b.buildEmisor(company, establishment),
-		Receptor:             b.buildReceptor(client),
+		Receptor:             b.buildReceptor(invoiceType, client),
 		OtrosDocumentos:      nil,
 		VentaTercero:         nil,
 		CuerpoDocumento:      cuerpoDocumento,
@@ -87,36 +87,43 @@ func (b *Builder) determineInvoiceType(client *ClientData) InvoiceType {
 // BUILD IDENTIFICACION
 // ============================================
 
-func (b *Builder) buildIdentificacion(invoice *models.Invoice, company *CompanyData) Identificacion {
+func (b *Builder) buildIdentificacion(invoiceType string, invoice *models.Invoice, company *CompanyData) Identificacion {
 	// Load El Salvador timezone
-	loc, err := time.LoadLocation("America/El_Salvador")
-	if err != nil {
-		// Fallback to CST offset if timezone data not available
-		loc = time.FixedZone("CST", -6*3600)
-	}
 
-	// Use finalized_at as the emission date/time
-	// Convert to El Salvador timezone
-	var emissionTime time.Time
-	if invoice.FinalizedAt != nil {
-		emissionTime = invoice.FinalizedAt.In(loc)
-	} else {
-		emissionTime = time.Now().In(loc)
-	}
+	switch InvoiceType {
+	case codigos.DocTypeComprobanteCredito:
+		return b.buildCCFIdentificacion
+	default:
 
-	return Identificacion{
-		Version:          1,
-		Ambiente:         company.DTEAmbiente,
-		TipoDte:          TipoDteFactura,
-		NumeroControl:    strings.ToUpper(*invoice.DteNumeroControl),
-		CodigoGeneracion: invoice.ID,
-		TipoModelo:       1,
-		TipoOperacion:    1,
-		TipoContingencia: nil,
-		MotivoContin:     nil,
-		FecEmi:           emissionTime.Format("2006-01-02"),
-		HorEmi:           emissionTime.Format("15:04:05"),
-		TipoMoneda:       "USD",
+		loc, err := time.LoadLocation("America/El_Salvador")
+		if err != nil {
+			// Fallback to CST offset if timezone data not available
+			loc = time.FixedZone("CST", -6*3600)
+		}
+
+		// Use finalized_at as the emission date/time
+		// Convert to El Salvador timezone
+		var emissionTime time.Time
+		if invoice.FinalizedAt != nil {
+			emissionTime = invoice.FinalizedAt.In(loc)
+		} else {
+			emissionTime = time.Now().In(loc)
+		}
+
+		return Identificacion{
+			Version:          1,
+			Ambiente:         company.DTEAmbiente,
+			TipoDte:          TipoDteFactura,
+			NumeroControl:    strings.ToUpper(*invoice.DteNumeroControl),
+			CodigoGeneracion: invoice.ID,
+			TipoModelo:       1,
+			TipoOperacion:    1,
+			TipoContingencia: nil,
+			MotivoContin:     nil,
+			FecEmi:           emissionTime.Format("2006-01-02"),
+			HorEmi:           emissionTime.Format("15:04:05"),
+			TipoMoneda:       "USD",
+		}
 	}
 }
 
@@ -147,45 +154,50 @@ func (b *Builder) buildEmisor(company *CompanyData, establishment *Establishment
 // BUILD RECEPTOR
 // ============================================
 
-func (b *Builder) buildReceptor(client *ClientData) *Receptor {
-	// Determine document type and number
-	var tipoDocumento *string
-	var numDocumento *string
-	var nrc *string
+func (b *Builder) buildReceptor(invoiceType string, client *ClientData) *Receptor {
+	switch invoiceType {
+	case codigos.DocTypeComprobanteCredito:
+		return buildCCFReceptor(client)
+	default:
+		// Determine document type and number
+		var tipoDocumento *string
+		var numDocumento *string
+		var nrc *string
 
-	if client.NIT != nil {
-		td := DocTypeNIT
-		tipoDocumento = &td
-		nitStr := fmt.Sprintf("%014d", *client.NIT)
-		numDocumento = &nitStr
-		if client.NCR != nil {
-			ncrStr := fmt.Sprintf("%d", *client.NCR)
-			nrc = &ncrStr
+		if client.NIT != nil {
+			td := DocTypeNIT
+			tipoDocumento = &td
+			nitStr := fmt.Sprintf("%014d", *client.NIT)
+			numDocumento = &nitStr
+			if client.NCR != nil {
+				ncrStr := fmt.Sprintf("%d", *client.NCR)
+				nrc = &ncrStr
+			}
+		} else if client.DUI != nil {
+			td := DocTypeDUI
+			tipoDocumento = &td
+			duiStr := fmt.Sprintf("%08d-%d", *client.DUI/10, *client.DUI%10)
+			numDocumento = &duiStr
 		}
-	} else if client.DUI != nil {
-		td := DocTypeDUI
-		tipoDocumento = &td
-		duiStr := fmt.Sprintf("%08d-%d", *client.DUI/10, *client.DUI%10)
-		numDocumento = &duiStr
-	}
 
-	// Build direccion
-	var direccion *Direccion
-	if client.DepartmentCode != "" && client.MunicipalityCode != "" {
-		dir := b.buildReceptorDireccion(client)
-		direccion = &dir
-	}
+		// Build direccion
+		var direccion *Direccion
+		if client.DepartmentCode != "" && client.MunicipalityCode != "" {
+			dir := b.buildReceptorDireccion(client)
+			direccion = &dir
+		}
 
-	return &Receptor{
-		TipoDocumento: tipoDocumento,
-		NumDocumento:  numDocumento,
-		NRC:           nrc,
-		Nombre:        &client.BusinessName,
-		CodActividad:  nil, // Not available in client table
-		DescActividad: nil, // Not available in client table
-		Direccion:     direccion,
-		Telefono:      nil, // Not available in client table
-		Correo:        nil, // Not available in client table
+		return &Receptor{
+			TipoDocumento: tipoDocumento,
+			NumDocumento:  numDocumento,
+			NRC:           nrc,
+			Nombre:        &client.BusinessName,
+			CodActividad:  nil, // Not available in client table
+			DescActividad: nil, // Not available in client table
+			Direccion:     direccion,
+			Telefono:      nil, // Not available in client table
+			Correo:        nil, // Not available in client table
+		}
 	}
 }
 
@@ -197,51 +209,58 @@ func (b *Builder) buildCuerpoDocumento(invoice *models.Invoice, invoiceType Invo
 	items := make([]CuerpoDocumentoItem, len(invoice.LineItems))
 	amounts := make([]ItemAmounts, len(invoice.LineItems))
 
-	for i, lineItem := range invoice.LineItems {
-		// ⭐ USE CALCULATOR - This is the critical fix!
-		var itemAmount ItemAmounts
+	switch invoiceType {
+	case codigos.DocTypeComprobanteCredito:
+		fmt.Println("processing CCF cuerpo Documento")
+		return b.buildCCFCuerpoDocumento(invoice)
+	default:
 
-		if invoiceType == InvoiceTypeConsumidorFinal {
-			// For B2C: lineItem.UnitPrice INCLUDES IVA
-			itemAmount = b.calculator.CalculateConsumidorFinal(
-				lineItem.UnitPrice,
-				lineItem.Quantity,
-				lineItem.DiscountAmount,
-			)
-		} else {
-			// For B2B: lineItem.UnitPrice EXCLUDES IVA
-			itemAmount = b.calculator.CalculateCreditoFiscal(
-				lineItem.UnitPrice,
-				lineItem.Quantity,
-				lineItem.DiscountAmount,
-			)
+		for i, lineItem := range invoice.LineItems {
+			// ⭐ USE CALCULATOR - This is the critical fix!
+			var itemAmount ItemAmounts
+
+			if invoiceType == InvoiceTypeConsumidorFinal {
+				// For B2C: lineItem.UnitPrice INCLUDES IVA
+				itemAmount = b.calculator.CalculateConsumidorFinal(
+					lineItem.UnitPrice,
+					lineItem.Quantity,
+					lineItem.DiscountAmount,
+				)
+			} else {
+				// For B2B: lineItem.UnitPrice EXCLUDES IVA
+				itemAmount = b.calculator.CalculateCreditoFiscal(
+					lineItem.UnitPrice,
+					lineItem.Quantity,
+					lineItem.DiscountAmount,
+				)
+			}
+
+			amounts[i] = itemAmount
+
+			items[i] = CuerpoDocumentoItem{
+				NumItem:         lineItem.LineNumber,
+				TipoItem:        b.parseTipoItem(lineItem.ItemTipoItem),
+				NumeroDocumento: nil,
+				Cantidad:        lineItem.Quantity,
+				Codigo:          &lineItem.ItemSku,
+				CodTributo:      nil, // Only for tipoItem = 4
+				UniMedida:       b.parseUniMedida(lineItem.UnitOfMeasure),
+				Descripcion:     lineItem.ItemName,
+				PrecioUni:       itemAmount.PrecioUni, // ✅ From calculator
+				MontoDescu:      lineItem.DiscountAmount,
+				VentaNoSuj:      0,
+				VentaExenta:     0,
+				VentaGravada:    itemAmount.VentaGravada, // ✅ From calculator
+				Tributos:        nil,                     // No special tributos for regular IVA
+				Psv:             0,
+				NoGravado:       0,
+				//IvaItem:         RoundToItemPrecision(itemAmount.IvaItem), // ✅ From calculator
+				IvaItem: RoundToResumenPrecision(itemAmount.IvaItem),
+			}
 		}
 
-		amounts[i] = itemAmount
-
-		items[i] = CuerpoDocumentoItem{
-			NumItem:         lineItem.LineNumber,
-			TipoItem:        b.parseTipoItem(lineItem.ItemTipoItem),
-			NumeroDocumento: nil,
-			Cantidad:        lineItem.Quantity,
-			Codigo:          &lineItem.ItemSku,
-			CodTributo:      nil, // Only for tipoItem = 4
-			UniMedida:       b.parseUniMedida(lineItem.UnitOfMeasure),
-			Descripcion:     lineItem.ItemName,
-			PrecioUni:       itemAmount.PrecioUni, // ✅ From calculator
-			MontoDescu:      lineItem.DiscountAmount,
-			VentaNoSuj:      0,
-			VentaExenta:     0,
-			VentaGravada:    itemAmount.VentaGravada, // ✅ From calculator
-			Tributos:        nil,                     // No special tributos for regular IVA
-			Psv:             0,
-			NoGravado:       0,
-			//IvaItem:         RoundToItemPrecision(itemAmount.IvaItem), // ✅ From calculator
-			IvaItem: RoundToResumenPrecision(itemAmount.IvaItem),
-		}
+		return items, amounts
 	}
-
-	return items, amounts
 }
 
 // ============================================
@@ -513,5 +532,94 @@ func (b *Builder) buildReceptorDireccion(client *ClientData) Direccion {
 		Departamento: client.DepartmentCode,
 		Municipio:    munCode,
 		Complemento:  client.FullAddress,
+	}
+}
+
+func (b *Builder) buildCCFCuerpoDocumento(invoice *models.Invoice) ([]CuerpoDocumentoItem, []ItemAmounts) {
+	items := make([]CuerpoDocumentoItem, len(invoice.LineItems))
+	amounts := make([]ItemAmounts, len(invoice.LineItems))
+
+	for i, lineItem := range invoice.LineItems {
+		// CCF uses CalculateCreditoFiscal
+		itemAmount := b.calculator.CalculateCreditoFiscal(
+			lineItem.UnitPrice,
+			lineItem.Quantity,
+			lineItem.DiscountAmount,
+		)
+
+		amounts[i] = itemAmount
+
+		// Tributos required for CCF
+		var tributos *[]string
+		if itemAmount.VentaGravada > 0 {
+			tribs := []string{"20"} // IVA 13%
+			tributos = &tribs
+		}
+
+		items[i] = CuerpoDocumentoItem{
+			NumItem:         lineItem.LineNumber,
+			TipoItem:        b.parseTipoItem(lineItem.ItemTipoItem),
+			NumeroDocumento: nil,
+			Cantidad:        lineItem.Quantity,
+			Codigo:          &lineItem.ItemSku,
+			CodTributo:      nil,
+			UniMedida:       b.parseUniMedida(lineItem.UnitOfMeasure),
+			Descripcion:     lineItem.ItemName,
+			PrecioUni:       itemAmount.PrecioUni,
+			MontoDescu:      lineItem.DiscountAmount,
+			VentaNoSuj:      0,
+			VentaExenta:     0,
+			VentaGravada:    itemAmount.VentaGravada,
+			Tributos:        tributos, // Required for CCF
+			Psv:             0,
+			NoGravado:       0,
+			IvaItem:         RoundToResumenPrecision(itemAmount.IvaItem),
+		}
+	}
+
+	return items, amounts
+}
+
+func (b *Builder) buildCCFIdentificacion(invoice *models.Invoice, company *CompanyData) Identificacion {
+	loc, _ := time.LoadLocation("America/El_Salvador")
+	emissionTime := invoice.FinalizedAt.In(loc)
+
+	return Identificacion{
+		Version:          3,
+		Ambiente:         company.DTEAmbiente,
+		TipoDte:          TipoDteCCF, // "03"
+		NumeroControl:    strings.ToUpper(*invoice.DteNumeroControl),
+		CodigoGeneracion: invoice.ID,
+		TipoModelo:       1,
+		TipoOperacion:    1,
+		TipoContingencia: nil,
+		MotivoContin:     nil,
+		FecEmi:           emissionTime.Format("2006-01-02"),
+		HorEmi:           emissionTime.Format("15:04:05"),
+		TipoMoneda:       "USD",
+	}
+}
+
+func (b *Builder) buildCCFReceptor(client *ClientData) *Receptor {
+	direccion := b.buildReceptorDireccion(client)
+
+	var nitStr, nrcStr string
+	if client.NIT != nil {
+		nitStr = fmt.Sprintf("%014d", *client.NIT)
+	}
+	if client.NCR != nil {
+		nrcStr = fmt.Sprintf("%d", *client.NCR)
+	}
+
+	return &Receptor{
+		NIT:             &nitStr,
+		NRC:             &nrcStr,
+		Nombre:          &client.BusinessName,
+		CodActividad:    client.CodActividad,
+		DescActividad:   client.DescActividad,
+		NombreComercial: client.NombreComercial,
+		Direccion:       &direccion,
+		Telefono:        client.Telefono,
+		Correo:          client.Correo,
 	}
 }
