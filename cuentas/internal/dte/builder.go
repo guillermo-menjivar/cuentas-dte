@@ -75,7 +75,8 @@ func (b *Builder) BuildFromInvoice(ctx context.Context, invoice *models.Invoice)
 // determineInvoiceType determines if this is B2C or B2B based on client
 func (b *Builder) determineInvoiceType(client *ClientData) InvoiceType {
 	// If client has NIT, it's a business (Crédito Fiscal / B2B)
-	if client.TipoPersona != nil && *client.TipoPersona == codigos.PersonTypeJuridica {
+
+	if client.TipoPersona == "2" {
 		return InvoiceTypeCreditoFiscal // Business (CCF)
 	}
 	// Otherwise it's a consumer (Consumidor Final / B2C)
