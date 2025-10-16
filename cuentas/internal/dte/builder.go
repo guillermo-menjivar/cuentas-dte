@@ -587,7 +587,7 @@ func (b *Builder) buildCCFIdentificacion(invoice *models.Invoice, company *Compa
 	return Identificacion{
 		Version:          3,
 		Ambiente:         company.DTEAmbiente,
-		TipoDte:          TipoDteCCF, // "03"
+		TipoDte:          codigos.DocTypeComprobanteCredito, // "03"
 		NumeroControl:    strings.ToUpper(*invoice.DteNumeroControl),
 		CodigoGeneracion: invoice.ID,
 		TipoModelo:       1,
