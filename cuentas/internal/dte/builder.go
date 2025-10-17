@@ -191,7 +191,7 @@ func (b *Builder) buildReceptor(invoiceType InvoiceType, client *ClientData) *Re
 			TipoDocumento: tipoDocumento,
 			NumDocumento:  numDocumento,
 			NRC:           nrc,
-			Nombre:        &client.BusinessName,
+			Nombre:        client.BusinessName,
 			CodActividad:  nil, // Not available in client table
 			DescActividad: nil, // Not available in client table
 			Direccion:     direccion,
@@ -618,12 +618,12 @@ func (b *Builder) buildCCFReceptor(client *ClientData) *Receptor {
 	return &Receptor{
 		NIT:             &nitStr,
 		NRC:             &nrcStr,
-		Nombre:          &client.BusinessName,
-		CodActividad:    &client.CodActividad,
-		DescActividad:   &client.DescActividad,
+		Nombre:          client.BusinessName,
+		CodActividad:    client.CodActividad,
+		DescActividad:   client.DescActividad,
 		NombreComercial: &client.LegalBusinessName,
 		Direccion:       &direccion,
-		Telefono:        &client.Telefono,
-		Correo:          &client.Correo,
+		Telefono:        client.Telefono,
+		Correo:          client.Correo,
 	}
 }
