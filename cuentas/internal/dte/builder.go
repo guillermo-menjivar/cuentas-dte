@@ -601,7 +601,11 @@ func (b *Builder) buildCCFCuerpoDocumento(invoice *models.Invoice) ([]CuerpoDocu
 }
 
 func (b *Builder) buildCCFIdentificacion(invoice *models.Invoice, company *CompanyData) Identificacion {
-	loc, _ := time.LoadLocation("America/El_Salvador")
+	loc, err := time.LoadLocation("America/El_Salvador")
+	if err != nil {
+		loc = time.FixedZone("CST", -6*3600)
+	}
+
 	emissionTime := invoice.FinalizedAt.In(loc)
 
 	return Identificacion{
