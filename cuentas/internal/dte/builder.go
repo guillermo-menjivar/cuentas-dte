@@ -73,21 +73,21 @@ func (b *Builder) BuildFromInvoice(ctx context.Context, invoice *models.Invoice)
 // ============================================
 
 // determineInvoiceType determines if this is B2C or B2B based on client
-func (b *Builder) determineInvoiceType(client *ClientData) InvoiceType {
+func (b *Builder) determineInvoiceType(client *ClientData) string {
 	// If client has NIT, it's a business (Crédito Fiscal / B2B)
 
 	if client.TipoPersona == "2" {
-		return InvoiceTypeCreditoFiscal // Business (CCF)
+		return codigos.PersonTypeJuridica // Business (CCF)
 	}
 	// Otherwise it's a consumer (Consumidor Final / B2C)
-	return InvoiceTypeConsumidorFinal
+	return codigos.PersonTypeNatural
 }
 
 // ============================================
 // BUILD IDENTIFICACION
 // ============================================
 
-func (b *Builder) buildIdentificacion(invoiceType InvoiceType, invoice *models.Invoice, company *CompanyData) Identificacion {
+func (b *Builder) buildIdentificacion(invoiceType string, invoice *models.Invoice, company *CompanyData) Identificacion {
 
 	switch invoiceType {
 	case codigos.DocTypeComprobanteCredito:
@@ -154,7 +154,7 @@ func (b *Builder) buildEmisor(company *CompanyData, establishment *Establishment
 // BUILD RECEPTOR
 // ============================================
 
-func (b *Builder) buildReceptor(invoiceType InvoiceType, client *ClientData) *Receptor {
+func (b *Builder) buildReceptor(invoiceType string, client *ClientData) *Receptor {
 	switch invoiceType {
 	case codigos.DocTypeComprobanteCredito:
 		return b.buildCCFReceptor(client)
@@ -205,35 +205,44 @@ func (b *Builder) buildReceptor(invoiceType InvoiceType, client *ClientData) *Re
 // BUILD CUERPO DOCUMENTO (WITH CALCULATOR!)
 // ============================================
 
-func (b *Builder) buildCuerpoDocumento(invoice *models.Invoice, invoiceType InvoiceType) ([]CuerpoDocumentoItem, []ItemAmounts) {
+func (b *Builder) buildCuerpoDocumento(invoice *models.Invoice, invoiceType string) ([]CuerpoDocumentoItem, []ItemAmounts) {
+	fmt.Println("This is the invoiceType you passed", invoiceType)
+	fmt.Println("this is the invoice type from codigos", codigos.DocTypeComprobanteCredito)
+
 	items := make([]CuerpoDocumentoItem, len(invoice.LineItems))
 	amounts := make([]ItemAmounts, len(invoice.LineItems))
 
 	switch invoiceType {
-	case codigos.DocTypeComprobanteCredito:
+	case codigos.PersonTypeJuridica:
 		fmt.Println("processing CCF cuerpo Documento")
 		return b.buildCCFCuerpoDocumento(invoice)
 	default:
+		fmt.Println("WE ARE TREATING THIS AS A FACTURA")
 
 		for i, lineItem := range invoice.LineItems {
 			// ⭐ USE CALCULATOR - This is the critical fix!
 			var itemAmount ItemAmounts
 
-			if invoiceType == InvoiceTypeConsumidorFinal {
-				// For B2C: lineItem.UnitPrice INCLUDES IVA
-				itemAmount = b.calculator.CalculateConsumidorFinal(
-					lineItem.UnitPrice,
-					lineItem.Quantity,
-					lineItem.DiscountAmount,
-				)
-			} else {
-				// For B2B: lineItem.UnitPrice EXCLUDES IVA
-				itemAmount = b.calculator.CalculateCreditoFiscal(
-					lineItem.UnitPrice,
-					lineItem.Quantity,
-					lineItem.DiscountAmount,
-				)
-			}
+			itemAmount = b.calculator.CalculateConsumidorFinal(
+				lineItem.UnitPrice,
+				lineItem.Quantity,
+				lineItem.DiscountAmount,
+			)
+			//if invoiceType == codigos.PersonTypeNatural {
+			// For B2C: lineItem.UnitPrice INCLUDES IVA
+			//	itemAmount = b.calculator.CalculateConsumidorFinal(
+			//		lineItem.UnitPrice,
+			//		lineItem.Quantity,
+			//		lineItem.DiscountAmount,
+			//	)
+			//} else {
+			//	// For B2B: lineItem.UnitPrice EXCLUDES IVA
+			//	itemAmount = b.calculator.CalculateCreditoFiscal(
+			//		lineItem.UnitPrice,
+			//		lineItem.Quantity,
+			//		lineItem.DiscountAmount,
+			//	)
+			//}
 
 			amounts[i] = itemAmount
 
@@ -267,7 +276,7 @@ func (b *Builder) buildCuerpoDocumento(invoice *models.Invoice, invoiceType Invo
 // BUILD RESUMEN (WITH CALCULATOR!)
 // ============================================
 
-func (b *Builder) buildResumen(invoice *models.Invoice, itemAmounts []ItemAmounts, invoiceType InvoiceType) Resumen {
+func (b *Builder) buildResumen(invoice *models.Invoice, itemAmounts []ItemAmounts, invoiceType string) Resumen {
 	// ⭐ USE CALCULATOR for resumen totals
 	resumenAmounts := b.calculator.CalculateResumen(itemAmounts, invoiceType)
 

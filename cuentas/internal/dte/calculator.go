@@ -1,7 +1,10 @@
 // internal/dte/calculator.go
 package dte
 
-import "math"
+import (
+	"cuentas/internal/codigos"
+	"math"
+)
 
 // Calculator handles all DTE monetary calculations.
 // It contains pure functions with no side effects or external dependencies.
@@ -110,7 +113,7 @@ func (c *Calculator) CalculateCreditoFiscal(
 //   - subTotal = totalGravada + totalIva
 func (c *Calculator) CalculateResumen(
 	items []ItemAmounts,
-	invoiceType InvoiceType,
+	invoiceType string,
 ) ResumenAmounts {
 	// Sum all item amounts (keep precision during summation)
 	var totalGravada, totalIva, totalDescu float64
@@ -128,7 +131,7 @@ func (c *Calculator) CalculateResumen(
 
 	// Calculate subTotal based on invoice type
 	var subTotal float64
-	if invoiceType == InvoiceTypeConsumidorFinal {
+	if invoiceType == codigos.PersonTypeNatural {
 		subTotal = totalGravada
 	} else {
 		subTotal = RoundToResumenPrecision(totalGravada + totalIva)
@@ -151,7 +154,7 @@ func (c *Calculator) CalculateResumen(
 // Use this when you have discounts applied at the invoice level (not per item).
 func (c *Calculator) CalculateResumenWithDiscounts(
 	items []ItemAmounts,
-	invoiceType InvoiceType,
+	invoiceType string,
 	globalDiscountNoSuj float64,
 	globalDiscountExenta float64,
 	globalDiscountGravada float64,
@@ -171,7 +174,7 @@ func (c *Calculator) CalculateResumenWithDiscounts(
 	resumen.TotalGravada = RoundToResumenPrecision(resumen.TotalGravada - resumen.DescuGravada)
 
 	// Recalculate IVA on the discounted amount if needed
-	if invoiceType == InvoiceTypeConsumidorFinal {
+	if invoiceType == codigos.PersonTypeNatural {
 		// For consumidor final, extract IVA from the discounted total
 		resumen.TotalIva = RoundToResumenPrecision(
 			resumen.TotalGravada - (resumen.TotalGravada / IVADivisor),
@@ -193,7 +196,7 @@ func (c *Calculator) CalculateResumenWithDiscounts(
 // Use this for B2B invoices where the buyer retains taxes.
 func (c *Calculator) CalculateResumenWithRetentions(
 	items []ItemAmounts,
-	invoiceType InvoiceType,
+	invoiceType string,
 	ivaRetenido float64, // IVA Retenido (1%)
 	rentaRetenida float64, // Renta Retenida
 ) ResumenAmounts {
