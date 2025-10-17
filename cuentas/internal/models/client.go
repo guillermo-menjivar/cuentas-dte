@@ -102,16 +102,16 @@ func (r *CreateClientRequest) ValidateForCCF() error {
 	if r.CodActividad == nil || *r.CodActividad == "" {
 		errors = append(errors, "cod_actividad is required for CCF clients")
 	} else {
-		name, exist := codigos.GetEconomicActivityName(r.CodActividad)
+		name, exist := codigos.GetEconomicActivityName(*r.CodActividad)
 		if !exist {
 			errors = append(errors, "cod_actividad must be 2-6 digits")
 		}
-		r.DescActividad = name
+		r.DescActividad = &name
 	}
 
 	// Required: NombreComercial (can be null, but if provided must be 1-150 chars)
-	if r.NombreComercial != nil && *r.NombreComercial != "" {
-		if len(*r.NombreComercial) > 150 {
+	if r.LegalBusinessName != "" {
+		if len(r.LegalBusinessName) > 150 {
 			errors = append(errors, "nombre_comercial must not exceed 150 characters")
 		}
 	}
@@ -125,7 +125,7 @@ func (r *CreateClientRequest) ValidateForCCF() error {
 	}
 
 	_, exists := codigos.GetDepartmentName(r.DepartmentCode)
-	if !exist {
+	if !exists {
 		errors = append(errors, "invalid Departmento code")
 	}
 
