@@ -66,14 +66,9 @@ type CreateClientRequest struct {
 // ValidateForCCF validates that a business client (tipo_persona="2") has all required CCF fields
 // according to the Hacienda CCF schema v3
 func (r *CreateClientRequest) ValidateForCCF() error {
-	// Only validate if this is a business client (Crédito Fiscal)
-	if r.TipoPersona != codigos.PersonTypeJuridica {
-		return nil
-	}
-
 	var errors []string
 
-	// Required: NIT (must be 14 or 9 digits)
+	// NIT (14 or 9 digits)
 	if r.NIT == "" {
 		errors = append(errors, "nit is required for CCF clients")
 	} else {
@@ -83,7 +78,7 @@ func (r *CreateClientRequest) ValidateForCCF() error {
 		}
 	}
 
-	// Required: NCR (must be 1-8 digits)
+	// NCR (1-8 digits)
 	if r.NCR == "" {
 		errors = append(errors, "ncr is required for CCF clients")
 	} else {
@@ -93,66 +88,69 @@ func (r *CreateClientRequest) ValidateForCCF() error {
 		}
 	}
 
-	// Required: BusinessName (1-250 chars)
+	// BusinessName (1-250 chars)
 	if len(r.BusinessName) == 0 || len(r.BusinessName) > 250 {
 		errors = append(errors, "business_name must be between 1 and 250 characters")
 	}
 
-	// Required: CodActividad (2-6 digits)
+	// CodActividad (2-6 digits, must exist in codigos)
 	if r.CodActividad == nil || *r.CodActividad == "" {
 		errors = append(errors, "cod_actividad is required for CCF clients")
 	} else {
-		name, exist := codigos.GetEconomicActivityName(*r.CodActividad)
-		if !exist {
-			errors = append(errors, "cod_actividad must be 2-6 digits")
-		}
-		r.DescActividad = &name
-	}
-
-	// Required: NombreComercial (can be null, but if provided must be 1-150 chars)
-	if r.LegalBusinessName != "" {
-		if len(r.LegalBusinessName) > 150 {
-			errors = append(errors, "nombre_comercial must not exceed 150 characters")
+		_, exists := codigos.GetEconomicActivityName(*r.CodActividad)
+		if !exists {
+			errors = append(errors, "cod_actividad is not a valid economic activity code")
 		}
 	}
 
-	// Required: Direccion (already validated by existing fields)
+	// DescActividad (1-150 chars)
+	if r.DescActividad == nil || *r.DescActividad == "" {
+		errors = append(errors, "desc_actividad is required for CCF clients")
+	} else if len(*r.DescActividad) > 150 {
+		errors = append(errors, "desc_actividad must not exceed 150 characters")
+	}
+
+	// Department code validation
 	if r.DepartmentCode == "" {
 		errors = append(errors, "department_code is required for CCF clients")
+	} else {
+		_, exists := codigos.GetDepartmentName(r.DepartmentCode)
+		if !exists {
+			errors = append(errors, "invalid department code")
+		}
 	}
+
+	// Municipality code validation
 	if r.MunicipalityCode == "" {
 		errors = append(errors, "municipality_code is required for CCF clients")
+	} else {
+		_, exists := codigos.GetMunicipalityName(r.MunicipalityCode)
+		if !exists {
+			errors = append(errors, "invalid municipality code")
+		}
 	}
 
-	_, exists := codigos.GetDepartmentName(r.DepartmentCode)
-	if !exists {
-		errors = append(errors, "invalid Departmento code")
-	}
-
-	_, exist := codigos.GetMunicipalityName(r.MunicipalityCode)
-	if !exist {
-		errors = append(errors, "invalid municipilo code")
-	}
-
+	// Full address required (max 200 chars per schema)
 	if r.FullAddress == "" {
 		errors = append(errors, "full_address is required for CCF clients")
+	} else if len(r.FullAddress) > 200 {
+		errors = append(errors, "full_address must not exceed 200 characters")
 	}
 
-	// Required: Telefono (can be null, but if provided must be 8-30 chars)
+	// Telefono (optional, but if provided: 8-30 chars)
 	if r.Telefono != nil && *r.Telefono != "" {
 		if len(*r.Telefono) < 8 || len(*r.Telefono) > 30 {
 			errors = append(errors, "telefono must be between 8 and 30 characters")
 		}
 	}
 
-	// Required: Correo (email format, max 100 chars) - NOT NULLABLE for CCF
+	// Correo (required, email format, max 100 chars)
 	if r.Correo == nil || *r.Correo == "" {
 		errors = append(errors, "correo (email) is required for CCF clients")
 	} else {
 		if len(*r.Correo) > 100 {
 			errors = append(errors, "correo must not exceed 100 characters")
 		}
-		// Validate email format
 		emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 		if !emailRegex.MatchString(*r.Correo) {
 			errors = append(errors, "correo must be a valid email address")

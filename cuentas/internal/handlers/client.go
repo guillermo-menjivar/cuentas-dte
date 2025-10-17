@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"cuentas/internal/codigos"
 	"cuentas/internal/models"
 	"cuentas/internal/services"
 
@@ -67,6 +68,16 @@ func CreateClientHandler(c *gin.Context) {
 			Code:  "invalid_request",
 		})
 		return
+	}
+
+	if req.TipoPersona == codigos.PersonTypeJuridica {
+		if err := req.ValidateForCCF(); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+				"code":  "ccf_validation_failed",
+			})
+			return
+		}
 	}
 
 	// Validate request
