@@ -188,17 +188,17 @@ type Emisor struct {
 
 // Receptor represents the recipient (customer/client)
 type Receptor struct {
-	NIT             *string    `json:"nit"`
-	TipoDocumento   *string    `json:"tipoDocumento,omitempty"`
-	NumDocumento    *string    `json:"numDocumento,omitempty"`
-	NRC             *string    `json:"nrc"`
-	Nombre          *string    `json:"nombre"`
-	NombreComercial *string    `json:"nombreComercial,omitempty"`
-	CodActividad    *string    `json:"codActividad,omitempty"`
-	DescActividad   *string    `json:"descActividad,omitempty"`
-	Direccion       *Direccion `json:"direccion"`
-	Telefono        *string    `json:"telefono"`
-	Correo          *string    `json:"correo"`
+	NIT             *string    `json:"nit,omitempty"`
+	TipoDocumento   *string    `json:"tipoDocumento,omitempty"` // ⚠️ Factura only - omit for CCF
+	NumDocumento    *string    `json:"numDocumento,omitempty"`  // ⚠️ Factura only - omit for CCF
+	NRC             *string    `json:"nrc,omitempty"`
+	Nombre          *string    `json:"nombre,omitempty"`
+	NombreComercial *string    `json:"nombreComercial,omitempty"` // ⚠️ CCF only - omit for Factura
+	CodActividad    *string    `json:"codActividad,omitempty"`    // ⚠️ CCF only - omit for Factura
+	DescActividad   *string    `json:"descActividad,omitempty"`   // ⚠️ CCF only - omit for Factura
+	Direccion       *Direccion `json:"direccion,omitempty"`
+	Telefono        *string    `json:"telefono,omitempty"`
+	Correo          *string    `json:"correo,omitempty"`
 }
 
 // Direccion represents an address
@@ -248,7 +248,7 @@ type CuerpoDocumentoItem struct {
 	Tributos        []string `json:"tributos"`
 	Psv             float64  `json:"psv"`
 	NoGravado       float64  `json:"noGravado"`
-	IvaItem         float64  `json:"ivaItem"`
+	IvaItem         float64  `json:"ivaItem,omitempty"`
 }
 
 // Resumen represents the invoice summary/totals
@@ -271,7 +271,7 @@ type Resumen struct {
 	TotalNoGravado      float64    `json:"totalNoGravado"`
 	TotalPagar          float64    `json:"totalPagar"`
 	TotalLetras         string     `json:"totalLetras"`
-	TotalIva            float64    `json:"totalIva"`
+	TotalIva            float64    `json:"totalIva,omitempty"`
 	SaldoFavor          float64    `json:"saldoFavor"`
 	CondicionOperacion  int        `json:"condicionOperacion"`
 	Pagos               *[]Pago    `json:"pagos"`
