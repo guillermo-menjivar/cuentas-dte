@@ -3,6 +3,7 @@ package hacienda
 import (
 	"bytes"
 	"context"
+	"cuentas/internal/codigos"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -175,9 +176,9 @@ func (c *Client) SubmitDTE(
 ) (*ReceptionResponse, error) {
 	// Prepare request in Hacienda's expected format
 
-	var version string
+	var version int
 	switch tipoDte {
-	case cogidos.DocTypeComprobanteCredito:
+	case codigos.DocTypeComprobanteCredito:
 		fmt.Println("assigning version ccf to wrapper")
 		version = 3
 	default:
