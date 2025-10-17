@@ -593,7 +593,7 @@ func (b *Builder) buildCCFCuerpoDocumento(invoice *models.Invoice) ([]CuerpoDocu
 			Tributos:        tributos, // Required for CCF
 			Psv:             0,
 			NoGravado:       0,
-			IvaItem:         RoundToResumenPrecision(itemAmount.IvaItem),
+			//IvaItem:         RoundToResumenPrecision(itemAmount.IvaItem),
 		}
 	}
 
