@@ -174,10 +174,19 @@ func (c *Client) SubmitDTE(
 	signedJWT string,
 ) (*ReceptionResponse, error) {
 	// Prepare request in Hacienda's expected format
+
+	var version string
+	switch tipoDte {
+	case cogidos.DocTypeComprobanteCredito:
+		fmt.Println("assigning version ccf to wrapper")
+		version = 3
+	default:
+		version = 1
+	}
 	reqPayload := ReceptionRequest{
 		Ambiente:         ambiente,
 		IDEnvio:          1, // TODO: Make this sequential per company
-		Version:          1, // Use version 1 (your bash script uses 1, not 2)
+		Version:          version,
 		TipoDte:          tipoDte,
 		Documento:        signedJWT,
 		CodigoGeneracion: codigoGeneracion,
