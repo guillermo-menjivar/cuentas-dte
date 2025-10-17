@@ -95,14 +95,14 @@ type ClientData struct {
 	NIT               *int64
 	NCR               *int64
 	DUI               *int64
-	BusinessName      string
+	BusinessName      *string
 	DepartmentCode    string
 	MunicipalityCode  string
 	FullAddress       string
-	Correo            string
-	Telefono          string
-	CodActividad      string
-	DescActividad     string
+	Correo            *string
+	Telefono          *string
+	CodActividad      *string
+	DescActividad     *string
 	LegalBusinessName string
 }
 
