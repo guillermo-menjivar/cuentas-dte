@@ -90,7 +90,8 @@ func (b *Builder) determineInvoiceType(client *ClientData) string {
 func (b *Builder) buildIdentificacion(invoiceType string, invoice *models.Invoice, company *CompanyData) Identificacion {
 
 	switch invoiceType {
-	case codigos.DocTypeComprobanteCredito:
+	case codigos.PersonTypeJuridica:
+		fmt.Println("creating identification CCF")
 		return b.buildCCFIdentificacion(invoice, company)
 	default:
 
@@ -156,7 +157,8 @@ func (b *Builder) buildEmisor(company *CompanyData, establishment *Establishment
 
 func (b *Builder) buildReceptor(invoiceType string, client *ClientData) *Receptor {
 	switch invoiceType {
-	case codigos.DocTypeComprobanteCredito:
+	case codigos.PersonTypeJuridica:
+		fmt.Println("building receptor CCF")
 		return b.buildCCFReceptor(client)
 	default:
 		// Determine document type and number
