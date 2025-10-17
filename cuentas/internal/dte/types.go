@@ -68,7 +68,7 @@ type CompanyData struct {
 	Email                string
 	CodActividad         string
 	DescActividad        string
-	NombreComercial      *string
+	NombreComercial      string
 	DTEAmbiente          string
 	Departamento         string
 	Municipio            string

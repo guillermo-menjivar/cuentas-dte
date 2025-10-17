@@ -138,7 +138,7 @@ func (b *Builder) buildEmisor(company *CompanyData, establishment *Establishment
 		Nombre:              company.Name,
 		CodActividad:        company.CodActividad,
 		DescActividad:       company.DescActividad,
-		NombreComercial:     company.NombreComercial,
+		NombreComercial:     &company.NombreComercial,
 		TipoEstablecimiento: establishment.TipoEstablecimiento,
 		Direccion:           b.buildEmisorDireccion(establishment),
 		Telefono:            establishment.Telefono,
