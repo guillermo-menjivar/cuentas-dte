@@ -644,6 +644,6 @@ func (b *Builder) buildCCFReceptor(client *ClientData) *Receptor {
 		Direccion:       &direccion,
 		Telefono:        client.Telefono,
 		Correo:          client.Correo,
-		NombreComercial: &client.BusinessName,
+		NombreComercial: client.BusinessName,
 	}
 }
