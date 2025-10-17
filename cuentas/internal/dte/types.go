@@ -189,13 +189,13 @@ type Emisor struct {
 // Receptor represents the recipient (customer/client)
 type Receptor struct {
 	NIT             *string    `json:"nit"`
-	TipoDocumento   *string    `json:"tipoDocumento"`
-	NumDocumento    *string    `json:"numDocumento"`
+	TipoDocumento   *string    `json:"tipoDocumento,omitempty"`
+	NumDocumento    *string    `json:"numDocumento,omitempty"`
 	NRC             *string    `json:"nrc"`
 	Nombre          *string    `json:"nombre"`
-	NombreComercial *string    `json:"nombre_comercial"`
-	CodActividad    *string    `json:"codActividad"`
-	DescActividad   *string    `json:"descActividad"`
+	NombreComercial *string    `json:"nombreComercial,omitempty"`
+	CodActividad    *string    `json:"codActividad,omitempty"`
+	DescActividad   *string    `json:"descActividad,omitempty"`
 	Direccion       *Direccion `json:"direccion"`
 	Telefono        *string    `json:"telefono"`
 	Correo          *string    `json:"correo"`
