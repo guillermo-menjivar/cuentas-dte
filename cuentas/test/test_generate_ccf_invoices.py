@@ -19,6 +19,9 @@ MAX_QUANTITY = 10
 MIN_DISCOUNT = 0
 MAX_DISCOUNT = 10
 
+# ⭐ HARDCODED VALID TEST NIT
+VALID_TEST_NIT = 6143005061013
+
 PAYMENT_METHODS = [
     ("01", 70),  # Cash - 70%
     ("02", 20),  # Check - 20%
@@ -30,7 +33,7 @@ class CCFGenerator:
     def __init__(self, company_id: str):
         self.company_id = company_id
         self.headers = {"Content-Type": "application/json", "X-Company-ID": company_id}
-        self.clients = []
+        self.valid_client = None  # ⭐ Single valid client
         self.establishments = []
         self.pos_by_establishment = {}
         self.items = []
@@ -45,21 +48,27 @@ class CCFGenerator:
         """Fetch all available data"""
         print("📊 Fetching available data...")
 
-        # Fetch CCF clients (tipo_persona = "2")
+        # ⭐ Fetch and find the ONE valid client with real NIT
         try:
             response = requests.get(f"{BASE_URL}/clients", headers=self.headers)
             response.raise_for_status()
             all_clients = response.json().get("clients", [])
 
-            # ⭐ FILTER: Only tipo_persona = "2" (businesses for CCF)
-            self.clients = [c for c in all_clients if c.get("tipo_persona") == "2"]
+            # Find the client with the valid test NIT
+            for client in all_clients:
+                if client.get("nit") == VALID_TEST_NIT:
+                    self.valid_client = client
+                    break
 
-            print(f"  ✓ Found {len(all_clients)} total clients")
-            print(f"  ✓ Using {len(self.clients)} CCF clients (tipo_persona=2)")
-
-            if not self.clients:
-                print(f"  ⚠️  No CCF clients found! Run create_ccf_clients.py first.")
+            if not self.valid_client:
+                print(f"  ✗ No client found with NIT {VALID_TEST_NIT}!")
+                print(f"  ℹ️  Update a client's NIT to {VALID_TEST_NIT} first.")
                 return False
+
+            print(f"  ✓ Found valid test client: {self.valid_client['business_name']}")
+            print(f"    NIT: {self.valid_client['nit']}")
+            print(f"    NRC: {self.valid_client['ncr']}")
+            print(f"    Email: {self.valid_client.get('correo', 'N/A')}")
 
         except Exception as e:
             print(f"  ✗ Failed to fetch clients: {e}")
@@ -101,11 +110,14 @@ class CCFGenerator:
             print(f"  ✗ Failed to fetch items: {e}")
             return False
 
-        if not self.clients or not self.establishments or not self.items:
+        if not self.valid_client or not self.establishments or not self.items:
             print("  ✗ Missing required data!")
             return False
 
         print("\n✅ Data fetching complete!\n")
+        print(
+            f"⚠️  All invoices will use client: {self.valid_client['business_name']}\n"
+        )
         return True
 
     def get_random_payment_method(self) -> str:
@@ -114,7 +126,8 @@ class CCFGenerator:
 
     def create_invoice(self) -> Dict[str, Any]:
         """Create a single CCF invoice"""
-        client = random.choice(self.clients)
+        # ⭐ USE ONLY THE VALID CLIENT
+        client = self.valid_client
         establishment = random.choice(self.establishments)
         pos = random.choice(self.pos_by_establishment[establishment["id"]])
 
@@ -183,10 +196,10 @@ class CCFGenerator:
                     return True
                 elif dte_status == "failed_signing":
                     error_msg = result.get("dte_hacienda_response", "Unknown error")
-                    print(f"    ⚠️  DTE submission failed: {error_msg}")
+                    print(f"    ⚠️   DTE submission failed: {error_msg}")
                     return False
                 else:
-                    print(f"    ⚠️  DTE status unclear: {dte_status}")
+                    print(f"    ⚠️   DTE status unclear: {dte_status}")
                     return False
             else:
                 print(f"    ✗ Not finalized: {result.get('error', 'Unknown')}")
@@ -285,6 +298,7 @@ def main():
     print("=" * 60)
     print(f"Company ID: {company_id}")
     print(f"Target: {count} CCF invoices")
+    print(f"Valid Test NIT: {VALID_TEST_NIT}")
     print(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 60 + "\n")
 
