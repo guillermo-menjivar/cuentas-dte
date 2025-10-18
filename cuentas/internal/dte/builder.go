@@ -314,6 +314,7 @@ func (b *Builder) buildResumen(invoice *models.Invoice, itemAmounts []ItemAmount
 
 	switch invoiceType {
 	case codigos.PersonTypeJuridica: // CCF
+		fmt.Println("we are using person juridica calculuator")
 		resumenAmounts = b.calculator.CalculateResumenCCF(itemAmounts)
 	default: // Factura
 		resumenAmounts = b.calculator.CalculateResumen(itemAmounts, invoiceType)
