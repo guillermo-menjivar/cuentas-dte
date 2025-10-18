@@ -19,8 +19,8 @@ MAX_QUANTITY = 10
 MIN_DISCOUNT = 0
 MAX_DISCOUNT = 10
 
-# ⭐ HARDCODED VALID TEST NIT
-VALID_TEST_NIT = 6143005061013
+# ⭐ HARDCODED VALID TEST CLIENT ID
+VALID_TEST_CLIENT_ID = "f2c32dd1-5b08-4eeb-bcc6-756aa67b3368"
 
 PAYMENT_METHODS = [
     ("01", 70),  # Cash - 70%
@@ -33,7 +33,7 @@ class CCFGenerator:
     def __init__(self, company_id: str):
         self.company_id = company_id
         self.headers = {"Content-Type": "application/json", "X-Company-ID": company_id}
-        self.valid_client = None  # ⭐ Single valid client
+        self.valid_client = None
         self.establishments = []
         self.pos_by_establishment = {}
         self.items = []
@@ -48,45 +48,20 @@ class CCFGenerator:
         """Fetch all available data"""
         print("📊 Fetching available data...")
 
-        # ⭐ Fetch and find the ONE valid client with real NIT
+        # ⭐ Fetch the specific valid client by ID
         try:
-            response = requests.get(f"{BASE_URL}/clients", headers=self.headers)
-            response.raise_for_status()
-            all_clients = response.json().get("clients", [])
-
-            # ⭐ DEBUG: Print what we're actually getting
-            print(
-                f"  🔍 DEBUG: Looking for NIT {VALID_TEST_NIT} (type: {type(VALID_TEST_NIT)})"
+            response = requests.get(
+                f"{BASE_URL}/clients/{VALID_TEST_CLIENT_ID}", headers=self.headers
             )
-            for client in all_clients[:3]:  # Show first 3 clients
-                client_nit = client.get("nit")
-                print(f"    Client: {client.get('business_name')}")
-                print(f"    NIT: {client_nit} (type: {type(client_nit)})")
-                print(f"    Match: {client_nit == VALID_TEST_NIT}")
-            print()
-
-            # Find the client with the valid test NIT
-            for client in all_clients:
-                client_nit = client.get("nit")
-                # Try both direct comparison and string comparison
-                if client_nit == VALID_TEST_NIT or str(client_nit) == str(
-                    VALID_TEST_NIT
-                ):
-                    self.valid_client = client
-                    break
-
-            if not self.valid_client:
-                print(f"  ✗ No client found with NIT {VALID_TEST_NIT}!")
-                print(f"  ℹ️  Update a client's NIT to {VALID_TEST_NIT} first.")
-                return False
+            response.raise_for_status()
+            self.valid_client = response.json()
 
             print(f"  ✓ Found valid test client: {self.valid_client['business_name']}")
             print(f"    NIT: {self.valid_client['nit']}")
             print(f"    NRC: {self.valid_client['ncr']}")
-            print(f"    Email: {self.valid_client.get('correo', 'N/A')}")
 
         except Exception as e:
-            print(f"  ✗ Failed to fetch clients: {e}")
+            print(f"  ✗ Failed to fetch client: {e}")
             return False
 
         # Fetch establishments
@@ -141,7 +116,6 @@ class CCFGenerator:
 
     def create_invoice(self) -> Dict[str, Any]:
         """Create a single CCF invoice"""
-        # ⭐ USE ONLY THE VALID CLIENT
         client = self.valid_client
         establishment = random.choice(self.establishments)
         pos = random.choice(self.pos_by_establishment[establishment["id"]])
@@ -164,7 +138,7 @@ class CCFGenerator:
         payload = {
             "establishment_id": establishment["id"],
             "point_of_sale_id": pos["id"],
-            "client_id": client["id"],
+            "client_id": VALID_TEST_CLIENT_ID,  # ⭐ Use the hardcoded ID
             "payment_terms": "cash",
             "notes": f"CCF Test Invoice #{self.total_created + 1}",
             "payment_method": "01",
@@ -313,7 +287,7 @@ def main():
     print("=" * 60)
     print(f"Company ID: {company_id}")
     print(f"Target: {count} CCF invoices")
-    print(f"Valid Test NIT: {VALID_TEST_NIT}")
+    print(f"Valid Test Client ID: {VALID_TEST_CLIENT_ID}")
     print(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 60 + "\n")
 
