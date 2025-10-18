@@ -325,7 +325,6 @@ func (b *Builder) buildResumen(invoice *models.Invoice, itemAmounts []ItemAmount
 		Tributos:            nil,
 		SubTotal:            resumenAmounts.SubTotal,
 		IvaRete1:            resumenAmounts.IvaRete1,
-		IvaPerci1:           resumenAmounts.IvaPerci1,
 		ReteRenta:           resumenAmounts.ReteRenta,
 		MontoTotalOperacion: resumenAmounts.MontoTotalOperacion,
 		TotalNoGravado:      resumenAmounts.TotalNoGravado,
