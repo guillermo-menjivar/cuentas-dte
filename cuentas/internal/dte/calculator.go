@@ -215,53 +215,23 @@ func (c *Calculator) CalculateResumenWithRetentions(
 }
 
 func (c *Calculator) CalculateResumenCCF(items []ItemAmounts) ResumenAmounts {
-	// Sum all item amounts (keep precision during summation)
-	var totalGravada, totalIva, totalDescu float64
+	// Sum all ventaGravada and discounts
+	var totalGravada, totalDescu float64
 
 	for _, item := range items {
 		totalGravada += item.VentaGravada
-		totalIva += item.IvaItem
 		totalDescu += item.MontoDescu
 	}
 
-	// ⭐ Round individual components FIRST
+	// ⭐ Calculate IVA on the TOTAL (not per item)
+	// Round totalGravada first, then calculate IVA
 	totalGravadaRounded := RoundToResumenPrecision(totalGravada)
+	totalIva := totalGravadaRounded * 0.13
 	totalIvaRounded := RoundToResumenPrecision(totalIva)
 	totalDescuRounded := RoundToResumenPrecision(totalDescu)
 
-	// ⭐ Calculate subTotal from ROUNDED values (Hacienda's expectation)
+	// Calculate subTotal from rounded values
 	subTotal := totalGravadaRounded + totalIvaRounded
-
-	return ResumenAmounts{
-		TotalNoSuj:          0,
-		TotalExenta:         0,
-		TotalGravada:        totalGravadaRounded,
-		SubTotalVentas:      totalGravadaRounded,
-		TotalDescu:          totalDescuRounded,
-		TotalIva:            totalIvaRounded,
-		SubTotal:            subTotal,
-		MontoTotalOperacion: subTotal,
-		TotalPagar:          subTotal,
-	}
-}
-
-func (c *Calculator) _CalculateResumenCCF(items []ItemAmounts) ResumenAmounts {
-	// Sum all item amounts (keep precision during summation)
-	var totalGravada, totalIva, totalDescu float64
-
-	for _, item := range items {
-		totalGravada += item.VentaGravada
-		totalIva += item.IvaItem
-		totalDescu += item.MontoDescu
-	}
-
-	// ⭐ Calculate subTotal from UNROUNDED values first (critical for Hacienda validation)
-	subTotal := RoundToResumenPrecision(totalGravada + totalIva)
-
-	// Round individual components for display
-	totalGravadaRounded := RoundToResumenPrecision(totalGravada)
-	totalIvaRounded := RoundToResumenPrecision(totalIva)
-	totalDescuRounded := RoundToResumenPrecision(totalDescu)
 
 	return ResumenAmounts{
 		TotalNoSuj:          0,

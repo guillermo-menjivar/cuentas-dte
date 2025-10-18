@@ -278,36 +278,6 @@ func (b *Builder) buildCuerpoDocumento(invoice *models.Invoice, invoiceType stri
 // BUILD RESUMEN (WITH CALCULATOR!)
 // ============================================
 
-func (b *Builder) _oldbuildResumen(invoice *models.Invoice, itemAmounts []ItemAmounts, invoiceType string) Resumen {
-	// ⭐ USE CALCULATOR for resumen totals
-	resumenAmounts := b.calculator.CalculateResumen(itemAmounts, invoiceType)
-
-	return Resumen{
-		TotalNoSuj:          resumenAmounts.TotalNoSuj,
-		TotalExenta:         resumenAmounts.TotalExenta,
-		TotalGravada:        resumenAmounts.TotalGravada,
-		SubTotalVentas:      resumenAmounts.SubTotalVentas,
-		DescuNoSuj:          resumenAmounts.DescuNoSuj,
-		DescuExenta:         resumenAmounts.DescuExenta,
-		DescuGravada:        resumenAmounts.DescuGravada,
-		PorcentajeDescuento: 0,
-		TotalDescu:          resumenAmounts.TotalDescu,
-		Tributos:            nil, // No special tributos for regular IVA invoices
-		SubTotal:            resumenAmounts.SubTotal,
-		IvaRete1:            resumenAmounts.IvaRete1,
-		ReteRenta:           resumenAmounts.ReteRenta,
-		MontoTotalOperacion: resumenAmounts.MontoTotalOperacion,
-		TotalNoGravado:      resumenAmounts.TotalNoGravado,
-		TotalPagar:          resumenAmounts.TotalPagar,
-		TotalLetras:         b.numberToWords(resumenAmounts.TotalPagar),
-		TotalIva:            resumenAmounts.TotalIva,
-		SaldoFavor:          resumenAmounts.SaldoFavor,
-		CondicionOperacion:  b.parseCondicionOperacion(invoice.PaymentTerms),
-		Pagos:               b.buildPagos(invoice),
-		NumPagoElectronico:  nil,
-	}
-}
-
 func (b *Builder) buildResumen(invoice *models.Invoice, itemAmounts []ItemAmounts, invoiceType string) Resumen {
 	// ⭐ USE CALCULATOR for resumen totals
 	var resumenAmounts ResumenAmounts
