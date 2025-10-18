@@ -54,9 +54,24 @@ class CCFGenerator:
             response.raise_for_status()
             all_clients = response.json().get("clients", [])
 
+            # ⭐ DEBUG: Print what we're actually getting
+            print(
+                f"  🔍 DEBUG: Looking for NIT {VALID_TEST_NIT} (type: {type(VALID_TEST_NIT)})"
+            )
+            for client in all_clients[:3]:  # Show first 3 clients
+                client_nit = client.get("nit")
+                print(f"    Client: {client.get('business_name')}")
+                print(f"    NIT: {client_nit} (type: {type(client_nit)})")
+                print(f"    Match: {client_nit == VALID_TEST_NIT}")
+            print()
+
             # Find the client with the valid test NIT
             for client in all_clients:
-                if client.get("nit") == VALID_TEST_NIT:
+                client_nit = client.get("nit")
+                # Try both direct comparison and string comparison
+                if client_nit == VALID_TEST_NIT or str(client_nit) == str(
+                    VALID_TEST_NIT
+                ):
                     self.valid_client = client
                     break
 
@@ -196,10 +211,10 @@ class CCFGenerator:
                     return True
                 elif dte_status == "failed_signing":
                     error_msg = result.get("dte_hacienda_response", "Unknown error")
-                    print(f"    ⚠️   DTE submission failed: {error_msg}")
+                    print(f"    ⚠️  DTE submission failed: {error_msg}")
                     return False
                 else:
-                    print(f"    ⚠️   DTE status unclear: {dte_status}")
+                    print(f"    ⚠️  DTE status unclear: {dte_status}")
                     return False
             else:
                 print(f"    ✗ Not finalized: {result.get('error', 'Unknown')}")
