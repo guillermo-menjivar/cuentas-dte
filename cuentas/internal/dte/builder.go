@@ -310,7 +310,14 @@ func (b *Builder) _oldbuildResumen(invoice *models.Invoice, itemAmounts []ItemAm
 
 func (b *Builder) buildResumen(invoice *models.Invoice, itemAmounts []ItemAmounts, invoiceType string) Resumen {
 	// ⭐ USE CALCULATOR for resumen totals
-	resumenAmounts := b.calculator.CalculateResumen(itemAmounts, invoiceType)
+	var resumenAmounts ResumenAmounts
+
+	switch invoiceType {
+	case codigos.PersonTypeJuridica: // CCF
+		resumenAmounts = b.calculator.CalculateResumenCCF(itemAmounts)
+	default: // Factura
+		resumenAmounts = b.calculator.CalculateResumen(itemAmounts, invoiceType)
+	}
 
 	resumen := Resumen{
 		TotalNoSuj:          resumenAmounts.TotalNoSuj,

@@ -214,6 +214,37 @@ func (c *Calculator) CalculateResumenWithRetentions(
 	return resumen
 }
 
+func (c *Calculator) CalculateResumenCCF(items []ItemAmounts) ResumenAmounts {
+	// Sum all item amounts (keep precision during summation)
+	var totalGravada, totalIva, totalDescu float64
+
+	for _, item := range items {
+		totalGravada += item.VentaGravada
+		totalIva += item.IvaItem
+		totalDescu += item.MontoDescu
+	}
+
+	// ⭐ Calculate subTotal from UNROUNDED values first (critical for Hacienda validation)
+	subTotal := RoundToResumenPrecision(totalGravada + totalIva)
+
+	// Round individual components for display
+	totalGravadaRounded := RoundToResumenPrecision(totalGravada)
+	totalIvaRounded := RoundToResumenPrecision(totalIva)
+	totalDescuRounded := RoundToResumenPrecision(totalDescu)
+
+	return ResumenAmounts{
+		TotalNoSuj:          0,
+		TotalExenta:         0,
+		TotalGravada:        totalGravadaRounded,
+		SubTotalVentas:      totalGravadaRounded,
+		TotalDescu:          totalDescuRounded,
+		TotalIva:            totalIvaRounded,
+		SubTotal:            subTotal,
+		MontoTotalOperacion: subTotal,
+		TotalPagar:          subTotal,
+	}
+}
+
 // ============================================
 // ROUNDING FUNCTIONS
 // ============================================
