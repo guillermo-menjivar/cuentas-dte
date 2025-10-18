@@ -13,7 +13,7 @@ BASE_URL = "http://localhost:8080/v1"
 # Sample CCF clients (Persona Jurídica - tipo_persona = "2")
 CCF_CLIENTS = [
     {
-        "nit": "0614-710820-001-9",
+        "nit": "06143005061013",
         "ncr": "710820-7",
         "business_name": "Importadora Pacific Trade S.A. de C.V.",
         "legal_business_name": "Importadora Pacific Trade Sociedad Anonima de Capital Variable",
