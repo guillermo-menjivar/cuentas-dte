@@ -302,6 +302,25 @@ func startServer() {
 		// commitlog
 		v1.GET("/dte/commit-log", handlers.ListDTECommitLogHandler)
 		v1.GET("/dte/commit-log/:codigo_generacion", handlers.GetDTECommitLogEntryHandler)
+		// notas
+
+		notasHandler := handlers.NewNotaHandler()
+		notas := v1.Group("/notas")
+		{
+			// Nota de Débito
+			notas.POST("/debito", notasHandler.CreateNotaDebito)
+			notas.POST("/debito/:id/finalize", notasHandler.FinalizeNotaDebito)
+
+			// Nota de Crédito
+			//notas.POST("/credito", notaHandler.CreateNotaCredito)
+			//notas.POST("/credito/:id/finalize", notaHandler.FinalizeNotaCredito)
+
+			// Common operations
+			//notas.GET("/:id", notaHandler.GetNota)
+			//notas.GET("", notaHandler.ListNotas)
+			//notas.DELETE("/:id", notaHandler.DeleteNota)
+		}
+
 	}
 
 	// Start server
