@@ -368,14 +368,16 @@ func (b *Builder) buildResumen(invoice *models.Invoice, itemAmounts []ItemAmount
 		// Don't set TotalIva - leave it at 0 (omitempty will exclude it)
 		// ⭐ Add tributos array with IVA breakdown
 		if resumenAmounts.TotalIva > 0 {
-			resumen.Tributos = []Tributo{
+			tributos := []Tributo{
 				{
 					Codigo:      "20",
 					Descripcion: "Impuesto al Valor Agregado 13",
 					Valor:       resumenAmounts.TotalIva,
 				},
 			}
+			resumen.Tributos = &tributos // ⭐ Use pointer
 		}
+
 	default: // Factura
 		resumen.TotalIva = resumenAmounts.TotalIva
 	}
