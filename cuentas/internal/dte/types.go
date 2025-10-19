@@ -48,6 +48,7 @@ type ResumenAmounts struct {
 	TotalIva            float64 // Total IVA
 	SubTotal            float64 // Subtotal after discounts
 	IvaRete1            float64 // IVA retained (1%)
+	IvaPerci1           float64
 	ReteRenta           float64 // Income tax retained
 	MontoTotalOperacion float64 // Total operation amount
 	TotalNoGravado      float64 // Total non-taxable charges
