@@ -7,6 +7,16 @@ import (
 	"time"
 )
 
+type InvoiceRelatedDocument struct {
+	ID                     string    `json:"id"`
+	InvoiceID              string    `json:"invoice_id"`
+	RelatedDocumentType    string    `json:"related_document_type"`     // "03", "07"
+	RelatedDocumentGenType int       `json:"related_document_gen_type"` // 1 or 2
+	RelatedDocumentNumber  string    `json:"related_document_number"`
+	RelatedDocumentDate    time.Time `json:"related_document_date"`
+	CreatedAt              time.Time `json:"created_at"`
+}
+
 // Invoice represents an invoice transaction
 type Invoice struct {
 	ID              string `json:"id"`
@@ -73,6 +83,9 @@ type Invoice struct {
 	// Relationships
 	LineItems []InvoiceLineItem `json:"line_items,omitempty"`
 	Payments  []InvoicePayment  `json:"payments,omitempty"`
+
+	ParentInvoiceType *string                  `json:"parent_invoice_type,omitempty"`
+	RelatedDocuments  []InvoiceRelatedDocument `json:"related_documents,omitempty"`
 }
 
 // CreateInvoiceRequest represents the request to create an invoice
