@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"cuentas/internal/codigos"
 	"cuentas/internal/dte"
 	"cuentas/internal/models"
 	"cuentas/internal/services"
@@ -45,7 +46,7 @@ func (h *InvoiceHandler) FinalizeNotaDebito(c *gin.Context) {
 	}
 
 	// Validate invoice type is Nota de Débito (type 6)
-	if existingInvoice.InvoiceType != 6 {
+	if existingInvoice.InvoiceType != codigos.DocTypeNotaDebito {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": fmt.Sprintf("invoice is not a Nota de Débito (type: %d)", existingInvoice.InvoiceType),
 		})
