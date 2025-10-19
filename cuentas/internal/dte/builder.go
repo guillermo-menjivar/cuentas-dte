@@ -278,7 +278,7 @@ func (b *Builder) buildCuerpoDocumento(invoice *models.Invoice, invoiceType stri
 // BUILD RESUMEN (WITH CALCULATOR!)
 // ============================================
 
-func (b *Builder) buildResumen(invoice *models.Invoice, itemAmounts []ItemAmounts, invoiceType string) Resumen {
+func (b *Builder) __buildResumen(invoice *models.Invoice, itemAmounts []ItemAmounts, invoiceType string) Resumen {
 	// ⭐ USE CALCULATOR for resumen totals
 	var resumenAmounts ResumenAmounts
 
@@ -318,6 +318,64 @@ func (b *Builder) buildResumen(invoice *models.Invoice, itemAmounts []ItemAmount
 	switch invoiceType {
 	case codigos.PersonTypeJuridica: // CCF
 		// Don't set TotalIva - leave it at 0 (omitempty will exclude it)
+	default: // Factura
+		resumen.TotalIva = resumenAmounts.TotalIva
+	}
+
+	return resumen
+}
+
+func (b *Builder) buildResumen(invoice *models.Invoice, itemAmounts []ItemAmounts, invoiceType string) Resumen {
+	// ⭐ USE CALCULATOR for resumen totals
+	var resumenAmounts ResumenAmounts
+
+	switch invoiceType {
+	case codigos.PersonTypeJuridica: // CCF
+		fmt.Println("we are using person juridica calculuator")
+		resumenAmounts = b.calculator.CalculateResumenCCF(itemAmounts)
+	default: // Factura
+		resumenAmounts = b.calculator.CalculateResumen(itemAmounts, invoiceType)
+	}
+
+	resumen := Resumen{
+		TotalNoSuj:          resumenAmounts.TotalNoSuj,
+		TotalExenta:         resumenAmounts.TotalExenta,
+		TotalGravada:        resumenAmounts.TotalGravada,
+		SubTotalVentas:      resumenAmounts.SubTotalVentas,
+		DescuNoSuj:          resumenAmounts.DescuNoSuj,
+		DescuExenta:         resumenAmounts.DescuExenta,
+		DescuGravada:        resumenAmounts.DescuGravada,
+		PorcentajeDescuento: 0,
+		TotalDescu:          resumenAmounts.TotalDescu,
+		Tributos:            nil, // Will be set below for CCF
+		SubTotal:            resumenAmounts.SubTotal,
+		IvaRete1:            resumenAmounts.IvaRete1,
+		IvaPerci1:           resumenAmounts.IvaPerci1,
+		ReteRenta:           resumenAmounts.ReteRenta,
+		MontoTotalOperacion: resumenAmounts.MontoTotalOperacion,
+		TotalNoGravado:      resumenAmounts.TotalNoGravado,
+		TotalPagar:          resumenAmounts.TotalPagar,
+		TotalLetras:         b.numberToWords(resumenAmounts.TotalPagar),
+		SaldoFavor:          resumenAmounts.SaldoFavor,
+		CondicionOperacion:  b.parseCondicionOperacion(invoice.PaymentTerms),
+		Pagos:               b.buildPagos(invoice),
+		NumPagoElectronico:  nil,
+	}
+
+	// ⭐ Handle CCF-specific fields
+	switch invoiceType {
+	case codigos.PersonTypeJuridica: // CCF
+		// Don't set TotalIva - leave it at 0 (omitempty will exclude it)
+		// ⭐ Add tributos array with IVA breakdown
+		if resumenAmounts.TotalIva > 0 {
+			resumen.Tributos = []Tributo{
+				{
+					Codigo:      "20",
+					Descripcion: "Impuesto al Valor Agregado 13",
+					Valor:       resumenAmounts.TotalIva,
+				},
+			}
+		}
 	default: // Factura
 		resumen.TotalIva = resumenAmounts.TotalIva
 	}
