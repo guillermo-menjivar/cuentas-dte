@@ -246,6 +246,38 @@ func (c *Calculator) CalculateResumenCCF(items []ItemAmounts) ResumenAmounts {
 	}
 }
 
+func (c *Calculator) __CalculateResumenCCF(items []ItemAmounts) ResumenAmounts {
+	// Sum all ventaGravada and discounts
+	var totalGravada, totalDescu float64
+
+	for _, item := range items {
+		totalGravada += item.VentaGravada
+		totalDescu += item.MontoDescu
+	}
+
+	// ⭐ Calculate IVA on the TOTAL (not per item)
+	// Round totalGravada first, then calculate IVA
+	totalGravadaRounded := RoundToResumenPrecision(totalGravada)
+	totalIva := totalGravadaRounded * 0.13
+	totalIvaRounded := RoundToResumenPrecision(totalIva)
+	totalDescuRounded := RoundToResumenPrecision(totalDescu)
+
+	// Calculate subTotal from rounded values
+	subTotal := totalGravadaRounded + totalIvaRounded
+
+	return ResumenAmounts{
+		TotalNoSuj:          0,
+		TotalExenta:         0,
+		TotalGravada:        totalGravadaRounded,
+		SubTotalVentas:      totalGravadaRounded,
+		TotalDescu:          totalDescuRounded,
+		TotalIva:            totalIvaRounded,
+		SubTotal:            subTotal,
+		MontoTotalOperacion: subTotal,
+		TotalPagar:          subTotal,
+	}
+}
+
 // ============================================
 // ROUNDING FUNCTIONS
 // ============================================
