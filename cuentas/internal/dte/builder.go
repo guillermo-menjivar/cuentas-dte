@@ -3,6 +3,7 @@ package dte
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -723,4 +724,130 @@ func (b *Builder) buildCCFReceptor(client *ClientData) *Receptor {
 		Correo:          client.Correo,
 		NombreComercial: client.BusinessName,
 	}
+}
+
+func (b *Builder) buildDocumentoRelacionado(relatedDocs []models.InvoiceRelatedDocument) *[]DocumentoRelacionado {
+	if len(relatedDocs) == 0 {
+		return nil
+	}
+
+	docs := make([]DocumentoRelacionado, len(relatedDocs))
+	for i, doc := range relatedDocs {
+		docs[i] = DocumentoRelacionado{
+			TipoDocumento:   doc.RelatedDocumentType,
+			TipoGeneracion:  doc.RelatedDocumentGenType,
+			NumeroDocumento: doc.RelatedDocumentNumber,
+			FechaEmision:    doc.RelatedDocumentDate.Format("2006-01-02"),
+		}
+	}
+
+	return &docs
+}
+
+func (b *Builder) BuildNotaDebito(invoice *models.Invoice) (*NotaDebitoElectronica, error) {
+	// Validate related documents exist
+	if len(invoice.RelatedDocuments) == 0 {
+		return nil, errors.New("nota de débito requires related documents")
+	}
+
+	// Build DTE using CCF-style calculations
+	itemAmounts := b.buildNDCuerpoDocumento(invoice)
+
+	nd := &NotaDebitoElectronica{
+		Identificacion:       b.buildIdentificacion(invoice, "06"),
+		DocumentoRelacionado: b.buildDocumentoRelacionado(invoice.RelatedDocuments),
+		Emisor:               b.buildEmisor(invoice),
+		Receptor:             b.buildReceptor(invoice),
+		VentaTercero:         b.buildVentaTercero(invoice),
+		CuerpoDocumento:      itemAmounts.Items,
+		Resumen:              b.buildResumenND(invoice, itemAmounts.Amounts),
+		Extension:            b.buildExtension(invoice),
+		Apendice:             b.buildApendice(invoice),
+	}
+
+	return nd, nil
+}
+
+func (b *Builder) buildNDCuerpoDocumento(invoice *models.Invoice) struct {
+	Items   []CuerpoDocumentoItem
+	Amounts []ItemAmounts
+} {
+	items := make([]CuerpoDocumentoItem, len(invoice.LineItems))
+	amounts := make([]ItemAmounts, len(invoice.LineItems))
+
+	for i, lineItem := range invoice.LineItems {
+		// Use CCF calculation (prices exclude IVA)
+		itemAmount := b.calculator.CalculateCreditoFiscal(
+			lineItem.UnitPrice,
+			lineItem.Quantity,
+			lineItem.DiscountAmount,
+		)
+
+		amounts[i] = itemAmount
+
+		var tributos []string
+		if itemAmount.VentaGravada > 0 {
+			tributos = []string{"20"}
+		}
+
+		items[i] = CuerpoDocumentoItem{
+			NumItem:         lineItem.LineNumber,
+			TipoItem:        b.parseTipoItem(lineItem.ItemTipoItem),
+			NumeroDocumento: lineItem.RelatedDocumentRef, // ⭐ Reference to parent
+			Cantidad:        lineItem.Quantity,
+			Codigo:          &lineItem.ItemSku,
+			CodTributo:      nil,
+			UniMedida:       b.parseUniMedida(lineItem.UnitOfMeasure),
+			Descripcion:     lineItem.ItemName,
+			PrecioUni:       itemAmount.PrecioUni,
+			MontoDescu:      lineItem.DiscountAmount,
+			VentaNoSuj:      0,
+			VentaExenta:     0,
+			VentaGravada:    itemAmount.VentaGravada,
+			Tributos:        tributos,
+		}
+	}
+
+	return struct {
+		Items   []CuerpoDocumentoItem
+		Amounts []ItemAmounts
+	}{items, amounts}
+}
+
+func (b *Builder) buildResumenND(invoice *models.Invoice, itemAmounts []ItemAmounts) Resumen {
+	// ⭐ Reuse CCF resumen calculation!
+	resumenAmounts := b.calculator.CalculateResumenCCF(itemAmounts)
+
+	resumen := Resumen{
+		TotalNoSuj:          resumenAmounts.TotalNoSuj,
+		TotalExenta:         resumenAmounts.TotalExenta,
+		TotalGravada:        resumenAmounts.TotalGravada,
+		SubTotalVentas:      resumenAmounts.SubTotalVentas,
+		DescuNoSuj:          resumenAmounts.DescuNoSuj,
+		DescuExenta:         resumenAmounts.DescuExenta,
+		DescuGravada:        resumenAmounts.DescuGravada,
+		TotalDescu:          resumenAmounts.TotalDescu,
+		SubTotal:            resumenAmounts.SubTotal,
+		IvaPerci1:           resumenAmounts.IvaPerci1,
+		IvaRete1:            resumenAmounts.IvaRete1,
+		ReteRenta:           resumenAmounts.ReteRenta,
+		MontoTotalOperacion: resumenAmounts.MontoTotalOperacion,
+		TotalPagar:          resumenAmounts.TotalPagar,
+		TotalLetras:         b.numberToWords(resumenAmounts.TotalPagar),
+		CondicionOperacion:  b.parseCondicionOperacion(invoice.PaymentTerms),
+		NumPagoElectronico:  nil,
+	}
+
+	// Add tributos array
+	if resumenAmounts.TotalIva > 0 {
+		resumen.Tributos = &[]Tributo{
+			{
+				Codigo:      "20",
+				Descripcion: "Impuesto al Valor Agregado 13",
+				Valor:       resumenAmounts.TotalIva,
+			},
+		}
+	}
+
+	return resumen
 }

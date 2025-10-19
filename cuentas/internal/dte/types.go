@@ -311,3 +311,22 @@ type Apendice struct {
 	Etiqueta string `json:"etiqueta"`
 	Valor    string `json:"valor"`
 }
+
+type DocumentoRelacionado struct {
+	TipoDocumento   string `json:"tipoDocumento"`
+	TipoGeneracion  int    `json:"tipoGeneracion"`
+	NumeroDocumento string `json:"numeroDocumento"`
+	FechaEmision    string `json:"fechaEmision"`
+}
+
+type NotaDebitoElectronica struct {
+	Identificacion       Identificacion          `json:"identificacion"`
+	DocumentoRelacionado *[]DocumentoRelacionado `json:"documentoRelacionado"` // ⭐ Mandatory for ND
+	Emisor               Emisor                  `json:"emisor"`
+	Receptor             Receptor                `json:"receptor"`
+	VentaTercero         *VentaTercero           `json:"ventaTercero"`
+	CuerpoDocumento      []CuerpoDocumentoItem   `json:"cuerpoDocumento"`
+	Resumen              Resumen                 `json:"resumen"`
+	Extension            *Extension              `json:"extension"`
+	Apendice             *[]Apendice             `json:"apendice"`
+}
