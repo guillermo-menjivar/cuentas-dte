@@ -1,131 +1,265 @@
+// internal/handlers/nota_handler.go
+
 package handlers
 
 import (
-	"cuentas/internal/codigos"
+	"fmt"
+	"net/http"
+
 	"cuentas/internal/dte"
 	"cuentas/internal/models"
 	"cuentas/internal/services"
-	"fmt"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-// internal/handlers/invoice_handler.go
+type NotaHandler struct {
+	notaService *services.NotaService
+}
 
-// FinalizeNotaDebito handles POST /v1/invoices/:id/finalize-nota-debito
-func (h *InvoiceHandler) FinalizeNotaDebito(c *gin.Context) {
+func NewNotaHandler() *NotaHandler {
+	return &NotaHandler{
+		notaService: services.NewNotaService(),
+	}
+}
+
+// CreateNotaDebito handles POST /v1/notas/debito
+func (h *NotaHandler) CreateNotaDebito(c *gin.Context) {
 	companyID := c.GetString("company_id")
 	if companyID == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id not found in context"})
 		return
 	}
 
-	invoiceID := c.Param("id")
-	if invoiceID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invoice_id is required"})
-		return
-	}
-
-	// Parse request body with payment info (same as regular invoice)
-	var req models.FinalizeInvoiceRequest
+	var req models.CreateNotaDebitoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Get the invoice first
-	existingInvoice, err := h.invoiceService.GetInvoice(c.Request.Context(), companyID, invoiceID)
+	// Validate related documents
+	if len(req.RelatedDocuments) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "at least one related document is required"})
+		return
+	}
+	if len(req.RelatedDocuments) > 50 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "maximum 50 related documents allowed"})
+		return
+	}
+
+	nota, err := h.notaService.CreateNotaDebito(c.Request.Context(), companyID, &req)
 	if err != nil {
-		if err == services.ErrInvoiceNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "invoice not found"})
+		if err == services.ErrClientNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "client not found"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Validate invoice type is Nota de Débito (type 6)
-	if existingInvoice.InvoiceType != codigos.DocTypeNotaDebito {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": fmt.Sprintf("invoice is not a Nota de Débito (type: %d)", existingInvoice.InvoiceType),
-		})
+	c.JSON(http.StatusCreated, nota)
+}
+
+// CreateNotaCredito handles POST /v1/notas/credito
+func (h *NotaHandler) CreateNotaCredito(c *gin.Context) {
+	companyID := c.GetString("company_id")
+	if companyID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id not found in context"})
 		return
 	}
 
-	// Validate related documents exist
-	if len(existingInvoice.RelatedDocuments) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Nota de Débito requires at least one related document",
-		})
-		return
-	}
-
-	// Validate payment against invoice total
-	if err := req.Validate(existingInvoice.Total); err != nil {
+	var req models.CreateNotaCreditoRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// TODO: Get user ID from auth context when auth is implemented
-	userID := "00000000-0000-0000-0000-000000000000" // Placeholder
+	// Validate related documents
+	if len(req.RelatedDocuments) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "at least one related document is required"})
+		return
+	}
+	if len(req.RelatedDocuments) > 50 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "maximum 50 related documents allowed"})
+		return
+	}
 
-	// Finalize invoice with payment info
-	invoice, err := h.invoiceService.FinalizeInvoice(c.Request.Context(), companyID, invoiceID, userID, &req.Payment)
+	nota, err := h.notaService.CreateNotaCredito(c.Request.Context(), companyID, &req)
 	if err != nil {
-		if err == services.ErrInvoiceNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "invoice not found"})
-			return
-		}
-		if err == services.ErrInvoiceNotDraft {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "only draft invoices can be finalized"})
-			return
-		}
-		if err == services.ErrCreditLimitExceeded {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "credit limit exceeded"})
-			return
-		}
-		if err == services.ErrCreditSuspended {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "client credit is suspended"})
+		if err == services.ErrClientNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "client not found"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// ===== DTE PROCESSING FOR NOTA DE DÉBITO =====
+	c.JSON(http.StatusCreated, nota)
+}
+
+// FinalizeNotaDebito handles POST /v1/notas/debito/:id/finalize
+func (h *NotaHandler) FinalizeNotaDebito(c *gin.Context) {
+	companyID := c.GetString("company_id")
+	if companyID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id not found in context"})
+		return
+	}
+
+	notaID := c.Param("id")
+	if notaID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "nota_id is required"})
+		return
+	}
+
+	// Parse payment info
+	var req models.FinalizeNotaRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Get the nota first
+	nota, err := h.notaService.GetNota(c.Request.Context(), companyID, notaID)
+	if err != nil {
+		if err == services.ErrNotaNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "nota not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate it's a Nota de Débito
+	if nota.Type != "debito" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": fmt.Sprintf("nota is not a débito (type: %s)", nota.Type),
+		})
+		return
+	}
+
+	// Validate payment
+	if err := req.Validate(nota.Total); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// TODO: Get user ID from auth
+	userID := "00000000-0000-0000-0000-000000000000"
+
+	// Finalize nota
+	nota, err = h.notaService.FinalizeNota(c.Request.Context(), companyID, notaID, userID, &req.Payment)
+	if err != nil {
+		if err == services.ErrNotaNotDraft {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "only draft notas can be finalized"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// ===== DTE PROCESSING =====
 	dteServiceInterface, exists := c.Get("dteService")
 	if exists {
 		dteService := dteServiceInterface.(*dte.DTEService)
 
 		fmt.Println("\n=== Starting Nota de Débito DTE Processing ===")
-		haciendaResponse, err := dteService.ProcessNotaDebito(c.Request.Context(), invoice)
+		haciendaResponse, err := dteService.ProcessNotaDebito(c.Request.Context(), nota)
 		if err != nil {
-			// Log the error but don't fail the invoice finalization
-			fmt.Printf("❌ Nota de Débito DTE processing failed: %v\n", err)
-			// Update invoice status to indicate DTE issue
+			fmt.Printf("❌ DTE processing failed: %v\n", err)
 			dteStatus := "failed_signing"
-			invoice.DteStatus = &dteStatus
+			nota.DteStatus = &dteStatus
 		} else {
-			// Successfully processed
-			fmt.Printf("✅ Nota de Débito DTE processed successfully for invoice %s\n", invoice.ID)
-
-			fmt.Printf("Estado: %s\n", haciendaResponse.Estado)
-			fmt.Printf("Código de Generación: %s\n", haciendaResponse.CodigoGeneracion)
-			if haciendaResponse.SelloRecibido != "" {
-				fmt.Printf("Sello Recibido: %s\n", haciendaResponse.SelloRecibido)
-			}
+			fmt.Printf("✅ Nota de Débito accepted by Hacienda!\n")
+			fmt.Printf("Sello: %s\n", haciendaResponse.SelloRecibido)
 
 			dteStatus := "signed"
-			invoice.DteStatus = &dteStatus
-
-			// Response is already saved in ProcessNotaDebito
-			_ = haciendaResponse
+			nota.DteStatus = &dteStatus
 		}
-	} else {
-		fmt.Println("⚠️  Warning: DTE service not available in context")
 	}
 	// ===== END DTE PROCESSING =====
 
-	c.JSON(http.StatusOK, invoice)
+	c.JSON(http.StatusOK, nota)
+}
+
+// FinalizeNotaCredito handles POST /v1/notas/credito/:id/finalize
+func (h *NotaHandler) FinalizeNotaCredito(c *gin.Context) {
+	// Same structure as FinalizeNotaDebito but calls ProcessNotaCredito
+	// ... (implement similarly)
+}
+
+// GetNota handles GET /v1/notas/:id
+func (h *NotaHandler) GetNota(c *gin.Context) {
+	companyID := c.GetString("company_id")
+	if companyID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id not found in context"})
+		return
+	}
+
+	notaID := c.Param("id")
+	nota, err := h.notaService.GetNota(c.Request.Context(), companyID, notaID)
+	if err != nil {
+		if err == services.ErrNotaNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "nota not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, nota)
+}
+
+// ListNotas handles GET /v1/notas
+func (h *NotaHandler) ListNotas(c *gin.Context) {
+	companyID := c.GetString("company_id")
+	if companyID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id not found in context"})
+		return
+	}
+
+	// Filter by type if specified
+	filters := make(map[string]interface{})
+	if notaType := c.Query("type"); notaType != "" {
+		filters["type"] = notaType // "debito" or "credito"
+	}
+	if status := c.Query("status"); status != "" {
+		filters["status"] = status
+	}
+
+	notas, err := h.notaService.ListNotas(c.Request.Context(), companyID, filters)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"notas": notas,
+		"count": len(notas),
+	})
+}
+
+// DeleteNota handles DELETE /v1/notas/:id
+func (h *NotaHandler) DeleteNota(c *gin.Context) {
+	companyID := c.GetString("company_id")
+	if companyID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id not found in context"})
+		return
+	}
+
+	notaID := c.Param("id")
+	err := h.notaService.DeleteDraftNota(c.Request.Context(), companyID, notaID)
+	if err != nil {
+		if err == services.ErrNotaNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "nota not found"})
+			return
+		}
+		if err == services.ErrNotaNotDraft {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "only draft notas can be deleted"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "nota deleted successfully"})
 }
