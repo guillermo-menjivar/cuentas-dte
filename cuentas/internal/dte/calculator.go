@@ -223,15 +223,14 @@ func (c *Calculator) CalculateResumenCCF(items []ItemAmounts) ResumenAmounts {
 		totalDescu += item.MontoDescu
 	}
 
-	// ⭐ Calculate IVA on the TOTAL (not per item)
 	// Round totalGravada first, then calculate IVA
 	totalGravadaRounded := RoundToResumenPrecision(totalGravada)
 	totalIva := totalGravadaRounded * 0.13
 	totalIvaRounded := RoundToResumenPrecision(totalIva)
 	totalDescuRounded := RoundToResumenPrecision(totalDescu)
 
-	// Calculate subTotal from rounded values
-	subTotal := totalGravadaRounded + totalIvaRounded
+	// ⭐ Round the sum to avoid floating-point errors
+	totalConIVA := RoundToResumenPrecision(totalGravadaRounded + totalIvaRounded)
 
 	return ResumenAmounts{
 		TotalNoSuj:          0,
@@ -240,9 +239,42 @@ func (c *Calculator) CalculateResumenCCF(items []ItemAmounts) ResumenAmounts {
 		SubTotalVentas:      totalGravadaRounded,
 		TotalDescu:          totalDescuRounded,
 		TotalIva:            totalIvaRounded,
-		SubTotal:            subTotal,
-		MontoTotalOperacion: subTotal,
-		TotalPagar:          subTotal,
+		SubTotal:            totalGravadaRounded, // NO IVA
+		MontoTotalOperacion: totalConIVA,         // Rounded!
+		TotalPagar:          totalConIVA,         // Rounded!
+	}
+}
+
+func (c *Calculator) _CalculateResumenCCF(items []ItemAmounts) ResumenAmounts {
+	// Sum all ventaGravada and discounts
+	var totalGravada, totalDescu float64
+
+	for _, item := range items {
+		totalGravada += item.VentaGravada
+		totalDescu += item.MontoDescu
+	}
+
+	// ⭐ Calculate IVA on the TOTAL (not per item)
+	// Round totalGravada first, then calculate IVA
+	totalGravadaRounded := RoundToResumenPrecision(totalGravada)
+	totalIva := totalGravadaRounded * 0.13
+	totalIvaRounded := RoundToResumenPrecision(totalIva)
+	totalDescuRounded := RoundToResumenPrecision(totalDescu)
+
+	// ⭐ For CCF: subTotal = totalGravada (NO IVA!)
+	// ⭐ montoTotalOperacion = totalGravada + IVA
+	totalConIVA := totalGravadaRounded + totalIvaRounded
+
+	return ResumenAmounts{
+		TotalNoSuj:          0,
+		TotalExenta:         0,
+		TotalGravada:        totalGravadaRounded,
+		SubTotalVentas:      totalGravadaRounded,
+		TotalDescu:          totalDescuRounded,
+		TotalIva:            totalIvaRounded,
+		SubTotal:            totalGravadaRounded, // ⭐ NO IVA!
+		MontoTotalOperacion: totalConIVA,         // ⭐ WITH IVA
+		TotalPagar:          totalConIVA,         // ⭐ WITH IVA
 	}
 }
 
