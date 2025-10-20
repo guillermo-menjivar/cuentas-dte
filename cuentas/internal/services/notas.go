@@ -113,3 +113,26 @@ func (s *NotaService) validateAndFetchCCFs(
 
 	return ccfs, nil
 }
+
+func (s *NotaService) CreateNotaDebito(
+	ctx context.Context,
+	companyID string,
+	req *models.CreateNotaDebitoRequest,
+	invoiceService *InvoiceService,
+) (*models.Nota, error) {
+
+	// Step 1: Validate and fetch all referenced CCFs
+	ccfs, err := s.validateAndFetchCCFs(ctx, companyID, req.CCFIds, invoiceService)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Printf("\n✅ Successfully validated %d CCF(s)\n", len(ccfs))
+
+	// TODO: Next steps will be:
+	// - Validate line items
+	// - Calculate totals
+	// - Create nota record
+
+	return nil, fmt.Errorf("not yet implemented - validation complete")
+}
