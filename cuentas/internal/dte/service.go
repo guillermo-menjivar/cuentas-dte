@@ -458,12 +458,13 @@ func (s *DTEService) ProcessNotaDebito(ctx context.Context, nota *models.Nota) (
 	}
 
 	// Step 7: Log to commit log
-	err = s.logToCommitLog(ctx, nota, notaDebito, signedDTE, response)
-	if err != nil {
-		fmt.Printf("⚠️  Warning: failed to log to commit log: %v\n", err)
-	} else {
-		fmt.Println("✅ DTE submission logged to commit log")
-	}
+	fmt.Println("WE ARE NOT SAVING NOTAS RIGHT NOW!! REFACTOR!!!")
+	//err = s.logToCommitLog(ctx, nota, notaDebito, signedDTE, response)
+	//if err != nil {
+	//	fmt.Printf("⚠️  Warning: failed to log to commit log: %v\n", err)
+	//} else {
+	//	fmt.Println("✅ DTE submission logged to commit log")
+	//}
 
 	return response, nil
 }
