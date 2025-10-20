@@ -94,6 +94,9 @@ func (b *Builder) buildIdentificacion(invoiceType string, invoice *models.Invoic
 	case codigos.PersonTypeJuridica:
 		fmt.Println("creating identification CCF")
 		return b.buildCCFIdentificacion(invoice, company)
+	case codigos.DocTypeNotaDebito:
+		fmt.Println("creating nota de debito")
+		return nil
 	default:
 
 		// Load El Salvador timezone
