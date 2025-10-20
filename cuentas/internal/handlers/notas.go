@@ -1,15 +1,30 @@
 // internal/handlers/nota_handler.go
+
 package handlers
 
 import (
-	"cuentas/internal/codigos"
-	"cuentas/internal/dte"
 	"fmt"
 	"net/http"
 
+	"cuentas/internal/codigos"
+	"cuentas/internal/dte"
+	"cuentas/internal/models"
+	"cuentas/internal/services"
+
 	"github.com/gin-gonic/gin"
-	// ... other imports
 )
+
+// NotaHandler handles nota-related HTTP requests
+type NotaHandler struct {
+	notaService *services.NotaService
+}
+
+// NewNotaHandler creates a new nota handler
+func NewNotaHandler(notaService *services.NotaService) *NotaHandler {
+	return &NotaHandler{
+		notaService: notaService,
+	}
+}
 
 // CreateNotaDebito handles POST /v1/notas/debito
 func (h *NotaHandler) CreateNotaDebito(c *gin.Context) {
@@ -35,7 +50,6 @@ func (h *NotaHandler) CreateNotaDebito(c *gin.Context) {
 		return
 	}
 
-	// ⭐ Pass Hacienda code
 	nota, err := h.notaService.CreateNota(c.Request.Context(), companyID, codigos.DocTypeNotaDebito, &req)
 	if err != nil {
 		if err == services.ErrClientNotFound {
@@ -72,7 +86,6 @@ func (h *NotaHandler) CreateNotaCredito(c *gin.Context) {
 		return
 	}
 
-	// ⭐ Pass Hacienda code
 	nota, err := h.notaService.CreateNota(c.Request.Context(), companyID, codigos.DocTypeNotaCredito, &req)
 	if err != nil {
 		if err == services.ErrClientNotFound {
@@ -117,7 +130,7 @@ func (h *NotaHandler) FinalizeNotaDebito(c *gin.Context) {
 		return
 	}
 
-	// ⭐ Validate using Hacienda code
+	// Validate using Hacienda code
 	if nota.Type != codigos.DocTypeNotaDebito {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": fmt.Sprintf("nota is not a débito (type: %s)", nota.Type),
@@ -195,7 +208,7 @@ func (h *NotaHandler) FinalizeNotaCredito(c *gin.Context) {
 		return
 	}
 
-	// ⭐ Validate using Hacienda code
+	// Validate using Hacienda code
 	if nota.Type != codigos.DocTypeNotaCredito {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": fmt.Sprintf("nota is not a crédito (type: %s)", nota.Type),
@@ -241,4 +254,80 @@ func (h *NotaHandler) FinalizeNotaCredito(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, nota)
+}
+
+// GetNota handles GET /v1/notas/:id
+func (h *NotaHandler) GetNota(c *gin.Context) {
+	companyID := c.GetString("company_id")
+	if companyID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id not found in context"})
+		return
+	}
+
+	notaID := c.Param("id")
+	nota, err := h.notaService.GetNota(c.Request.Context(), companyID, notaID)
+	if err != nil {
+		if err == services.ErrNotaNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "nota not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, nota)
+}
+
+// ListNotas handles GET /v1/notas
+func (h *NotaHandler) ListNotas(c *gin.Context) {
+	companyID := c.GetString("company_id")
+	if companyID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id not found in context"})
+		return
+	}
+
+	filters := make(map[string]interface{})
+	if notaType := c.Query("type"); notaType != "" {
+		filters["type"] = notaType
+	}
+	if status := c.Query("status"); status != "" {
+		filters["status"] = status
+	}
+
+	notas, err := h.notaService.ListNotas(c.Request.Context(), companyID, filters)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"notas": notas,
+		"count": len(notas),
+	})
+}
+
+// DeleteNota handles DELETE /v1/notas/:id
+func (h *NotaHandler) DeleteNota(c *gin.Context) {
+	companyID := c.GetString("company_id")
+	if companyID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id not found in context"})
+		return
+	}
+
+	notaID := c.Param("id")
+	err := h.notaService.DeleteDraftNota(c.Request.Context(), companyID, notaID)
+	if err != nil {
+		if err == services.ErrNotaNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "nota not found"})
+			return
+		}
+		if err == services.ErrNotaNotDraft {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "only draft notas can be deleted"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "nota deleted successfully"})
 }
