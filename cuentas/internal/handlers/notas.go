@@ -3,6 +3,7 @@ package handlers
 import (
 	"cuentas/internal/models"
 	"cuentas/internal/services"
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -33,6 +34,8 @@ func (n *NotaHandler) CreateNota(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	fmt.Println("this is the request we received")
+	fmt.Println(request)
 
 }
 
