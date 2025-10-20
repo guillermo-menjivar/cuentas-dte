@@ -37,7 +37,7 @@ func (n *NotaHandler) CreateNota(c *gin.Context) {
 	fmt.Println("this is the request we received")
 	fmt.Println(request)
 
-	nota, err := h.notaService.CreateNotaDebito(c.Request.Context(), companyID, &req, h.invoiceService)
+	nota, err := h.notaService.CreateNotaDebito(c.Request.Context(), companyID, &request, h.invoiceService)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
