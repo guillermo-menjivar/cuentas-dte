@@ -304,7 +304,10 @@ func startServer() {
 		v1.GET("/dte/commit-log/:codigo_generacion", handlers.GetDTECommitLogEntryHandler)
 		// notas
 
-		notasHandler := handlers.NewNotaHandler()
+		invoiceService := services.NewInvoiceService()
+		notaService := services.NewNotaService()
+		notasHandler := handlers.NewNotaHandler(notaService, invoiceService)
+
 		notas := v1.Group("/notas")
 		{
 			// Nota de Débito
