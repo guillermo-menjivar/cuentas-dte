@@ -724,21 +724,3 @@ func (b *Builder) buildCCFReceptor(client *ClientData) *Receptor {
 		NombreComercial: client.BusinessName,
 	}
 }
-
-func (b *Builder) buildDocumentoRelacionado(relatedDocs []models.InvoiceRelatedDocument) *[]DocumentoRelacionado {
-	if len(relatedDocs) == 0 {
-		return nil
-	}
-
-	docs := make([]DocumentoRelacionado, len(relatedDocs))
-	for i, doc := range relatedDocs {
-		docs[i] = DocumentoRelacionado{
-			TipoDocumento:   doc.RelatedDocumentType,
-			TipoGeneracion:  doc.RelatedDocumentGenType,
-			NumeroDocumento: doc.RelatedDocumentNumber,
-			FechaEmision:    doc.RelatedDocumentDate.Format("2006-01-02"),
-		}
-	}
-
-	return &docs
-}
