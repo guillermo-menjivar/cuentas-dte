@@ -312,13 +312,6 @@ type Apendice struct {
 	Valor    string `json:"valor"`
 }
 
-type DocumentoRelacionado struct {
-	TipoDocumento   string `json:"tipoDocumento"`
-	TipoGeneracion  int    `json:"tipoGeneracion"`
-	NumeroDocumento string `json:"numeroDocumento"`
-	FechaEmision    string `json:"fechaEmision"`
-}
-
 type NotaDebitoElectronica struct {
 	Identificacion       Identificacion          `json:"identificacion"`
 	DocumentoRelacionado *[]DocumentoRelacionado `json:"documentoRelacionado"` // ⭐ Mandatory for ND
