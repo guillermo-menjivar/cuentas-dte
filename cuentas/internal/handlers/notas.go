@@ -22,7 +22,7 @@ func NewNotaHandler(notaService *services.NotaService, invoiceService *services.
 	}
 }
 
-func (n *NotaHandler) CreateNota(c *gin.Context) {
+func (h *NotaHandler) CreateNota(c *gin.Context) {
 	companyID := c.GetString("company_id")
 
 	if companyID == "" {
