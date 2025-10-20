@@ -7,6 +7,10 @@ import (
 	"fmt"
 )
 
+const (
+	MaxCCFRequests = 50
+)
+
 type NotaService struct{}
 
 func NewNotaService() *NotaService {
@@ -24,7 +28,7 @@ func (s *NotaService) validateAndFetchCCFs(
 		return nil, fmt.Errorf("at least one CCF ID is required")
 	}
 
-	if len(ccfIDs) > 50 {
+	if len(ccfIDs) > MaxCCFRequests {
 		return nil, fmt.Errorf("maximum 50 CCFs allowed per nota")
 	}
 
