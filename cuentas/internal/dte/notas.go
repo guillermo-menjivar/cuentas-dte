@@ -62,7 +62,7 @@ func (b *Builder) BuildNotaDebito(ctx context.Context, nota *models.Nota) (*DTE,
 
 	dte := &DTE{
 		Identificacion:       b.buildNotaIdentificacion(nota, company),
-		DocumentoRelacionado: b.buildDocumentoRelacionado(invoiceRelatedDocs),
+		DocumentoRelacionado: b.buildNotaDocumentoRelacionado(invoiceRelatedDocs),
 		Emisor:               b.buildEmisor(company, establishment),
 		Receptor:             b.buildNotaReceptor(client),
 		OtrosDocumentos:      nil,
@@ -112,13 +112,14 @@ func (b *Builder) buildNotaReceptor(client *ClientData) *Receptor {
 	return b.buildCCFReceptor(client)
 }
 
-// buildNotaCuerpoDocumento builds cuerpo for Nota de Débito
-func (b *Builder) buildNotaCuerpoDocumento(nota *models.Nota) ([]CuerpoDocumentoItem, []ItemAmounts) {
-	items := make([]CuerpoDocumentoItem, len(nota.LineItems))
+func (b *Builder) buildNotaCuerpoDocumento(nota *models.Nota) struct {
+	Items   []CuerpoDocumentoNota // ⭐ Not CuerpoDocumentoItem!
+	Amounts []ItemAmounts
+} {
+	items := make([]CuerpoDocumentoNota, len(nota.LineItems)) // ⭐ CuerpoDocumentoNota
 	amounts := make([]ItemAmounts, len(nota.LineItems))
 
 	for i, lineItem := range nota.LineItems {
-		// Use CCF calculation (prices exclude IVA)
 		itemAmount := b.calculator.CalculateCreditoFiscal(
 			lineItem.UnitPrice,
 			lineItem.Quantity,
@@ -132,16 +133,15 @@ func (b *Builder) buildNotaCuerpoDocumento(nota *models.Nota) ([]CuerpoDocumento
 			tributos = []string{"20"}
 		}
 
-		// Get related document reference
 		numeroDocumento := ""
-		if lineItem.RelatedDocumentRef != nil {
+		if lineItem.RelatedDocumentRef != nil && *lineItem.RelatedDocumentRef != "" {
 			numeroDocumento = *lineItem.RelatedDocumentRef
 		}
 
-		items[i] = CuerpoDocumentoItem{
+		items[i] = CuerpoDocumentoNota{ // ⭐ CuerpoDocumentoNota
 			NumItem:         lineItem.LineNumber,
 			TipoItem:        lineItem.ItemType,
-			NumeroDocumento: numeroDocumento, // Required for Nota
+			NumeroDocumento: numeroDocumento, // ⭐ String, not pointer - CORRECT!
 			Cantidad:        lineItem.Quantity,
 			Codigo:          &lineItem.ItemSku,
 			CodTributo:      nil,
@@ -153,12 +153,13 @@ func (b *Builder) buildNotaCuerpoDocumento(nota *models.Nota) ([]CuerpoDocumento
 			VentaExenta:     0,
 			VentaGravada:    itemAmount.VentaGravada,
 			Tributos:        tributos,
-			Psv:             0,
-			NoGravado:       0,
 		}
 	}
 
-	return items, amounts
+	return struct {
+		Items   []CuerpoDocumentoNota
+		Amounts []ItemAmounts
+	}{items, amounts}
 }
 
 // buildNotaResumen builds resumen for Nota (use CCF calculation)
