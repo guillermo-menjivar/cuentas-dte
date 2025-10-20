@@ -365,7 +365,7 @@ func (s *DTEService) ProcessNotaDebito(ctx context.Context, nota *models.Nota) (
 
 	// Step 2: Load company credentials and sign
 	fmt.Println("\nStep 2: Loading credentials and signing DTE...")
-	companyID, err := uuid.Parse(invoice.CompanyID)
+	companyID, err := uuid.Parse(nota.CompanyID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid company ID: %w", err)
 	}
@@ -449,7 +449,7 @@ func (s *DTEService) ProcessNotaDebito(ctx context.Context, nota *models.Nota) (
 	}
 
 	if response.Estado == "PROCESADO" {
-		err = s.saveHaciendaResponse(ctx, invoice.ID, response)
+		err = s.saveHaciendaResponse(ctx, nota.ID, response)
 		if err != nil {
 			fmt.Printf("⚠️  Warning: failed to save Hacienda response: %v\n", err)
 		} else {
@@ -458,7 +458,7 @@ func (s *DTEService) ProcessNotaDebito(ctx context.Context, nota *models.Nota) (
 	}
 
 	// Step 7: Log to commit log
-	err = s.logToCommitLog(ctx, invoice, notaDebito, signedDTE, response)
+	err = s.logToCommitLog(ctx, nota, notaDebito, signedDTE, response)
 	if err != nil {
 		fmt.Printf("⚠️  Warning: failed to log to commit log: %v\n", err)
 	} else {
