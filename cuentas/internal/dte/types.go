@@ -323,3 +323,49 @@ type NotaDebitoElectronica struct {
 	Extension            *Extension              `json:"extension"`
 	Apendice             *[]Apendice             `json:"apendice"`
 }
+
+type NotaDebitoElectronica struct {
+	Identificacion       Identificacion         `json:"identificacion"`
+	DocumentoRelacionado []DocumentoRelacionado `json:"documentoRelacionado"` // Required: 1-50 items
+	Emisor               Emisor                 `json:"emisor"`
+	Receptor             Receptor               `json:"receptor"`
+	VentaTercero         *VentaTercero          `json:"ventaTercero"`
+	CuerpoDocumento      []CuerpoDocumentoNota  `json:"cuerpoDocumento"`
+	Resumen              Resumen                `json:"resumen"`
+	Extension            *Extension             `json:"extension"`
+	Apendice             *[]Apendice            `json:"apendice"`
+}
+
+// NotaCreditoElectronica represents a Nota de Crédito DTE (type 05)
+type NotaCreditoElectronica struct {
+	Identificacion       Identificacion         `json:"identificacion"`
+	DocumentoRelacionado []DocumentoRelacionado `json:"documentoRelacionado"` // Required: 1-50 items
+	Emisor               Emisor                 `json:"emisor"`
+	Receptor             Receptor               `json:"receptor"`
+	VentaTercero         *VentaTercero          `json:"ventaTercero"`
+	CuerpoDocumento      []CuerpoDocumentoNota  `json:"cuerpoDocumento"`
+	Resumen              Resumen                `json:"resumen"`
+	Extension            *Extension             `json:"extension"`
+	Apendice             *[]Apendice            `json:"apendice"`
+}
+
+// CuerpoDocumentoNota represents line items for Nota de Débito/Crédito
+// Key difference from CuerpoDocumentoItem: numeroDocumento is required (not pointer)
+type CuerpoDocumentoNota struct {
+	NumItem         int      `json:"numItem"`
+	TipoItem        int      `json:"tipoItem"`
+	NumeroDocumento string   `json:"numeroDocumento"` // REQUIRED: References parent document UUID
+	Cantidad        float64  `json:"cantidad"`
+	Codigo          *string  `json:"codigo"`
+	CodTributo      *string  `json:"codTributo"`
+	UniMedida       int      `json:"uniMedida"`
+	Descripcion     string   `json:"descripcion"`
+	PrecioUni       float64  `json:"precioUni"`
+	MontoDescu      float64  `json:"montoDescu"`
+	VentaNoSuj      float64  `json:"ventaNoSuj"`
+	VentaExenta     float64  `json:"ventaExenta"`
+	VentaGravada    float64  `json:"ventaGravada"`
+	Tributos        []string `json:"tributos"`
+	Psv             float64  `json:"psv,omitempty"`
+	NoGravado       float64  `json:"noGravado,omitempty"`
+}
