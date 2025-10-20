@@ -1,4 +1,5 @@
 // internal/handlers/nota_handler.go
+package handlers
 
 import (
 	"cuentas/internal/codigos"
