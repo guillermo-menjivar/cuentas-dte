@@ -17,65 +17,6 @@ import (
 // BUILD NOTA DE DÉBITO
 // ============================================
 
-// BuildNotaDebito converts a nota into a Nota de Débito Electrónica
-func (b *Builder) BuildNotaDebito(ctx context.Context, nota *models.Nota) (*DTE, error) {
-	// Validate nota type
-	if nota.Type != codigos.DocTypeNotaDebito {
-		return nil, fmt.Errorf("invalid nota type: expected %s, got %s", codigos.DocTypeNotaDebito, nota.Type)
-	}
-
-	// Validate related documents
-	if len(nota.RelatedDocuments) == 0 {
-		return nil, fmt.Errorf("nota de débito requires at least one related document")
-	}
-
-	// Load required data
-	company, err := b.loadCompany(ctx, nota.CompanyID)
-	if err != nil {
-		return nil, fmt.Errorf("load company: %w", err)
-	}
-
-	establishment, err := b.loadEstablishmentAndPOS(ctx, nota.EstablishmentID, nota.PointOfSaleID)
-	if err != nil {
-		return nil, fmt.Errorf("load establishment: %w", err)
-	}
-
-	client, err := b.loadClient(ctx, nota.ClientID)
-	if err != nil {
-		return nil, fmt.Errorf("load client: %w", err)
-	}
-
-	// Build the DTE
-	cuerpoDocumento, itemAmounts := b.buildNotaCuerpoDocumento(nota)
-	resumen := b.buildNotaResumen(nota, itemAmounts)
-
-	// Convert []NotaRelatedDocument to []InvoiceRelatedDocument for reuse
-	invoiceRelatedDocs := make([]models.InvoiceRelatedDocument, len(nota.RelatedDocuments))
-	for i, rd := range nota.RelatedDocuments {
-		invoiceRelatedDocs[i] = models.InvoiceRelatedDocument{
-			RelatedDocumentType:    rd.DocumentType,
-			RelatedDocumentGenType: rd.GenerationType,
-			RelatedDocumentNumber:  rd.DocumentNumber,
-			RelatedDocumentDate:    rd.DocumentDate,
-		}
-	}
-
-	dte := &DTE{
-		Identificacion:       b.buildNotaIdentificacion(nota, company),
-		DocumentoRelacionado: b.buildNotaDocumentoRelacionado(invoiceRelatedDocs),
-		Emisor:               b.buildEmisor(company, establishment),
-		Receptor:             b.buildNotaReceptor(client),
-		OtrosDocumentos:      nil,
-		VentaTercero:         nil,
-		CuerpoDocumento:      cuerpoDocumento,
-		Resumen:              resumen,
-		Extension:            b.buildNotaExtension(nota),
-		Apendice:             nil,
-	}
-
-	return dte, nil
-}
-
 // buildNotaIdentificacion builds identificacion for Nota de Débito
 func (b *Builder) buildNotaIdentificacion(nota *models.Nota, company *CompanyData) Identificacion {
 	loc, err := time.LoadLocation("America/El_Salvador")
@@ -237,4 +178,51 @@ func (b *Builder) BuildNotaCredito(ctx context.Context, nota *models.Nota) (*DTE
 	// Same implementation as BuildNotaDebito - just different type validation
 	// The rest is identical
 	return b.BuildNotaDebito(ctx, nota)
+}
+
+func (b *Builder) BuildNotaDebito(ctx context.Context, nota *models.Nota) (*NotaDebitoElectronica, error) {
+	// Validate
+	if nota.Type != codigos.DocTypeNotaDebito {
+		return nil, fmt.Errorf("invalid nota type: expected %s, got %s",
+			codigos.DocTypeNotaDebito, nota.Type)
+	}
+
+	if len(nota.RelatedDocuments) == 0 {
+		return nil, fmt.Errorf("nota requires at least 1 related document")
+	}
+
+	// Load data
+	company, err := b.loadCompanyData(ctx, nota.CompanyID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load company: %w", err)
+	}
+
+	client, err := b.loadClientData(ctx, nota.ClientID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load client: %w", err)
+	}
+
+	// ⭐ FIX: Get result as single struct
+	itemsResult := b.buildNotaCuerpoDocumento(nota)
+
+	// Build resumen
+	resumenAmounts := b.calculator.CalculateResumenCCF(itemsResult.Amounts)
+	resumen := b.buildNotaResumen(nota, resumenAmounts)
+
+	// Build related docs
+	relDocs := b.buildNotaDocumentoRelacionado(nota.RelatedDocuments)
+
+	nd := &NotaDebitoElectronica{
+		Identificacion:       b.buildNotaIdentificacion(codigos.DocTypeNotaDebito, nota, company),
+		DocumentoRelacionado: relDocs,
+		Emisor:               b.buildEmisorFromCompany(company),
+		Receptor:             b.buildReceptorFromClient(client),
+		VentaTercero:         nil,
+		CuerpoDocumento:      itemsResult.Items, // ⭐ Access .Items
+		Resumen:              resumen,
+		Extension:            b.buildNotaExtensionFromNota(nota),
+		Apendice:             nil,
+	}
+
+	return nd, nil
 }
