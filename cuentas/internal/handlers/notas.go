@@ -1,19 +1,23 @@
 package handlers
 
 import (
+	"cuentas/internal/models"
 	"cuentas/internal/services"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-type NotasHandler struct {
-	invoiceService *service.InvoiceService
+type NotaHandler struct {
+	notaService    *services.NotaService
+	invoiceService *services.InvoiceService
 }
 
-func NewNotasHandler() *NoasHandler {
-	return &NoasHandler{
-		invoiceService: services.NewInvoiceService(),
+// Update constructor
+func NewNotaHandler(notaService *services.NotaService, invoiceService *services.InvoiceService) *NotaHandler {
+	return &NotaHandler{
+		notaService:    notaService,
+		invoiceService: invoiceService,
 	}
 }
 
@@ -24,12 +28,17 @@ func (n *NotasHandler) CreateNota(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id not found in context"})
 	}
 
-	invoice, err := h.invoiceService.GetInvoice(c.Request.Context(), companyID, invoiceID)
+	var request models.CreateNotaDebitoRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 }
 
 /*
  CCF exists
- CCF is type "03"
+ CCF is type "031q2az
  CCF belongs to same client
  CCF is finalized (not draft/voided)
 
