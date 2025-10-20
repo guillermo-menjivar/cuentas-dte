@@ -178,84 +178,6 @@ func (h *NotaHandler) FinalizeNotaDebito(c *gin.Context) {
 	c.JSON(http.StatusOK, nota)
 }
 
-// FinalizeNotaCredito handles POST /v1/notas/credito/:id/finalize
-func (h *NotaHandler) FinalizeNotaCredito(c *gin.Context) {
-	companyID := c.GetString("company_id")
-	if companyID == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id not found in context"})
-		return
-	}
-
-	notaID := c.Param("id")
-	if notaID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "nota_id is required"})
-		return
-	}
-
-	var req models.FinalizeNotaRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	nota, err := h.notaService.GetNota(c.Request.Context(), companyID, notaID)
-	if err != nil {
-		if err == services.ErrNotaNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "nota not found"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Validate using Hacienda code
-	if nota.Type != codigos.DocTypeNotaCredito {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": fmt.Sprintf("nota is not a crédito (type: %s)", nota.Type),
-		})
-		return
-	}
-
-	if err := req.Validate(nota.Total); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	userID := "00000000-0000-0000-0000-000000000000"
-
-	nota, err = h.notaService.FinalizeNota(c.Request.Context(), companyID, notaID, userID, &req.Payment)
-	if err != nil {
-		if err == services.ErrNotaNotDraft {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "only draft notas can be finalized"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	// DTE Processing
-	dteServiceInterface, exists := c.Get("dteService")
-	if exists {
-		dteService := dteServiceInterface.(*dte.DTEService)
-
-		fmt.Println("\n=== Starting Nota de Crédito DTE Processing ===")
-		haciendaResponse, err := dteService.ProcessNotaCredito(c.Request.Context(), nota)
-		if err != nil {
-			fmt.Printf("❌ DTE processing failed: %v\n", err)
-			dteStatus := "failed_signing"
-			nota.DteStatus = &dteStatus
-		} else {
-			fmt.Printf("✅ Nota de Crédito accepted by Hacienda!\n")
-			fmt.Printf("Sello: %s\n", haciendaResponse.SelloRecibido)
-
-			dteStatus := "signed"
-			nota.DteStatus = &dteStatus
-		}
-	}
-
-	c.JSON(http.StatusOK, nota)
-}
-
 // GetNota handles GET /v1/notas/:id
 func (h *NotaHandler) GetNota(c *gin.Context) {
 	companyID := c.GetString("company_id")
@@ -330,4 +252,165 @@ func (h *NotaHandler) DeleteNota(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "nota deleted successfully"})
+}
+
+// FinalizeNotaDebito handles POST /v1/notas/debito/:id/finalize
+func (h *NotaHandler) FinalizeNotaDebito(c *gin.Context) {
+	companyID := c.GetString("company_id")
+	if companyID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id not found in context"})
+		return
+	}
+
+	notaID := c.Param("id")
+	if notaID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "nota_id is required"})
+		return
+	}
+
+	var req models.FinalizeNotaRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Get the nota
+	nota, err := h.notaService.GetNota(c.Request.Context(), companyID, notaID)
+	if err != nil {
+		if err == services.ErrNotaNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "nota not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate using Hacienda code
+	if nota.Type != codigos.DocTypeNotaDebito {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": fmt.Sprintf("nota is not a débito (type: %s)", nota.Type),
+		})
+		return
+	}
+
+	// ⭐ FIX 1: Remove argument - Validate() takes no params
+	if err := req.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userID := "00000000-0000-0000-0000-000000000000"
+
+	// ⭐ FIX 2: Pass nil - notas don't require payment on finalize
+	nota, err = h.notaService.FinalizeNota(c.Request.Context(), companyID, notaID, userID, nil)
+	if err != nil {
+		if err == services.ErrNotaNotDraft {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "only draft notas can be finalized"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// DTE Processing
+	dteServiceInterface, exists := c.Get("dteService")
+	if exists {
+		dteService := dteServiceInterface.(*dte.DTEService)
+
+		fmt.Println("\n=== Starting Nota de Débito DTE Processing ===")
+		haciendaResponse, err := dteService.ProcessNotaDebito(c.Request.Context(), nota)
+		if err != nil {
+			fmt.Printf("❌ DTE processing failed: %v\n", err)
+			dteStatus := "failed_signing"
+			nota.DteStatus = &dteStatus
+		} else {
+			fmt.Printf("✅ Nota de Débito accepted by Hacienda!\n")
+			fmt.Printf("Sello: %s\n", haciendaResponse.SelloRecibido)
+
+			dteStatus := "signed"
+			nota.DteStatus = &dteStatus
+		}
+	}
+
+	c.JSON(http.StatusOK, nota)
+}
+
+// FinalizeNotaCredito handles POST /v1/notas/credito/:id/finalize
+func (h *NotaHandler) FinalizeNotaCredito(c *gin.Context) {
+	companyID := c.GetString("company_id")
+	if companyID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id not found in context"})
+		return
+	}
+
+	notaID := c.Param("id")
+	if notaID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "nota_id is required"})
+		return
+	}
+
+	var req models.FinalizeNotaRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	nota, err := h.notaService.GetNota(c.Request.Context(), companyID, notaID)
+	if err != nil {
+		if err == services.ErrNotaNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "nota not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate using Hacienda code
+	if nota.Type != codigos.DocTypeNotaCredito {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": fmt.Sprintf("nota is not a crédito (type: %s)", nota.Type),
+		})
+		return
+	}
+
+	// ⭐ FIX 1: Remove argument
+	if err := req.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userID := "00000000-0000-0000-0000-000000000000"
+
+	// ⭐ FIX 2: Pass nil
+	nota, err = h.notaService.FinalizeNota(c.Request.Context(), companyID, notaID, userID, nil)
+	if err != nil {
+		if err == services.ErrNotaNotDraft {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "only draft notas can be finalized"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// DTE Processing
+	dteServiceInterface, exists := c.Get("dteService")
+	if exists {
+		dteService := dteServiceInterface.(*dte.DTEService)
+
+		fmt.Println("\n=== Starting Nota de Crédito DTE Processing ===")
+		haciendaResponse, err := dteService.ProcessNotaCredito(c.Request.Context(), nota)
+		if err != nil {
+			fmt.Printf("❌ DTE processing failed: %v\n", err)
+			dteStatus := "failed_signing"
+			nota.DteStatus = &dteStatus
+		} else {
+			fmt.Printf("✅ Nota de Crédito accepted by Hacienda!\n")
+			fmt.Printf("Sello: %s\n", haciendaResponse.SelloRecibido)
+
+			dteStatus := "signed"
+			nota.DteStatus = &dteStatus
+		}
+	}
+
+	c.JSON(http.StatusOK, nota)
 }

@@ -1,6 +1,9 @@
 package services
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // Invoice service errors
 var (
@@ -14,4 +17,6 @@ var (
 	ErrCreditSuspended       = errors.New("client credit is suspended")
 	ErrInvalidInvoiceStatus  = errors.New("invalid invoice status for this operation")
 	ErrPointOfSaleNotFound   = errors.New("POS not found")
+	ErrNotaNotFound          = fmt.Errorf("nota not found")
+	ErrNotaNotDraft          = fmt.Errorf("nota is not in draft status")
 )
