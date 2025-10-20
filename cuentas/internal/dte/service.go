@@ -347,10 +347,10 @@ func (s *DTEService) logToCommitLog(ctx context.Context, invoice *models.Invoice
 	return err
 }
 
-func (s *DTEService) ProcessNotaDebito(ctx context.Context, invoice *models.Invoice) (*hacienda.ReceptionResponse, error) {
+func (s *DTEService) ProcessNotaDebito(ctx context.Context, nota *models.Nota) (*hacienda.ReceptionResponse, error) {
 	// Step 1: Build Nota de Débito DTE from invoice
-	fmt.Println("Step 1: Building Nota de Débito from invoice...")
-	notaDebito, err := s.builder.BuildNotaDebito(ctx, invoice)
+	fmt.Println("Step 1: Building Nota de Débito from nota...")
+	notaDebito, err := s.builder.BuildNotaDebito(ctx, nota)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build Nota de Débito: %w", err)
 	}
