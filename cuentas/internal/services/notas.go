@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-type Notaservice struct{}
+type NotaService struct{}
 
 func NewNotaService() *NotaService {
 	return &NotaService{}
