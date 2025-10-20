@@ -313,22 +313,10 @@ type Apendice struct {
 }
 
 type NotaDebitoElectronica struct {
-	Identificacion       Identificacion          `json:"identificacion"`
-	DocumentoRelacionado *[]DocumentoRelacionado `json:"documentoRelacionado"` // ⭐ Mandatory for ND
-	Emisor               Emisor                  `json:"emisor"`
-	Receptor             Receptor                `json:"receptor"`
-	VentaTercero         *VentaTercero           `json:"ventaTercero"`
-	CuerpoDocumento      []CuerpoDocumentoItem   `json:"cuerpoDocumento"`
-	Resumen              Resumen                 `json:"resumen"`
-	Extension            *Extension              `json:"extension"`
-	Apendice             *[]Apendice             `json:"apendice"`
-}
-
-type NotaDebitoElectronica struct {
 	Identificacion       Identificacion         `json:"identificacion"`
 	DocumentoRelacionado []DocumentoRelacionado `json:"documentoRelacionado"` // Required: 1-50 items
 	Emisor               Emisor                 `json:"emisor"`
-	Receptor             Receptor               `json:"receptor"`
+	Receptor             Receptor               `json:"receptor"` // ⚠️ NOT pointer for Notas
 	VentaTercero         *VentaTercero          `json:"ventaTercero"`
 	CuerpoDocumento      []CuerpoDocumentoNota  `json:"cuerpoDocumento"`
 	Resumen              Resumen                `json:"resumen"`
