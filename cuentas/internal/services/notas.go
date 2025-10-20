@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"math"
 	"strings"
 	"time"
 
@@ -596,8 +595,4 @@ func (s *NotaService) getAndIncrementDTESequence(ctx context.Context, tx *sql.Tx
 		newSeq, time.Now(), posID, tipoDte)
 
 	return newSeq, err
-}
-
-func round(val float64) float64 {
-	return math.Round(val*100) / 100
 }
