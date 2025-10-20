@@ -1,23 +1,161 @@
+// internal/dte/notas.go
+
 package dte
 
 import (
 	"context"
-	"cuentas/internal/codigos"
-	"cuentas/internal/models"
 	"fmt"
 	"strings"
 	"time"
+
+	"cuentas/internal/codigos"
+	"cuentas/internal/models"
 )
-
-// internal/dte/builder.go
-
-// Add these methods to your existing Builder
 
 // ============================================
 // BUILD NOTA DE DÉBITO
 // ============================================
 
-// buildNotaIdentificacion builds identificacion for Nota de Débito
+// BuildNotaDebito converts a nota into a Nota de Débito Electrónica
+func (b *Builder) BuildNotaDebito(ctx context.Context, nota *models.Nota) (*NotaDebitoElectronica, error) {
+	// Validate nota type
+	if nota.Type != codigos.DocTypeNotaDebito {
+		return nil, fmt.Errorf("invalid nota type: expected %s, got %s", codigos.DocTypeNotaDebito, nota.Type)
+	}
+
+	// Validate related documents
+	if len(nota.RelatedDocuments) == 0 {
+		return nil, fmt.Errorf("nota de débito requires at least one related document")
+	}
+
+	// Load required data
+	company, err := b.loadCompany(ctx, nota.CompanyID)
+	if err != nil {
+		return nil, fmt.Errorf("load company: %w", err)
+	}
+
+	establishment, err := b.loadEstablishmentAndPOS(ctx, nota.EstablishmentID, nota.PointOfSaleID)
+	if err != nil {
+		return nil, fmt.Errorf("load establishment: %w", err)
+	}
+
+	client, err := b.loadClient(ctx, nota.ClientID)
+	if err != nil {
+		return nil, fmt.Errorf("load client: %w", err)
+	}
+
+	// Build the DTE components
+	cuerpoResult := b.buildNotaCuerpoDocumento(nota)
+	resumen := b.buildNotaResumen(nota, cuerpoResult.Amounts)
+
+	// Convert []NotaRelatedDocument to []InvoiceRelatedDocument for reuse
+	invoiceRelatedDocs := make([]models.InvoiceRelatedDocument, len(nota.RelatedDocuments))
+	for i, rd := range nota.RelatedDocuments {
+		invoiceRelatedDocs[i] = models.InvoiceRelatedDocument{
+			RelatedDocumentType:    rd.DocumentType,
+			RelatedDocumentGenType: rd.GenerationType,
+			RelatedDocumentNumber:  rd.DocumentNumber,
+			RelatedDocumentDate:    rd.DocumentDate,
+		}
+	}
+
+	// Use existing buildDocumentoRelacionado (returns *[]DocumentoRelacionado)
+	docRelacionadoPtr := b.buildDocumentoRelacionado(invoiceRelatedDocs)
+
+	// Convert pointer to array (NotaDebitoElectronica requires []DocumentoRelacionado not pointer)
+	var docRelacionado []DocumentoRelacionado
+	if docRelacionadoPtr != nil {
+		docRelacionado = *docRelacionadoPtr
+	}
+
+	nd := &NotaDebitoElectronica{
+		Identificacion:       b.buildNotaIdentificacion(nota, company),
+		DocumentoRelacionado: docRelacionado, // Array not pointer
+		Emisor:               b.buildEmisor(company, establishment),
+		Receptor:             b.buildNotaReceptor(client), // Value not pointer
+		VentaTercero:         nil,
+		CuerpoDocumento:      cuerpoResult.Items,
+		Resumen:              resumen,
+		Extension:            b.buildNotaExtension(nota),
+		Apendice:             nil,
+	}
+
+	return nd, nil
+}
+
+// ============================================
+// BUILD NOTA DE CRÉDITO
+// ============================================
+
+// BuildNotaCredito converts a nota into a Nota de Crédito Electrónica
+func (b *Builder) BuildNotaCredito(ctx context.Context, nota *models.Nota) (*NotaCreditoElectronica, error) {
+	// Validate nota type
+	if nota.Type != codigos.DocTypeNotaCredito {
+		return nil, fmt.Errorf("invalid nota type: expected %s, got %s", codigos.DocTypeNotaCredito, nota.Type)
+	}
+
+	// Validate related documents
+	if len(nota.RelatedDocuments) == 0 {
+		return nil, fmt.Errorf("nota de crédito requires at least one related document")
+	}
+
+	// Load required data
+	company, err := b.loadCompany(ctx, nota.CompanyID)
+	if err != nil {
+		return nil, fmt.Errorf("load company: %w", err)
+	}
+
+	establishment, err := b.loadEstablishmentAndPOS(ctx, nota.EstablishmentID, nota.PointOfSaleID)
+	if err != nil {
+		return nil, fmt.Errorf("load establishment: %w", err)
+	}
+
+	client, err := b.loadClient(ctx, nota.ClientID)
+	if err != nil {
+		return nil, fmt.Errorf("load client: %w", err)
+	}
+
+	// Build the DTE components
+	cuerpoResult := b.buildNotaCuerpoDocumento(nota)
+	resumen := b.buildNotaResumen(nota, cuerpoResult.Amounts)
+
+	// Convert related docs
+	invoiceRelatedDocs := make([]models.InvoiceRelatedDocument, len(nota.RelatedDocuments))
+	for i, rd := range nota.RelatedDocuments {
+		invoiceRelatedDocs[i] = models.InvoiceRelatedDocument{
+			RelatedDocumentType:    rd.DocumentType,
+			RelatedDocumentGenType: rd.GenerationType,
+			RelatedDocumentNumber:  rd.DocumentNumber,
+			RelatedDocumentDate:    rd.DocumentDate,
+		}
+	}
+
+	docRelacionadoPtr := b.buildDocumentoRelacionado(invoiceRelatedDocs)
+	var docRelacionado []DocumentoRelacionado
+	if docRelacionadoPtr != nil {
+		docRelacionado = *docRelacionadoPtr
+	}
+
+	nc := &NotaCreditoElectronica{
+		Identificacion:       b.buildNotaIdentificacion(nota, company),
+		DocumentoRelacionado: docRelacionado,
+		Emisor:               b.buildEmisor(company, establishment),
+		Receptor:             b.buildNotaReceptor(client),
+		VentaTercero:         nil,
+		CuerpoDocumento:      cuerpoResult.Items,
+		Resumen:              resumen,
+		Extension:            b.buildNotaExtension(nota),
+		Apendice:             nil,
+	}
+
+	return nc, nil
+}
+
+// ============================================
+// HELPER BUILDERS FOR NOTAS
+// ============================================
+
+// buildNotaIdentificacion builds identificacion for Nota de Débito/Crédito
 func (b *Builder) buildNotaIdentificacion(nota *models.Nota, company *CompanyData) Identificacion {
 	loc, err := time.LoadLocation("America/El_Salvador")
 	if err != nil {
@@ -34,7 +172,7 @@ func (b *Builder) buildNotaIdentificacion(nota *models.Nota, company *CompanyDat
 	return Identificacion{
 		Version:          3,
 		Ambiente:         company.DTEAmbiente,
-		TipoDte:          nota.Type, // "06" for Nota de Débito
+		TipoDte:          nota.Type, // "05" or "06"
 		NumeroControl:    strings.ToUpper(*nota.DteNumeroControl),
 		CodigoGeneracion: nota.ID,
 		TipoModelo:       1,
@@ -47,20 +185,24 @@ func (b *Builder) buildNotaIdentificacion(nota *models.Nota, company *CompanyDat
 	}
 }
 
-// buildNotaReceptor builds receptor for Nota (always CCF-style)
-func (b *Builder) buildNotaReceptor(client *ClientData) *Receptor {
+// buildNotaReceptor builds receptor for Nota (always CCF-style, returns value not pointer)
+func (b *Builder) buildNotaReceptor(client *ClientData) Receptor {
 	// Notas are always B2B, so use CCF receptor format
-	return b.buildCCFReceptor(client)
+	receptor := b.buildCCFReceptor(client)
+	return *receptor // Dereference pointer to return value
 }
 
+// buildNotaCuerpoDocumento builds cuerpo documento for Nota
+// Returns struct with Items ([]CuerpoDocumentoNota) and Amounts ([]ItemAmounts)
 func (b *Builder) buildNotaCuerpoDocumento(nota *models.Nota) struct {
-	Items   []CuerpoDocumentoNota // ⭐ Not CuerpoDocumentoItem!
+	Items   []CuerpoDocumentoNota
 	Amounts []ItemAmounts
 } {
-	items := make([]CuerpoDocumentoNota, len(nota.LineItems)) // ⭐ CuerpoDocumentoNota
+	items := make([]CuerpoDocumentoNota, len(nota.LineItems))
 	amounts := make([]ItemAmounts, len(nota.LineItems))
 
 	for i, lineItem := range nota.LineItems {
+		// Use CCF calculation (prices exclude IVA)
 		itemAmount := b.calculator.CalculateCreditoFiscal(
 			lineItem.UnitPrice,
 			lineItem.Quantity,
@@ -74,15 +216,16 @@ func (b *Builder) buildNotaCuerpoDocumento(nota *models.Nota) struct {
 			tributos = []string{"20"}
 		}
 
+		// Get related document reference (required for Notas)
 		numeroDocumento := ""
 		if lineItem.RelatedDocumentRef != nil && *lineItem.RelatedDocumentRef != "" {
 			numeroDocumento = *lineItem.RelatedDocumentRef
 		}
 
-		items[i] = CuerpoDocumentoNota{ // ⭐ CuerpoDocumentoNota
+		items[i] = CuerpoDocumentoNota{
 			NumItem:         lineItem.LineNumber,
 			TipoItem:        lineItem.ItemType,
-			NumeroDocumento: numeroDocumento, // ⭐ String, not pointer - CORRECT!
+			NumeroDocumento: numeroDocumento, // String, not *string
 			Cantidad:        lineItem.Quantity,
 			Codigo:          &lineItem.ItemSku,
 			CodTributo:      nil,
@@ -94,6 +237,8 @@ func (b *Builder) buildNotaCuerpoDocumento(nota *models.Nota) struct {
 			VentaExenta:     0,
 			VentaGravada:    itemAmount.VentaGravada,
 			Tributos:        tributos,
+			Psv:             0,
+			NoGravado:       0,
 		}
 	}
 
@@ -162,67 +307,4 @@ func (b *Builder) buildNotaExtension(nota *models.Nota) *Extension {
 		Observaciones: observaciones,
 		PlacaVehiculo: nil,
 	}
-}
-
-// ============================================
-// BUILD NOTA DE CRÉDITO (same structure)
-// ============================================
-
-// BuildNotaCredito converts a nota into a Nota de Crédito Electrónica
-func (b *Builder) BuildNotaCredito(ctx context.Context, nota *models.Nota) (*DTE, error) {
-	// Validate nota type
-	if nota.Type != codigos.DocTypeNotaCredito {
-		return nil, fmt.Errorf("invalid nota type: expected %s, got %s", codigos.DocTypeNotaCredito, nota.Type)
-	}
-
-	// Same implementation as BuildNotaDebito - just different type validation
-	// The rest is identical
-	return b.BuildNotaDebito(ctx, nota)
-}
-
-func (b *Builder) BuildNotaDebito(ctx context.Context, nota *models.Nota) (*NotaDebitoElectronica, error) {
-	// Validate
-	if nota.Type != codigos.DocTypeNotaDebito {
-		return nil, fmt.Errorf("invalid nota type: expected %s, got %s",
-			codigos.DocTypeNotaDebito, nota.Type)
-	}
-
-	if len(nota.RelatedDocuments) == 0 {
-		return nil, fmt.Errorf("nota requires at least 1 related document")
-	}
-
-	// Load data
-	company, err := b.loadCompanyData(ctx, nota.CompanyID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load company: %w", err)
-	}
-
-	client, err := b.loadClientData(ctx, nota.ClientID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load client: %w", err)
-	}
-
-	// ⭐ FIX: Get result as single struct
-	itemsResult := b.buildNotaCuerpoDocumento(nota)
-
-	// Build resumen
-	resumenAmounts := b.calculator.CalculateResumenCCF(itemsResult.Amounts)
-	resumen := b.buildNotaResumen(nota, resumenAmounts)
-
-	// Build related docs
-	relDocs := b.buildNotaDocumentoRelacionado(nota.RelatedDocuments)
-
-	nd := &NotaDebitoElectronica{
-		Identificacion:       b.buildNotaIdentificacion(codigos.DocTypeNotaDebito, nota, company),
-		DocumentoRelacionado: relDocs,
-		Emisor:               b.buildEmisorFromCompany(company),
-		Receptor:             b.buildReceptorFromClient(client),
-		VentaTercero:         nil,
-		CuerpoDocumento:      itemsResult.Items, // ⭐ Access .Items
-		Resumen:              resumen,
-		Extension:            b.buildNotaExtensionFromNota(nota),
-		Apendice:             nil,
-	}
-
-	return nd, nil
 }
