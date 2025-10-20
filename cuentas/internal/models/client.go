@@ -57,10 +57,9 @@ type CreateClientRequest struct {
 	MunicipalityCode  string `json:"municipality_code" binding:"required"`
 
 	// CCF-specific fields
-	CodActividad  *string `json:"cod_actividad"`
-	DescActividad *string `json:"desc_actividad"`
-	Telefono      *string `json:"telefono"`
-	Correo        *string `json:"correo"`
+	CodActividad *string `json:"cod_actividad"`
+	Telefono     *string `json:"telefono"`
+	Correo       *string `json:"correo"`
 }
 
 // ValidateForCCF validates that a business client (tipo_persona="2") has all required CCF fields
@@ -97,17 +96,12 @@ func (r *CreateClientRequest) ValidateForCCF() error {
 	if r.CodActividad == nil || *r.CodActividad == "" {
 		errors = append(errors, "cod_actividad is required for CCF clients")
 	} else {
-		_, exists := codigos.GetEconomicActivityName(*r.CodActividad)
+		description, exists := codigos.GetEconomicActivityName(*r.CodActividad)
 		if !exists {
 			errors = append(errors, "cod_actividad is not a valid economic activity code")
 		}
-	}
 
-	// DescActividad (1-150 chars)
-	if r.DescActividad == nil || *r.DescActividad == "" {
-		errors = append(errors, "desc_actividad is required for CCF clients")
-	} else if len(*r.DescActividad) > 150 {
-		errors = append(errors, "desc_actividad must not exceed 150 characters")
+		r.DescActividad = description
 	}
 
 	// Department code validation
