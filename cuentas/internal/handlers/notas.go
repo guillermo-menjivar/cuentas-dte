@@ -29,7 +29,7 @@ func (n *NotasHandler) CreateNota(c *gin.Context) {
 	}
 
 	var request models.CreateNotaDebitoRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
