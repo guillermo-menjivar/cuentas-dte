@@ -60,7 +60,7 @@ func (s *ClientService) CreateClient(ctx context.Context, companyID string, req 
 		company_id, ncr, nit, dui,
 		business_name, legal_business_name, giro, tipo_contribuyente, tipo_persona,
 		full_address, country_code, department_code, municipality_code, cod_actividad, desc_actividad, correo, telefono,
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
 	RETURNING id, company_id, ncr, nit, dui, 
 			  business_name, legal_business_name, giro, tipo_contribuyente, tipo_persona,
 			  full_address, country_code, department_code, municipality_code, cod_actividad, desc_actividad, correo, telefono,
