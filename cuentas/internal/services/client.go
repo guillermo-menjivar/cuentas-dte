@@ -76,7 +76,7 @@ func (s *ClientService) CreateClient(ctx context.Context, companyID string, req 
 	).Scan(
 		&client.ID, &client.CompanyID, &client.NCR, &client.NIT, &client.DUI,
 		&client.BusinessName, &client.LegalBusinessName, &client.Giro, &client.TipoContribuyente, &client.TipoPersona,
-		&client.FullAddress, &client.CountryCode, &client.DepartmentCode, &client.MunicipalityCode, req.CodActividad, req.CodActividadDescription,
+		&client.FullAddress, &client.CountryCode, &client.DepartmentCode, &client.MunicipalityCode, &req.CodActividad, &req.CodActividadDescription,
 		&client.Active, &client.CreatedAt, &client.UpdatedAt,
 	)
 
