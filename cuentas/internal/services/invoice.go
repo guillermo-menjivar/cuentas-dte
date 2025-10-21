@@ -1060,7 +1060,7 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 		payment.Amount,
 		balanceDue,
 		numeroControl,
-		dte_type,
+		tipoDte,
 		now,
 		userID,
 		invoiceID,
