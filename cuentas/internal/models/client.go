@@ -96,12 +96,10 @@ func (r *CreateClientRequest) ValidateForCCF() error {
 	if r.CodActividad == nil || *r.CodActividad == "" {
 		errors = append(errors, "cod_actividad is required for CCF clients")
 	} else {
-		description, exists := codigos.GetEconomicActivityName(*r.CodActividad)
+		_, exists := codigos.GetEconomicActivityName(*r.CodActividad)
 		if !exists {
 			errors = append(errors, "cod_actividad is not a valid economic activity code")
 		}
-
-		r.DescActividad = description
 	}
 
 	// Department code validation
