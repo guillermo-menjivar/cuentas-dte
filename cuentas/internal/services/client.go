@@ -112,7 +112,7 @@ func (s *ClientService) GetClientByID(ctx context.Context, companyID, clientID s
 	err := s.db.QueryRowContext(ctx, query, clientID, companyID).Scan(
 		&client.ID, &client.CompanyID, &client.NCR, &client.NIT, &client.DUI,
 		&client.BusinessName, &client.LegalBusinessName, &client.Giro, &client.TipoContribuyente, &client.TipoPersona,
-		&client.FullAddress, &client.CountryCode, &client.DepartmentCode, &client.MunicipalityCode, req.CodActividad, req.CodActividadDescription,
+		&client.FullAddress, &client.CountryCode, &client.DepartmentCode, &client.MunicipalityCode, &client.CodActividad, &client.CodActividadDescription,
 		&client.Active, &client.CreatedAt, &client.UpdatedAt,
 	)
 	if err != nil {
