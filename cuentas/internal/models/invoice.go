@@ -69,6 +69,7 @@ type Invoice struct {
 	DteStatus           *string    `json:"dte_status,omitempty"`
 	DteHaciendaResponse *string    `json:"dte_hacienda_response,omitempty"`
 	DteSubmittedAt      *time.Time `json:"dte_submitted_at,omitempty"`
+	DteType             *string    `json:"dte_type"`
 
 	// Timestamps
 	CreatedAt   time.Time  `json:"created_at"`
