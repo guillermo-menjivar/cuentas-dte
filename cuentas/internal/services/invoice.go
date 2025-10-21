@@ -642,7 +642,7 @@ func (s *InvoiceService) insertInvoice(ctx context.Context, tx *sql.Tx, invoice 
 			client_name, client_legal_name, client_nit, client_ncr, client_dui,
 			client_address, client_tipo_contribuyente, client_tipo_persona,
 			subtotal, total_discount, total_taxes, total,
-			currency, payment_terms, payment_method, payment_status, amount_paid, balance_due, due_date,
+			currency, payment_terms, payment_method, payment_status, amount_paid, balance_due, due_date, dte_codigo_generacion,
 			status, notes, contact_email, contact_whatsapp, created_at
 		) VALUES (
 			$1, $2, $3, $4, $5, $6,
@@ -650,7 +650,7 @@ func (s *InvoiceService) insertInvoice(ctx context.Context, tx *sql.Tx, invoice 
 			$12, $13, $14,
 			$15, $16, $17, $18,
 			$19, $20, $21, $22, $23, $24,
-			$25, $26, $27, $28, $29, $30, $31
+			$25, $26, $27, $28, $29, $30, $31, $32
 		) RETURNING id
 	`
 
@@ -660,7 +660,7 @@ func (s *InvoiceService) insertInvoice(ctx context.Context, tx *sql.Tx, invoice 
 		invoice.ClientName, invoice.ClientLegalName, invoice.ClientNit, invoice.ClientNcr, invoice.ClientDui,
 		invoice.ClientAddress, invoice.ClientTipoContribuyente, invoice.ClientTipoPersona,
 		invoice.Subtotal, invoice.TotalDiscount, invoice.TotalTaxes, invoice.Total,
-		invoice.Currency, invoice.PaymentTerms, invoice.PaymentMethod, invoice.PaymentStatus, invoice.AmountPaid, invoice.BalanceDue, invoice.DueDate,
+		invoice.Currency, invoice.PaymentTerms, invoice.PaymentMethod, invoice.PaymentStatus, invoice.AmountPaid, invoice.BalanceDue, invoice.DueDate, id,
 		invoice.Status, invoice.Notes, invoice.ContactEmail, invoice.ContactWhatsapp, invoice.CreatedAt,
 	)
 
@@ -728,7 +728,7 @@ func (s *InvoiceService) ListInvoices(ctx context.Context, companyID string, fil
 			subtotal, total_discount, total_taxes, total,
 			payment_terms, payment_status, amount_paid, balance_due, due_date,
 			status,
-			dte_status, dte_numero_control,
+			dte_status, dte_numero_control, dte_type, dte_codigo_generacion,
 			created_at, finalized_at,
 			notes
 		FROM invoices
@@ -794,7 +794,7 @@ func (s *InvoiceService) ListInvoices(ctx context.Context, companyID string, fil
 			&inv.Subtotal, &inv.TotalDiscount, &inv.TotalTaxes, &inv.Total,
 			&inv.PaymentTerms, &inv.PaymentStatus, &inv.AmountPaid, &inv.BalanceDue, &inv.DueDate,
 			&inv.Status,
-			&inv.DteStatus, &inv.DteNumeroControl,
+			&inv.DteStatus, &inv.DteNumeroControl, &inv.DteType, &inv.DteSello,
 			&inv.CreatedAt, &inv.FinalizedAt,
 			&inv.Notes,
 		)
@@ -808,10 +808,10 @@ func (s *InvoiceService) ListInvoices(ctx context.Context, companyID string, fil
 }
 
 func (s *InvoiceService) determineDTEType(tipoPersona string) string {
-	if tipoPersona == "2" {
-		return "03" // CCF for businesses
+	if tipoPersona == codigos.PersonTypeJuridica {
+		return codigos.DocTypeComprobanteCredito // CCF for businesses
 	}
-	return "01" // Factura for individuals (default)
+	return codigos.DocTypeFactura // Factura for individuals (default)
 }
 
 // generateNumeroControl generates the DTE numero control with strict validation

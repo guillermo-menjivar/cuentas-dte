@@ -66,6 +66,7 @@ type Invoice struct {
 
 	// DTE tracking
 	DteNumeroControl    *string    `json:"dte_numero_control,omitempty"`
+	DteSello            *string    `json:"dte_sello"`
 	DteStatus           *string    `json:"dte_status,omitempty"`
 	DteHaciendaResponse *string    `json:"dte_hacienda_response,omitempty"`
 	DteSubmittedAt      *time.Time `json:"dte_submitted_at,omitempty"`
