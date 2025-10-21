@@ -684,7 +684,7 @@ func (s *InvoiceService) getInvoiceHeader(ctx context.Context, companyID, invoic
 			currency,
 			payment_terms, payment_method, payment_status, amount_paid, balance_due, due_date,
 			status,
-			dte_numero_control, dte_status, dte_hacienda_response, dte_submitted_at,
+			dte_numero_control, dte_status, dte_hacienda_response, dte_submitted_at, dte_type,
 			created_at, finalized_at, voided_at,
 			created_by, voided_by, notes,
 			contact_email, contact_whatsapp
@@ -703,7 +703,7 @@ func (s *InvoiceService) getInvoiceHeader(ctx context.Context, companyID, invoic
 		&invoice.Currency,
 		&invoice.PaymentTerms, &invoice.PaymentMethod, &invoice.PaymentStatus, &invoice.AmountPaid, &invoice.BalanceDue, &invoice.DueDate,
 		&invoice.Status,
-		&invoice.DteNumeroControl, &invoice.DteStatus, &invoice.DteHaciendaResponse, &invoice.DteSubmittedAt, // ⭐ Removed DteCodigoGeneracion
+		&invoice.DteNumeroControl, &invoice.DteStatus, &invoice.DteHaciendaResponse, &invoice.DteSubmittedAt, &invoice.DteType, // ⭐ Removed DteCodigoGeneracion
 		&invoice.CreatedAt, &invoice.FinalizedAt, &invoice.VoidedAt,
 		&invoice.CreatedBy, &invoice.VoidedBy, &invoice.Notes,
 		&invoice.ContactEmail, &invoice.ContactWhatsapp,
@@ -1047,10 +1047,11 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 		    amount_paid = $3,
 		    balance_due = $4,
 		    dte_numero_control = $5,
+            dte_type = $6,
 		    dte_status = 'not_submitted',
-		    finalized_at = $6,
-		    created_by = $7
-		WHERE id = $8 AND company_id = $9
+		    finalized_at = $7,
+		    created_by = $8
+		WHERE id = $9 AND company_id = $10
 	`
 
 	_, err = tx.ExecContext(ctx, updateQuery,
@@ -1059,6 +1060,7 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 		payment.Amount,
 		balanceDue,
 		numeroControl,
+		dte_type,
 		now,
 		userID,
 		invoiceID,
