@@ -16,16 +16,16 @@ curl -X POST http://localhost:8080/v1/notas/debito \
   -H "X-Company-ID: ${COMPANY_ID}" \
   -d "{
   \"ccf_ids\": [
-    \"${CCF_ID}\"
+    \"2EADAAE2-40C3-4910-B0E5-A81AD4F117EF\"
   ],
   \"line_items\": [
     {
-      \"related_ccf_id\": \"${CCF_ID}\",
-      \"is_new_item\": true,
-      \"inventory_item_id\": \"11223344-5566-7788-99aa-bbccddeeff00\",
-      \"item_name\": \"Cargo por pago tardío\",
+      \"related_ccf_id\": \"2EADAAE2-40C3-4910-B0E5-A81AD4F117EF\",
+      \"is_new_item\": false,
+      \"inventory_item_id\": \"0f409222-7102-4fae-885b-586980c8bb14\",
+      \"item_name\": \"Logitech MX Master 3\",
       \"quantity\": 1,
-      \"unit_price\": 25.00,
+      \"unit_price\": 150.00,
       \"discount_amount\": 0
     }
   ],

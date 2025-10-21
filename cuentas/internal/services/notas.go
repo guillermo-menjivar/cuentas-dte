@@ -132,6 +132,7 @@ func (s *NotaService) CreateNotaDebito(
 	fmt.Printf("\n✅ Successfully validated %d CCF(s)\n", len(ccfs))
 	// Step 2 Validate line items
 	if err := s.validateLineItems(ctx, companyID, req.LineItems, ccfs); err != nil {
+		fmt.Println("we received an error from validate line items", err)
 		return err
 	}
 	// lets inspect if the item is either new or existing.
