@@ -132,7 +132,7 @@ func (s *NotaService) CreateNotaDebito(
 	fmt.Printf("\n✅ Successfully validated %d CCF(s)\n", len(ccfs))
 	// Step 2 Validate line items
 	if err := s.validateLineItems(ctx, companyID, req.LineItems, ccfs); err != nil {
-		return nil, err
+		return err
 	}
 	// lets inspect if the item is either new or existing.
 	// if its new we just add it to the total. If its existing lets make sure the price has increased
