@@ -107,6 +107,7 @@ func (r *CreateClientRequest) ValidateForCCF() error {
 		errors = append(errors, "department_code is required for CCF clients")
 	} else {
 		_, exists := codigos.GetDepartmentName(r.DepartmentCode)
+		fmt.Println("this is the department you sent", r.DepartmentCode)
 		if !exists {
 			errors = append(errors, "invalid department code")
 		}
@@ -120,6 +121,7 @@ func (r *CreateClientRequest) ValidateForCCF() error {
 		if !exists {
 			errors = append(errors, "invalid municipality code")
 		}
+		fmt.Println(r.MunicipalityCode)
 	}
 
 	// Full address required (max 200 chars per schema)
