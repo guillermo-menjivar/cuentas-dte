@@ -117,11 +117,11 @@ func (r *CreateClientRequest) ValidateForCCF() error {
 	if r.MunicipalityCode == "" {
 		errors = append(errors, "municipality_code is required for CCF clients")
 	} else {
-		_, exists := codigos.GetMunicipalityName(r.MunicipalityCode)
+		_, exists := codigos.GetMunicipalityName(fmt.Sprintf("%s.%s", r.DepartmentCode, r.MunicipalityCode))
 		if !exists {
 			errors = append(errors, "invalid municipality code")
 		}
-		fmt.Println(r.MunicipalityCode)
+		fmt.Println(r.MunicipalityCode, "this is the municipality", exists)
 	}
 
 	// Full address required (max 200 chars per schema)
