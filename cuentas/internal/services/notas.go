@@ -59,7 +59,7 @@ func (s *NotaService) validateAndFetchCCFs(
 		}
 
 		// Validate it's a CCF (type "03")
-		if &invoice.DteType != codigos.DocTypeComprobanteCredito {
+		if *invoice.DteType != codigos.DocTypeComprobanteCredito {
 			return nil, fmt.Errorf(
 				"document %s is not a CCF (type: %s). Notas de Débito can only reference CCF invoices (type 03)",
 				ccfID,
