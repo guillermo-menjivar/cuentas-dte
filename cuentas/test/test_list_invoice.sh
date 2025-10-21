@@ -74,7 +74,7 @@ if [ "$COUNT" -gt 0 ]; then
         "Total: $\(.total)\n" +
         "Status: \(.status)\n" +
         "DTE Status: \(.dte_status // "N/A")\n" +
-        "Código Gen: \(.dte_codigo_generacion // "N/A")\n" +
+        "Código Gen: \(.id // "N/A")\n" +
         "Número Control: \(.dte_numero_control // "N/A")\n" +
         "Created: \(.created_at)\n" +
         "DTE Sello \(.dte_sello)\n" +
