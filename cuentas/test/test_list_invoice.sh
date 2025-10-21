@@ -54,6 +54,7 @@ RESPONSE=$(curl -s -X GET "$API_URL" \
     -H "X-Company-ID: $COMPANY_ID")
 
 echo "Response:"
+echo "$RESPONSE"
 echo "$RESPONSE" | jq '.'
 
 # Display summary
@@ -76,6 +77,8 @@ if [ "$COUNT" -gt 0 ]; then
         "Código Gen: \(.dte_codigo_generacion // "N/A")\n" +
         "Número Control: \(.dte_numero_control // "N/A")\n" +
         "Created: \(.created_at)\n" +
+        "DTE Sello \(.dte_sello)\n" +
+        "DTE Tipo \(.dte_type)\n" +
         "Finalized: \(.finalized_at // "N/A")\n" +
         "---"'
 else
