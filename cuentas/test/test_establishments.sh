@@ -37,7 +37,7 @@ CREATE_ESTABLISHMENT_RESPONSE=$(curl -s -X POST "$BASE_URL/establishments" \
   -d '{
     "tipo_establecimiento": "02",
     "nombre": "Casa Matriz - San Salvador",
-    "cod_establecimiento": "0003",
+    "cod_establecimiento": "0006",
     "departamento": "06",
     "municipio": "14",
     "complemento_direccion": "Colonia Escalón, Calle Principal #123, San Salvador",
@@ -141,7 +141,7 @@ CREATE_PORTABLE_POS_RESPONSE=$(curl -s -X POST "$BASE_URL/establishments/$ESTABL
   -H "$COMPANY_HEADER" \
   -d '{
     "nombre": "Food Truck - Mobile POS",
-    "cod_punto_venta": "0007",
+    "cod_punto_venta": "0017",
     "latitude": 13.6989,
     "longitude": -89.1914,
     "is_portable": true
