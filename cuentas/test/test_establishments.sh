@@ -119,7 +119,7 @@ CREATE_POS_RESPONSE=$(curl -s -X POST "$BASE_URL/establishments/$ESTABLISHMENT_I
   -H "$COMPANY_HEADER" \
   -d '{
     "nombre": "Caja Principal 1",
-    "cod_punto_venta": "0003",
+    "cod_punto_venta": "0004",
     "is_portable": false
   }')
 
@@ -141,7 +141,7 @@ CREATE_PORTABLE_POS_RESPONSE=$(curl -s -X POST "$BASE_URL/establishments/$ESTABL
   -H "$COMPANY_HEADER" \
   -d '{
     "nombre": "Food Truck - Mobile POS",
-    "cod_punto_venta": "0002",
+    "cod_punto_venta": "0007",
     "latitude": 13.6989,
     "longitude": -89.1914,
     "is_portable": true
