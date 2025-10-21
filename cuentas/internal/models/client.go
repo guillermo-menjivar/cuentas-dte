@@ -19,26 +19,28 @@ var (
 
 // Client represents a client in the system
 type Client struct {
-	ID                string    `json:"id"`
-	CompanyID         string    `json:"company_id"`
-	NCR               *int64    `json:"-"`
-	NCRFormatted      string    `json:"ncr,omitempty"`
-	NIT               *int64    `json:"-"`
-	NITFormatted      string    `json:"nit,omitempty"`
-	DUI               *int64    `json:"-"`
-	DUIFormatted      string    `json:"dui,omitempty"`
-	BusinessName      string    `json:"business_name"`
-	LegalBusinessName string    `json:"legal_business_name"`
-	Giro              string    `json:"giro"`
-	TipoContribuyente string    `json:"tipo_contribuyente"`
-	FullAddress       string    `json:"full_address"`
-	CountryCode       string    `json:"country_code"`
-	DepartmentCode    string    `json:"department_code"`
-	MunicipalityCode  string    `json:"municipality_code"`
-	TipoPersona       string    `json:"tipo_persona"`
-	Active            bool      `json:"active"`
-	CreatedAt         time.Time `json:"created_at"`
-	UpdatedAt         time.Time `json:"updated_at"`
+	ID                      string    `json:"id"`
+	CompanyID               string    `json:"company_id"`
+	NCR                     *int64    `json:"-"`
+	NCRFormatted            string    `json:"ncr,omitempty"`
+	NIT                     *int64    `json:"-"`
+	NITFormatted            string    `json:"nit,omitempty"`
+	DUI                     *int64    `json:"-"`
+	DUIFormatted            string    `json:"dui,omitempty"`
+	BusinessName            string    `json:"business_name"`
+	LegalBusinessName       string    `json:"legal_business_name"`
+	Giro                    string    `json:"giro"`
+	TipoContribuyente       string    `json:"tipo_contribuyente"`
+	FullAddress             string    `json:"full_address"`
+	CountryCode             string    `json:"country_code"`
+	DepartmentCode          string    `json:"department_code"`
+	MunicipalityCode        string    `json:"municipality_code"`
+	TipoPersona             string    `json:"tipo_persona"`
+	CodActividad            string    `json:"cod_actividad"`
+	CodActividadDescription string    `json:"cod_actividad_description"`
+	Active                  bool      `json:"active"`
+	CreatedAt               time.Time `json:"created_at"`
+	UpdatedAt               time.Time `json:"updated_at"`
 }
 
 // CreateClientRequest represents the request to create a client
