@@ -59,11 +59,11 @@ func (s *ClientService) CreateClient(ctx context.Context, companyID string, req 
 	INSERT INTO clients (
 		company_id, ncr, nit, dui,
 		business_name, legal_business_name, giro, tipo_contribuyente, tipo_persona,
-		full_address, country_code, department_code, municipality_code, cod_actividad, desc_actividad
+		full_address, country_code, department_code, municipality_code, cod_actividad, desc_actividad, correo, telefono,
 	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 	RETURNING id, company_id, ncr, nit, dui, 
 			  business_name, legal_business_name, giro, tipo_contribuyente, tipo_persona,
-			  full_address, country_code, department_code, municipality_code, cod_actividad, desc_actividad,
+			  full_address, country_code, department_code, municipality_code, cod_actividad, desc_actividad, correo, telefono,
 			  active, created_at, updated_at
 `
 
@@ -72,11 +72,11 @@ func (s *ClientService) CreateClient(ctx context.Context, companyID string, req 
 	err := s.db.QueryRowContext(ctx, query,
 		companyID, ncrInt, nitInt, duiInt,
 		req.BusinessName, req.LegalBusinessName, req.Giro, req.TipoContribuyente, req.TipoPersona,
-		req.FullAddress, req.CountryCode, req.DepartmentCode, fullMunicipalityCode, req.CodActividad, req.CodActividadDescription,
+		req.FullAddress, req.CountryCode, req.DepartmentCode, fullMunicipalityCode, req.CodActividad, req.CodActividadDescription, req.Correo, req.Telefono,
 	).Scan(
 		&client.ID, &client.CompanyID, &client.NCR, &client.NIT, &client.DUI,
 		&client.BusinessName, &client.LegalBusinessName, &client.Giro, &client.TipoContribuyente, &client.TipoPersona,
-		&client.FullAddress, &client.CountryCode, &client.DepartmentCode, &client.MunicipalityCode, &req.CodActividad, &req.CodActividadDescription,
+		&client.FullAddress, &client.CountryCode, &client.DepartmentCode, &client.MunicipalityCode, &req.CodActividad, &req.CodActividadDescription, &req.Correo, &req.Telefono,
 		&client.Active, &client.CreatedAt, &client.UpdatedAt,
 	)
 
@@ -102,7 +102,7 @@ func (s *ClientService) GetClientByID(ctx context.Context, companyID, clientID s
 	query := `
 		SELECT id, company_id, ncr, nit, dui,
 			   business_name, legal_business_name, giro, tipo_contribuyente, tipo_persona,
-			   full_address, country_code, department_code, municipality_code, cod_actividad, desc_actividad,
+			   full_address, country_code, department_code, municipality_code, cod_actividad, desc_actividad, correo, telefono,
 			   active, created_at, updated_at
 		FROM clients
 		WHERE id = $1 AND company_id = $2
@@ -112,7 +112,7 @@ func (s *ClientService) GetClientByID(ctx context.Context, companyID, clientID s
 	err := s.db.QueryRowContext(ctx, query, clientID, companyID).Scan(
 		&client.ID, &client.CompanyID, &client.NCR, &client.NIT, &client.DUI,
 		&client.BusinessName, &client.LegalBusinessName, &client.Giro, &client.TipoContribuyente, &client.TipoPersona,
-		&client.FullAddress, &client.CountryCode, &client.DepartmentCode, &client.MunicipalityCode, &client.CodActividad, &client.CodActividadDescription,
+		&client.FullAddress, &client.CountryCode, &client.DepartmentCode, &client.MunicipalityCode, &client.CodActividad, &client.CodActividadDescription, &client.Correo, &client.Telefono,
 		&client.Active, &client.CreatedAt, &client.UpdatedAt,
 	)
 	if err != nil {

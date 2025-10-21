@@ -41,6 +41,8 @@ type Client struct {
 	Active                  bool      `json:"active"`
 	CreatedAt               time.Time `json:"created_at"`
 	UpdatedAt               time.Time `json:"updated_at"`
+	Correo                  string    `json:"correo"`
+	Telefono                string    `json:"telefono"`
 }
 
 // CreateClientRequest represents the request to create a client
