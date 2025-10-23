@@ -121,6 +121,17 @@ func (r *CreateInventoryItemRequest) Validate() error {
 		return fmt.Errorf("cost_price cannot be negative")
 	}
 
+	// Validate tax exempt logic
+	isTaxExempt := false
+	if r.IsTaxExempt != nil {
+		isTaxExempt = *r.IsTaxExempt
+	}
+
+	// If tax exempt, should not have taxes
+	if isTaxExempt && len(r.Taxes) > 0 {
+		return fmt.Errorf("tax exempt items cannot have taxes")
+	}
+
 	// Validate taxes if provided
 	for i, tax := range r.Taxes {
 		if err := tax.Validate(); err != nil {
