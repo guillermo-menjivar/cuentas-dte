@@ -21,7 +21,6 @@ func NewInventoryService(db *sql.DB) *InventoryService {
 }
 
 // CreateItem creates a new inventory item with its taxes
-// CreateItem creates a new inventory item with its taxes
 func (s *InventoryService) CreateItem(ctx context.Context, companyID string, req *models.CreateInventoryItemRequest) (*models.InventoryItem, error) {
 	// Generate SKU if not provided
 	sku := ""
@@ -124,7 +123,7 @@ func (s *InventoryService) GetItemByID(ctx context.Context, companyID, itemID st
 	query := `
 		SELECT id, company_id, tipo_item, sku, codigo_barras,
 			   name, description, manufacturer, image_url,
-			   unit_of_measure, color, is_tax_exempt,
+			   unit_price, unit_of_measure, color, is_tax_exempt,
 			   active, created_at, updated_at
 		FROM inventory_items
 		WHERE id = $1 AND company_id = $2
@@ -134,7 +133,7 @@ func (s *InventoryService) GetItemByID(ctx context.Context, companyID, itemID st
 	err := s.db.QueryRowContext(ctx, query, itemID, companyID).Scan(
 		&item.ID, &item.CompanyID, &item.TipoItem, &item.SKU, &item.CodigoBarras,
 		&item.Name, &item.Description, &item.Manufacturer, &item.ImageURL,
-		&item.UnitOfMeasure, &item.Color, &item.IsTaxExempt,
+		&item.UnitPrice, &item.UnitOfMeasure, &item.Color, &item.IsTaxExempt,
 		&item.Active, &item.CreatedAt, &item.UpdatedAt,
 	)
 	if err != nil {
@@ -155,7 +154,7 @@ func (s *InventoryService) ListItems(ctx context.Context, companyID string, acti
 	query := `
 		SELECT id, company_id, tipo_item, sku, codigo_barras,
 			   name, description, manufacturer, image_url,
-			   unit_of_measure, color, is_tax_exempt,
+			   unit_price, unit_of_measure, color, is_tax_exempt,
 			   active, created_at, updated_at
 		FROM inventory_items
 		WHERE company_id = $1
@@ -190,7 +189,7 @@ func (s *InventoryService) ListItems(ctx context.Context, companyID string, acti
 		err := rows.Scan(
 			&item.ID, &item.CompanyID, &item.TipoItem, &item.SKU, &item.CodigoBarras,
 			&item.Name, &item.Description, &item.Manufacturer, &item.ImageURL,
-			&item.UnitOfMeasure, &item.Color, &item.IsTaxExempt,
+			&item.UnitPrice, &item.UnitOfMeasure, &item.Color, &item.IsTaxExempt,
 			&item.Active, &item.CreatedAt, &item.UpdatedAt,
 		)
 		if err != nil {
