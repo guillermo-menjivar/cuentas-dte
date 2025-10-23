@@ -54,8 +54,8 @@ func (s *InventoryService) RecordPurchase(
 	// Build event data
 	eventData := map[string]interface{}{
 		"quantity":   req.Quantity,
-		"unit_cost":  req.UnitCost,
-		"total_cost": req.Quantity * req.UnitCost,
+		"unit_cost":  req.UnitCost.Float64(),
+		"total_cost": purchaseTotal.Float64(),
 	}
 	if req.ReferenceType != nil {
 		eventData["reference_type"] = *req.ReferenceType
