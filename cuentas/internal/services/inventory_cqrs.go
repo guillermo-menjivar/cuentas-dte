@@ -235,7 +235,6 @@ func (s *InventoryService) RecordAdjustment(
 	`
 
 	var event models.InventoryEvent
-	reason := req.Reason
 	err = tx.QueryRowContext(ctx, eventQuery,
 		companyID, itemID, "ADJUSTMENT",
 		nextVersion, req.Quantity, unitCost, req.Quantity*unitCost,
