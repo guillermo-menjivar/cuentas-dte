@@ -98,11 +98,11 @@ func (s *InventoryService) RecordPurchase(
 	`
 
 	var event models.InventoryEvent
-	err = tx.QueryRow(ctx, eventQuery,
+	err = tx.QueryRowContext(ctx, eventQuery, // Changed from tx.QueryRow to tx.QueryRowContext
 		companyID, itemID, "PURCHASE",
-		nextVersion, req.Quantity, req.UnitCost.Float64(), purchaseTotal.Float64(), // ← Add .Float64()
-		newQuantity, newTotalCost.Float64(), // ← Add .Float64()
-		currentState.CurrentAvgCost.Float64(), newAvgCost.Float64(), // ← Add .Float64()
+		nextVersion, req.Quantity, req.UnitCost.Float64(), purchaseTotal.Float64(),
+		newQuantity, newTotalCost.Float64(),
+		currentState.CurrentAvgCost.Float64(), newAvgCost.Float64(),
 		req.ReferenceType, req.ReferenceID, req.CorrelationID,
 		eventDataJSON, req.Notes, nil,
 	).Scan(
@@ -118,7 +118,7 @@ func (s *InventoryService) RecordPurchase(
 	}
 
 	// Update state
-	err = s.updateInventoryStateTx(ctx, tx, companyID, itemID, newQuantity, newTotalCost, event.EventID, nextVersion, currentState.AggregateVersion)
+	err = s.updateInventoryStateTx(ctx, tx, companyID, itemID, newQuantity, newTotalCost.Float64(), event.EventID, nextVersion, currentState.AggregateVersion) // Changed to .Float64()
 	if err != nil {
 		return nil, fmt.Errorf("failed to update state: %w", err)
 	}
