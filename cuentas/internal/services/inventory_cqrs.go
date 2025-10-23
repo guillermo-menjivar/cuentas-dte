@@ -161,6 +161,12 @@ func (s *InventoryService) RecordAdjustment(
 		return nil, fmt.Errorf("failed to get current state: %w", err)
 	}
 
+	// Calculate new quantity first (needed for validation)
+	newQuantity := currentState.CurrentQuantity + req.Quantity
+	if newQuantity < 0 {
+		return nil, fmt.Errorf("adjustment would result in negative quantity (current: %.2f, adjustment: %.2f)", currentState.CurrentQuantity, req.Quantity)
+	}
+
 	// Determine unit cost
 	var unitCost models.Money
 	if req.Quantity > 0 {
@@ -172,15 +178,16 @@ func (s *InventoryService) RecordAdjustment(
 		unitCost = currentState.CurrentAvgCost
 	}
 
+	// Calculate new values
 	adjustmentTotal := unitCost.Mul(req.Quantity)
 	newTotalCost := currentState.CurrentTotalCost.Add(adjustmentTotal)
-	if newTotalCost < 0 {
+	if newTotalCost.Float64() < 0 { // Fixed: added .Float64()
 		newTotalCost = 0 // Safety check
 	}
 
-	newAvgCost := models.Money
+	var newAvgCost models.Money // Fixed: changed from float64
 	if newQuantity > 0 {
-		newAvgCost = newTotalCost.Div(newQuantity)
+		newAvgCost = newTotalCost.Div(newQuantity) // Fixed: use .Div()
 	}
 
 	nextVersion := currentState.AggregateVersion + 1
@@ -188,8 +195,8 @@ func (s *InventoryService) RecordAdjustment(
 	// Build event data
 	eventData := map[string]interface{}{
 		"quantity":   req.Quantity,
-		"unit_cost":  unitCost,
-		"total_cost": req.Quantity * unitCost,
+		"unit_cost":  unitCost.Float64(),        // Fixed: added .Float64()
+		"total_cost": adjustmentTotal.Float64(), // Fixed: use adjustmentTotal
 		"reason":     req.Reason,
 	}
 	if req.ReferenceType != nil {
@@ -232,9 +239,9 @@ func (s *InventoryService) RecordAdjustment(
 	var event models.InventoryEvent
 	err = tx.QueryRowContext(ctx, eventQuery,
 		companyID, itemID, "ADJUSTMENT",
-		nextVersion, req.Quantity, unitCost.Float64(), adjustmentTotal.Float64(), // ← .Float64()
-		newQuantity, newTotalCost.Float64(), // ← .Float64()
-		currentState.CurrentAvgCost.Float64(), newAvgCost.Float64(), // ← .Float64()
+		nextVersion, req.Quantity, unitCost.Float64(), adjustmentTotal.Float64(),
+		newQuantity, newTotalCost.Float64(),
+		currentState.CurrentAvgCost.Float64(), newAvgCost.Float64(),
 		req.ReferenceType, req.ReferenceID, req.CorrelationID,
 		eventDataJSON, req.Reason, nil,
 	).Scan(
@@ -250,7 +257,7 @@ func (s *InventoryService) RecordAdjustment(
 	}
 
 	// Update state
-	err = s.updateInventoryStateTx(ctx, tx, companyID, itemID, newQuantity, newTotalCost, event.EventID, nextVersion, currentState.AggregateVersion)
+	err = s.updateInventoryStateTx(ctx, tx, companyID, itemID, newQuantity, newTotalCost.Float64(), event.EventID, nextVersion, currentState.AggregateVersion) // Fixed: added .Float64()
 	if err != nil {
 		return nil, fmt.Errorf("failed to update state: %w", err)
 	}
