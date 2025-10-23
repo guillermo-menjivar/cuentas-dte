@@ -14,12 +14,12 @@ type InventoryEvent struct {
 	EventTimestamp        time.Time       `json:"event_timestamp"`
 	AggregateVersion      int             `json:"aggregate_version"`
 	Quantity              float64         `json:"quantity"`
-	UnitCost              float64         `json:"unit_cost"`
-	TotalCost             float64         `json:"total_cost"`
+	UnitCost              Money           `json:"unit_cost"`
+	TotalCost             Money           `json:"total_cost"`
 	BalanceQuantityAfter  float64         `json:"balance_quantity_after"`
-	BalanceTotalCostAfter float64         `json:"balance_total_cost_after"`
-	MovingAvgCostBefore   float64         `json:"moving_avg_cost_before"`
-	MovingAvgCostAfter    float64         `json:"moving_avg_cost_after"`
+	BalanceTotalCostAfter Money           `json:"balance_total_cost_after"`
+	MovingAvgCostBefore   Money           `json:"moving_avg_cost_before"`
+	MovingAvgCostAfter    Money           `json:"moving_avg_cost_after"`
 	ReferenceType         *string         `json:"reference_type,omitempty"`
 	ReferenceID           *string         `json:"reference_id,omitempty"`
 	CorrelationID         *string         `json:"correlation_id,omitempty"`
@@ -34,8 +34,8 @@ type InventoryState struct {
 	CompanyID        string    `json:"company_id"`
 	ItemID           string    `json:"item_id"`
 	CurrentQuantity  float64   `json:"current_quantity"`
-	CurrentTotalCost float64   `json:"current_total_cost"`
-	CurrentAvgCost   float64   `json:"current_avg_cost"`
+	CurrentTotalCost Money     `json:"current_total_cost"`
+	CurrentAvgCost   Money     `json:"current_avg_cost"`
 	LastEventID      *int64    `json:"last_event_id,omitempty"`
 	AggregateVersion int       `json:"aggregate_version"`
 	UpdatedAt        time.Time `json:"updated_at"`
@@ -58,7 +58,7 @@ type InventoryStateWithItem struct {
 // RecordPurchaseRequest represents a request to record a purchase
 type RecordPurchaseRequest struct {
 	Quantity      float64 `json:"quantity" binding:"required,gt=0"`
-	UnitCost      float64 `json:"unit_cost" binding:"required,gt=0"`
+	UnitCost      Money   `json:"unit_cost" binding:"required,gt=0"`
 	Notes         *string `json:"notes"`
 	ReferenceType *string `json:"reference_type"`
 	ReferenceID   *string `json:"reference_id"`
@@ -67,12 +67,12 @@ type RecordPurchaseRequest struct {
 
 // RecordAdjustmentRequest represents a request to record an inventory adjustment
 type RecordAdjustmentRequest struct {
-	Quantity      float64  `json:"quantity" binding:"required,ne=0"`
-	UnitCost      *float64 `json:"unit_cost"`
-	Reason        string   `json:"reason" binding:"required"`
-	ReferenceType *string  `json:"reference_type"`
-	ReferenceID   *string  `json:"reference_id"`
-	CorrelationID *string  `json:"correlation_id"`
+	Quantity      float64 `json:"quantity" binding:"required,ne=0"`
+	UnitCost      *Money  `json:"unit_cost"`
+	Reason        string  `json:"reason" binding:"required"`
+	ReferenceType *string `json:"reference_type"`
+	ReferenceID   *string `json:"reference_id"`
+	CorrelationID *string `json:"correlation_id"`
 }
 
 func (r *RecordAdjustmentRequest) Validate() error {
