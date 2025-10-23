@@ -1,0 +1,886 @@
+Inventory Cost Tracking System - Implementation Plan
+Executive Summary
+This plan implements a moving average cost tracking system for inventory using CQRS (Command Query Responsibility Segregation) pattern with event sourcing. The system will provide accurate cost tracking, complete audit trails for Hacienda compliance, and powerful reporting capabilities for business insights.
+
+Goals & Capabilities
+Primary Goals:
+
+Track moving average cost for all inventory items
+Maintain complete, immutable audit trail of all inventory movements
+Provide accurate inventory valuation at any point in time
+Enable Hacienda-compliant reporting with 10-year retention
+Deliver actionable cost insights to customers
+
+Key Capabilities Delivered:
+For Business Owners:
+
+Accurate moving average cost calculation
+Real-time inventory valuation
+Historical cost analysis and trends
+Better pricing decisions based on true costs
+Alerts for cost increases and inventory issues
+
+For Hacienda Compliance:
+
+Accurate Cost of Goods Sold (COGS) foundation
+Year-end inventory valuation reports
+Complete audit trail (immutable)
+Point-in-time inventory reconstruction
+Purchase documentation for expense verification
+
+Reporting Capabilities:
+
+Current inventory summary with values
+Cost history and trend analysis
+Purchase analysis by supplier/period
+Low stock alerts
+Inventory efficiency metrics
+Transaction audit trail
+
+
+Architecture Overview
+CQRS Pattern:
+Write Side (Event Log):
+
+inventory_events - Immutable transaction log
+Only INSERT operations
+Source of truth for all inventory movements
+Never UPDATE or DELETE
+
+Read Side (Projections):
+
+inventory_state - Current snapshot optimized for queries
+Updated from events (synchronously in Phase 1)
+Can be rebuilt from events if corrupted
+
+Master Data:
+
+inventory_items - Product catalog (modified role)
+Reference data only, no quantities or costs
+
+
+Table Relationships & Architecture
+Three-Table System:
+inventory_items (1) ← Product Catalog
+    ↓ (referenced by)
+inventory_events (many) ← Transaction Log
+    ↓ (updates)
+inventory_state (1) ← Current Snapshot
+```
+
+### **Role Changes:**
+
+**OLD inventory_items (before):**
+- Product catalog ✓
+- Current inventory quantities ✓
+- Current costs ✓
+- Gets updated frequently ✓
+
+**NEW inventory_items (after):**
+- Product catalog ✓
+- Reference data ONLY
+- Rarely updated (only when product details change)
+- Does NOT track quantities or costs anymore
+
+**What moved out:**
+- Quantities → `inventory_state`
+- Costs → `inventory_state` (moving average)
+- History → `inventory_events`
+
+---
+
+### **Concrete Example of How Tables Work Together**
+
+**Example: Dell Laptop Product**
+
+**inventory_items (Master Data):**
+```
+├── id: uuid-123
+├── company_id: company-abc
+├── sku: "LAPTOP-001"
+├── name: "Dell Laptop"
+├── unit_price: $800 (selling price)
+├── minimum_stock: 10
+├── unit_of_measure: "unit"
+├── active: true
+```
+**Role:** Just describes "what is this product"
+
+---
+
+**inventory_events (Transaction History):**
+```
+Event 1:
+├── event_id: 1
+├── item_id: uuid-123 (FK → inventory_items)
+├── company_id: company-abc
+├── event_type: "PURCHASE"
+├── quantity: 10
+├── unit_cost: $400
+├── moving_avg_before: $0
+├── moving_avg_after: $400
+├── balance_quantity_after: 10
+├── created_at: Jan 1, 2025
+
+Event 2:
+├── event_id: 2
+├── item_id: uuid-123
+├── event_type: "PURCHASE"
+├── quantity: 20
+├── unit_cost: $450
+├── moving_avg_before: $400
+├── moving_avg_after: $433.33
+├── balance_quantity_after: 30
+├── created_at: Jan 15, 2025
+
+Event 3:
+├── event_id: 3
+├── item_id: uuid-123
+├── event_type: "ADJUSTMENT"
+├── quantity: -5
+├── unit_cost: $433.33
+├── moving_avg_before: $433.33
+├── moving_avg_after: $433.33
+├── balance_quantity_after: 25
+├── notes: "Damaged in warehouse"
+├── created_at: Jan 20, 2025
+```
+**Role:** Complete, immutable history of all movements
+
+---
+
+**inventory_state (Current Snapshot):**
+```
+├── company_id: company-abc
+├── item_id: uuid-123 (FK → inventory_items)
+├── current_quantity: 25
+├── current_total_cost: $10,833.25
+├── current_avg_cost: $433.33 (auto-calculated)
+├── last_event_id: 3
+├── aggregate_version: 3
+├── updated_at: Jan 20, 2025
+```
+**Role:** Fast lookups of current state
+
+---
+
+### **Example Transaction Flow**
+
+**User Action:** "Purchase 15 more Dell Laptops at $470 each"
+
+**Step 1: Query Current State**
+```
+SELECT current_quantity, current_total_cost, current_avg_cost, aggregate_version
+FROM inventory_state
+WHERE company_id = company-abc AND item_id = uuid-123
+
+Result: qty=25, total=$10,833.25, avg=$433.33, version=3
+```
+
+**Step 2: Calculate New Values**
+```
+New total = $10,833.25 + (15 × $470) = $17,883.25
+New quantity = 25 + 15 = 40
+New average = $17,883.25 / 40 = $447.08
+```
+
+**Step 3: Write Event (INSERT only)**
+```
+INSERT INTO inventory_events
+VALUES (
+    event_id: 4,
+    item_id: uuid-123,
+    event_type: 'PURCHASE',
+    quantity: 15,
+    unit_cost: $470,
+    moving_avg_before: $433.33,
+    moving_avg_after: $447.08,
+    balance_quantity_after: 40,
+    aggregate_version: 4,
+    ...
+)
+```
+
+**Step 4: Update State (UPDATE)**
+```
+UPDATE inventory_state
+SET 
+    current_quantity = 40,
+    current_total_cost = $17,883.25,
+    aggregate_version = 4,
+    last_event_id = 4
+WHERE company_id = company-abc 
+  AND item_id = uuid-123
+  AND aggregate_version = 3 (optimistic lock)
+```
+
+**Result:**
+- Event recorded permanently
+- State updated with new values
+- Cost changed: $433.33 → $447.08
+
+---
+
+### **Query Examples**
+
+**Query 1: Current Inventory Dashboard**
+```
+SELECT 
+    i.sku,
+    i.name,
+    s.current_quantity,
+    s.current_avg_cost,
+    s.current_total_cost
+FROM inventory_state s
+JOIN inventory_items i ON i.id = s.item_id
+WHERE s.company_id = ?
+
+Uses: inventory_items + inventory_state
+```
+
+**Query 2: Cost History for Product**
+```
+SELECT 
+    created_at,
+    event_type,
+    quantity,
+    unit_cost,
+    moving_avg_after
+FROM inventory_events
+WHERE company_id = ? AND item_id = ?
+ORDER BY created_at
+
+Uses: inventory_events only
+```
+
+**Query 3: Product Details with Inventory**
+```
+SELECT 
+    i.sku,
+    i.name,
+    i.unit_price,
+    i.minimum_stock,
+    s.current_quantity,
+    s.current_avg_cost
+FROM inventory_items i
+LEFT JOIN inventory_state s 
+    ON s.item_id = i.id
+WHERE i.company_id = ? AND i.active = true
+
+Uses: inventory_items + inventory_state
+```
+
+---
+
+### **Foreign Key Relationships**
+
+**inventory_items:**
+- No foreign keys OUT
+- Referenced BY: `inventory_events.item_id`
+- Referenced BY: `inventory_state.item_id`
+
+**inventory_events:**
+```
+FOREIGN KEY (item_id) REFERENCES inventory_items(id)
+FOREIGN KEY (company_id) REFERENCES companies(id)
+```
+
+**inventory_state:**
+```
+FOREIGN KEY (item_id) REFERENCES inventory_items(id)
+FOREIGN KEY (company_id) REFERENCES companies(id)
+PRIMARY KEY (company_id, item_id)
+```
+
+---
+
+## **Database Schema Changes**
+
+### **1. Modify Existing `inventory_items` Table**
+
+**Changes Required:**
+
+**REMOVE these columns:**
+- `current_stock` → Moving to `inventory_state`
+- `cost_price` → Moving to `inventory_state` (as moving average)
+
+**KEEP all other columns:**
+- `id, company_id, tipo_item`
+- `sku, codigo_barras`
+- `name, description`
+- `manufacturer, image_url`
+- `unit_price` (selling price)
+- `unit_of_measure`
+- `color`
+- `track_inventory` (boolean flag)
+- `minimum_stock` (for alerts)
+- `active, created_at, updated_at`
+
+**New Role:**
+- Product catalog/master data only
+- No operational inventory data
+- Reference table for item details
+
+**Keep existing:**
+- All indexes
+- All constraints
+- Update trigger
+
+---
+
+### **2. Create `inventory_events` Table (Event Log)**
+
+**Purpose:** Immutable transaction log of all inventory movements
+
+**Key Fields:**
+
+**Identity:**
+- `event_id` - BIGSERIAL primary key
+- `company_id` - UUID (tenant isolation)
+- `item_id` - UUID (references inventory_items)
+
+**Event Details:**
+- `event_type` - VARCHAR(50): 'PURCHASE', 'ADJUSTMENT', 'INITIAL'
+- `event_timestamp` - TIMESTAMPTZ
+- `aggregate_version` - INT (for optimistic locking)
+
+**Transaction Data:**
+- `quantity` - DECIMAL(15,4) (positive for additions)
+- `unit_cost` - DECIMAL(15,4) (cost of this transaction)
+- `total_cost` - DECIMAL(15,2) (quantity × unit_cost)
+
+**State Tracking (Critical for Cost History):**
+- `balance_quantity_after` - DECIMAL(15,4)
+- `balance_total_cost_after` - DECIMAL(15,2)
+- `moving_avg_cost_before` - DECIMAL(15,4)
+- `moving_avg_cost_after` - DECIMAL(15,4)
+
+**References:**
+- `reference_type` - VARCHAR(50) (e.g., 'purchase_order', 'adjustment')
+- `reference_id` - UUID
+- `correlation_id` - UUID (group related events)
+
+**Complete Context:**
+- `event_data` - JSONB (full transaction context)
+
+**Audit:**
+- `notes` - TEXT
+- `created_by_user_id` - UUID
+- `created_at` - TIMESTAMPTZ
+
+**Constraints:**
+- CHECK: event_type in valid values
+- CHECK: quantity > 0 for purchases
+- UNIQUE: (company_id, item_id, aggregate_version) for optimistic locking
+
+**Indexes:**
+- (company_id, item_id, created_at DESC)
+- (company_id, event_type, created_at DESC)
+- (reference_type, reference_id)
+- (created_at DESC) for archival queries
+
+**Important:** This table is append-only. Never UPDATE or DELETE records.
+
+---
+
+### **3. Create `inventory_state` Table (Current Snapshot)**
+
+**Purpose:** Fast queries for current inventory levels and costs
+
+**Key Fields:**
+
+**Identity:**
+- `company_id` - UUID
+- `item_id` - UUID
+- PRIMARY KEY (company_id, item_id)
+
+**Current State:**
+- `current_quantity` - DECIMAL(15,4) NOT NULL DEFAULT 0
+- `current_total_cost` - DECIMAL(15,2) NOT NULL DEFAULT 0
+- `current_avg_cost` - DECIMAL(15,4) GENERATED ALWAYS AS (CASE WHEN current_quantity > 0 THEN current_total_cost / current_quantity ELSE 0 END) STORED
+
+**Metadata:**
+- `last_event_id` - BIGINT (last event processed)
+- `aggregate_version` - INT (optimistic lock, matches events)
+- `updated_at` - TIMESTAMPTZ
+
+**Constraints:**
+- CHECK: current_quantity >= 0
+- CHECK: current_total_cost >= 0
+- FOREIGN KEY: item_id references inventory_items(id)
+
+**Indexes:**
+- (company_id, item_id) - Primary key
+- (company_id, current_quantity) WHERE current_quantity > 0 - For in-stock queries
+- (company_id, updated_at DESC) - For recent changes
+
+**Note:** This table gets UPDATED. It's the only table in the system that does.
+
+---
+
+### **4. Keep `inventory_item_taxes` Table (No Changes)**
+
+**No modifications needed:**
+- Remains as reference data
+- Links items to tax codes
+- Not involved in cost tracking
+
+---
+
+## **Data Flow**
+
+### **Purchase Flow (Adding Inventory):**
+
+**Input:**
+- Company ID
+- Item ID
+- Quantity purchased
+- Unit cost
+- Reference (purchase order, supplier invoice, etc.)
+- User ID
+
+**Process:**
+
+**Step 1: Get Current State**
+- Query `inventory_state` for current quantity, total cost, moving average
+- If item doesn't exist in state, initialize with zeros
+
+**Step 2: Calculate New Values**
+- New total cost = current_total_cost + (quantity × unit_cost)
+- New quantity = current_quantity + quantity
+- New moving average = new_total_cost / new_quantity
+
+**Step 3: Write Event (Transaction Begin)**
+- INSERT into `inventory_events`:
+  - Event type: 'PURCHASE'
+  - Quantity and unit cost
+  - Moving average BEFORE
+  - Moving average AFTER
+  - New balances
+  - Reference info
+  - Complete event data as JSONB
+
+**Step 4: Update State**
+- UPDATE `inventory_state`:
+  - Set new quantity
+  - Set new total cost
+  - Increment aggregate_version
+  - Update last_event_id
+  - (moving average auto-calculated by generated column)
+
+**Step 5: Commit Transaction**
+- Both event and state updated atomically
+
+**Result:**
+- Immutable event recorded
+- Current state updated
+- Moving average recalculated
+
+---
+
+### **Adjustment Flow (Corrections):**
+
+**Input:**
+- Company ID
+- Item ID
+- Quantity adjustment (can be + or -)
+- Reason
+- User ID
+
+**Process:**
+
+**Step 1: Get Current State**
+- Query `inventory_state`
+
+**Step 2: Determine Cost Impact**
+- If adding quantity (+): require unit cost (like purchase)
+- If removing quantity (-): use current moving average cost
+
+**Step 3: Calculate New Values**
+- Similar to purchase but may be adding or removing
+
+**Step 4: Write Event**
+- Event type: 'ADJUSTMENT'
+- Include reason in notes
+- Record cost impact
+
+**Step 5: Update State**
+- Adjust quantity and total cost
+- Moving average recalculated
+
+**Step 6: Commit Transaction**
+
+---
+
+### **Query Flow (Getting Current Cost):**
+
+**For Current Inventory:**
+```
+Query: inventory_state
+Filter: company_id = ?
+Result: current_quantity, current_avg_cost, total_value
+```
+
+**For Cost History:**
+```
+Query: inventory_events
+Filter: company_id = ?, item_id = ?
+Order: created_at
+Result: All cost changes over time
+```
+
+**For Point-in-Time Valuation:**
+```
+Query: inventory_events
+Filter: company_id = ?, created_at <= target_date
+Aggregate: Sum quantities, get last moving_avg_after
+Result: Historical inventory state
+```
+
+---
+
+## **Data Flow Visual Summary**
+
+### **When Product Created:**
+```
+INSERT inventory_items
+(sku, name, description, etc.)
+↓
+No inventory yet - just product definition
+```
+
+### **When First Inventory Added:**
+```
+INSERT inventory_events
+(INITIAL, qty: 100, cost: $400)
+↓
+INSERT inventory_state
+(qty: 100, total: $40,000, avg: $400)
+```
+
+### **When More Inventory Purchased:**
+```
+INSERT inventory_events
+(PURCHASE, qty: 50, cost: $450)
+↓
+UPDATE inventory_state
+(qty: 150, total: $62,500, avg: $416.67)
+```
+
+### **When Querying:**
+```
+Fast lookup → inventory_state
+Product info → inventory_items
+History → inventory_events
+
+Implementation Phases
+Phase 1: Schema Migration (No Breaking Changes)
+Deliverables:
+
+Create inventory_events table
+Create inventory_state table
+Keep inventory_items unchanged initially
+Add database migration scripts
+
+Testing:
+
+Verify tables created correctly
+Test indexes performance
+Validate constraints
+
+
+Phase 2: Dual Write (Transition Period)
+Deliverables:
+
+Implement purchase event recording
+Write to BOTH old and new tables
+inventory_items.current_stock still updated (backward compatibility)
+New inventory_events and inventory_state also populated
+
+Testing:
+
+Verify data written to both systems
+Validate moving average calculations
+Compare old vs new values
+
+
+Phase 3: Switch Reads to New System
+Deliverables:
+
+Update queries to read from inventory_state
+Stop reading inventory_items.current_stock
+Maintain writes to both systems
+Validate accuracy
+
+Testing:
+
+All inventory queries use new tables
+Performance acceptable
+Results match old system
+
+
+Phase 4: Remove Old Columns
+Deliverables:
+
+Remove current_stock from inventory_items
+Remove cost_price from inventory_items
+Stop dual writes
+Update all application code
+
+Testing:
+
+No references to old columns
+All features working
+Data migration complete
+
+
+Phase 5: Reporting & Analytics
+Deliverables:
+
+Current inventory dashboard
+Cost history reports
+Purchase analysis reports
+Audit trail queries
+Low stock alerts
+
+Testing:
+
+All reports accurate
+Performance acceptable
+Export capabilities
+
+
+Key Reports to Implement
+1. Current Inventory Summary
+
+Source: inventory_state JOIN inventory_items
+Shows: Product, quantity, average cost, total value
+Filters: Company, active items, in-stock only
+Export: PDF, Excel
+
+2. Cost History Report
+
+Source: inventory_events
+Shows: Date, event type, quantity, cost, new average
+Filters: Company, item, date range
+Visualization: Cost trend line chart
+
+3. Inventory Valuation Report
+
+Source: inventory_state aggregated
+Shows: Total inventory value by category
+Purpose: Financial statements, Hacienda filing
+Export: PDF with signature
+
+4. Purchase Analysis
+
+Source: inventory_events WHERE event_type = 'PURCHASE'
+Shows: Total purchases, frequency, suppliers, cost trends
+Filters: Date range, supplier, item
+Insights: Cost increases, best suppliers
+
+5. Transaction Audit Trail
+
+Source: inventory_events
+Shows: Complete movement history
+Filters: Company, item, date range, event type
+Purpose: Internal audits, Hacienda compliance
+Must be exportable and printable
+
+6. Low Stock Alert Report
+
+Source: inventory_state JOIN inventory_items
+Shows: Items below minimum_stock threshold
+Real-time or scheduled
+Email/notification capability
+
+7. Point-in-Time Valuation
+
+Source: inventory_events replayed to target date
+Shows: Inventory value on specific historical date
+Purpose: Year-end reporting, tax filing
+Input: Target date
+Output: Complete inventory snapshot
+
+
+Data Migration Strategy
+For Existing Data:
+If you have current inventory quantities:
+
+Create INITIAL events for each existing item
+Event type: 'INITIAL'
+Quantity: current stock
+Cost: current cost_price (if available) or estimate
+Timestamp: migration date
+Notes: "Initial migration from legacy system"
+
+If you have historical data:
+
+Import in chronological order
+Each historical purchase becomes an event
+Calculate moving averages correctly
+Validate final state matches current
+
+If starting fresh:
+
+No migration needed
+Start recording events from go-live
+Initial inventory becomes first events
+
+
+Critical Constraints & Rules
+Immutability Rules:
+
+NEVER UPDATE inventory_events table
+NEVER DELETE from inventory_events table
+Only INSERT into inventory_events
+If correction needed: insert compensating event
+
+Optimistic Locking:
+
+aggregate_version increments with each event
+Prevents concurrent update conflicts
+Failed version check = retry transaction
+
+Cost Calculation Rules:
+
+Moving average = total_cost / quantity
+Purchases add: new_avg = (old_total + purchase_cost) / (old_qty + purchase_qty)
+Division by zero: when quantity = 0, average = 0
+Negative quantities not allowed in state
+
+Event Ordering:
+
+Events processed in timestamp order
+aggregate_version ensures ordering
+Replaying events must be deterministic
+
+
+Performance Considerations
+Indexes Strategy:
+
+inventory_state: Indexed by (company_id, item_id) for fast lookups
+inventory_events: Indexed by (company_id, item_id, created_at) for history queries
+Partitioning: Consider partitioning inventory_events by date when > 1M rows
+
+Query Optimization:
+
+Current inventory: Always query inventory_state (fast)
+Historical queries: Query inventory_events (may be slower but infrequent)
+Large date ranges: Consider pre-aggregated reports
+
+Scaling Path:
+
+Phase 1 (now): All in Postgres
+Phase 2 (later): Archive old events to ClickHouse
+Phase 3 (future): Read replicas for reporting
+
+
+Hacienda Compliance Features
+10-Year Retention:
+
+inventory_events retained forever
+Archive to ClickHouse after 12-24 months
+Can reconstruct any historical date
+
+Audit Trail Requirements:
+
+Every movement documented with timestamp
+User who made change recorded
+Immutable (can't alter history)
+Can export complete transaction log
+
+Required Reports:
+
+Year-end inventory valuation
+Purchase documentation (expense deductions)
+Cost basis for COGS calculations (Phase 2)
+Point-in-time reconstruction for audits
+
+
+Future Expansion (Out of Scope for Phase 1)
+Sales Integration:
+
+Record COGS using moving average at time of sale
+Store cost_at_sale for return handling
+Generate accurate gross profit reports
+
+Returns Handling:
+
+Return items at original sale cost
+Recalculate moving average when returned
+Track return rates and reasons
+
+DTE Integration:
+
+Use moving average cost for COGS on invoices
+Link DTE documents to inventory events
+Complete audit chain from inventory to tax filing
+
+Multi-Location:
+
+Track inventory by warehouse/location
+Transfer events between locations
+Location-specific valuations
+
+Advanced Analytics:
+
+Cross-tenant benchmarking
+Predictive inventory alerts
+Supplier price comparison
+Margin analysis by product
+
+
+Success Metrics
+Technical:
+
+All inventory movements recorded in events
+100% accuracy in moving average calculations
+Zero data loss or corruption
+Query performance < 100ms for current inventory
+Complete audit trail for all changes
+
+Business:
+
+Customers can view accurate inventory costs
+Reports generate in < 5 seconds
+Cost alerts identify pricing issues
+Hacienda reports exportable and accurate
+Customer satisfaction with cost visibility
+
+Compliance:
+
+10-year data retention achieved
+All transactions auditable
+Point-in-time reconstruction possible
+Export capabilities for authorities
+
+
+Open Questions to Resolve
+Before Implementation:
+
+Migration: Do you have existing inventory data? Historical costs?
+Purchase process: How are items currently added to inventory?
+Adjustments: Do you need inventory corrections? Physical counts?
+Multiple locations: Single or multiple warehouses per company?
+Units of measure: Need conversions or always same unit?
+User permissions: Who can add/adjust inventory?
+Notifications: Real-time or batch for cost alerts?
+
+
+Summary
+This plan implements a production-ready inventory cost tracking system using CQRS and event sourcing patterns. The system provides:
+
+Accurate moving average cost calculation
+Complete audit trail for compliance
+Powerful reporting for business insights
+Scalable architecture for future growth
+Hacienda compliance with 10-year retention
+
+The three-table architecture separates concerns clearly:
+
+inventory_items = product catalog (what is this product?)
+inventory_events = transaction history (what happened?)
+inventory_state = current snapshot (what is the state now?)
+
+The implementation is phased to avoid breaking changes and can be extended to handle sales, returns, and DTE integration in future phases.
