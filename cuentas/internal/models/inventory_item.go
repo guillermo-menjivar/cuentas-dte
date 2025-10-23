@@ -32,7 +32,8 @@ type InventoryItem struct {
 	UpdatedAt time.Time `json:"updated_at"`
 
 	// Relationships (loaded separately)
-	Taxes []InventoryItemTax `json:"taxes,omitempty"`
+	Taxes       []InventoryItemTax `json:"taxes,omitempty"`
+	IsTaxExempt bool               `json:"is_tax_exempt"`
 }
 
 // CreateInventoryItemRequest represents the request to create an inventory item
