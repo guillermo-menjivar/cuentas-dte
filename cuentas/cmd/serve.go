@@ -269,6 +269,13 @@ func startServer() {
 		v1.POST("/inventory/items/:id/taxes", handlers.AddItemTaxHandler)
 		v1.DELETE("/inventory/items/:id/taxes/:code", handlers.RemoveItemTaxHandler)
 
+		// Inventory cost tracking (CQRS)
+		v1.POST("/inventory/items/:id/purchase", handlers.RecordPurchaseHandler)
+		v1.POST("/inventory/items/:id/adjustment", handlers.RecordAdjustmentHandler)
+		v1.GET("/inventory/items/:id/state", handlers.GetInventoryStateHandler)
+		v1.GET("/inventory/states", handlers.ListInventoryStatesHandler)
+		v1.GET("/inventory/items/:id/cost-history", handlers.GetCostHistoryHandler)
+
 		// Invoice routes
 		invoiceHandler := handlers.NewInvoiceHandler()
 		v1.POST("/invoices", invoiceHandler.CreateInvoice)
