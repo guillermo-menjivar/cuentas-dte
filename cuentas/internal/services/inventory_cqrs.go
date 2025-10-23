@@ -98,13 +98,13 @@ func (s *InventoryService) RecordPurchase(
 	`
 
 	var event models.InventoryEvent
-	err = tx.QueryRowContext(ctx, eventQuery,
+	err = tx.QueryRow(ctx, eventQuery,
 		companyID, itemID, "PURCHASE",
-		nextVersion, req.Quantity, req.UnitCost, req.Quantity*req.UnitCost,
-		newQuantity, newTotalCost,
-		currentState.CurrentAvgCost, newAvgCost,
-		req.ReferenceType, req.ReferenceID, nil, // correlation_id nil for now
-		eventDataJSON, req.Notes, nil, // created_by_user_id nil (placeholder)
+		nextVersion, req.Quantity, req.UnitCost.Float64(), purchaseTotal.Float64(), // ← Add .Float64()
+		newQuantity, newTotalCost.Float64(), // ← Add .Float64()
+		currentState.CurrentAvgCost.Float64(), newAvgCost.Float64(), // ← Add .Float64()
+		req.ReferenceType, req.ReferenceID, req.CorrelationID,
+		eventDataJSON, req.Notes, nil,
 	).Scan(
 		&event.EventID, &event.CompanyID, &event.ItemID, &event.EventType, &event.EventTimestamp,
 		&event.AggregateVersion, &event.Quantity, &event.UnitCost, &event.TotalCost,
@@ -162,32 +162,25 @@ func (s *InventoryService) RecordAdjustment(
 	}
 
 	// Determine unit cost
-	var unitCost float64
+	var unitCost models.Money
 	if req.Quantity > 0 {
-		// Adding inventory - use provided cost
 		if req.UnitCost == nil {
 			return nil, fmt.Errorf("unit_cost required when adding inventory")
 		}
 		unitCost = *req.UnitCost
 	} else {
-		// Removing inventory - use current moving average
 		unitCost = currentState.CurrentAvgCost
 	}
 
-	// Calculate new values
-	newQuantity := currentState.CurrentQuantity + req.Quantity
-	if newQuantity < 0 {
-		return nil, fmt.Errorf("adjustment would result in negative quantity (current: %.2f, adjustment: %.2f)", currentState.CurrentQuantity, req.Quantity)
-	}
-
-	newTotalCost := currentState.CurrentTotalCost + (req.Quantity * unitCost)
+	adjustmentTotal := unitCost.Mul(req.Quantity)
+	newTotalCost := currentState.CurrentTotalCost.Add(adjustmentTotal)
 	if newTotalCost < 0 {
 		newTotalCost = 0 // Safety check
 	}
 
-	newAvgCost := float64(0)
+	newAvgCost := models.Money
 	if newQuantity > 0 {
-		newAvgCost = newTotalCost / newQuantity
+		newAvgCost = newTotalCost.Div(newQuantity)
 	}
 
 	nextVersion := currentState.AggregateVersion + 1
@@ -239,10 +232,10 @@ func (s *InventoryService) RecordAdjustment(
 	var event models.InventoryEvent
 	err = tx.QueryRowContext(ctx, eventQuery,
 		companyID, itemID, "ADJUSTMENT",
-		nextVersion, req.Quantity, unitCost, req.Quantity*unitCost,
-		newQuantity, newTotalCost,
-		currentState.CurrentAvgCost, newAvgCost,
-		req.ReferenceType, req.ReferenceID, nil,
+		nextVersion, req.Quantity, unitCost.Float64(), adjustmentTotal.Float64(), // ← .Float64()
+		newQuantity, newTotalCost.Float64(), // ← .Float64()
+		currentState.CurrentAvgCost.Float64(), newAvgCost.Float64(), // ← .Float64()
+		req.ReferenceType, req.ReferenceID, req.CorrelationID,
 		eventDataJSON, req.Reason, nil,
 	).Scan(
 		&event.EventID, &event.CompanyID, &event.ItemID, &event.EventType, &event.EventTimestamp,
