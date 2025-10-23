@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"cuentas/internal/models"
@@ -345,16 +346,191 @@ func RemoveItemTaxHandler(c *gin.Context) {
 }
 
 // RecordPurchaseHandler handles POST /v1/inventory/items/:id/purchase
-func RecordPurchaseHandler(c *gin.Context)
+func RecordPurchaseHandler(c *gin.Context) {
+	itemID := c.Param("id")
+	companyID := c.MustGet("company_id").(string)
+	db := c.MustGet("db").(*sql.DB)
+
+	// Parse request
+	var req models.RecordPurchaseRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error: "invalid JSON format",
+			Code:  "invalid_json",
+		})
+		return
+	}
+
+	// Validate request
+	if err := req.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error: err.Error(),
+			Code:  "validation_failed",
+		})
+		return
+	}
+
+	// Record purchase
+	inventoryService := services.NewInventoryService(db)
+	event, err := inventoryService.RecordPurchase(c.Request.Context(), companyID, itemID, &req)
+	if err != nil {
+		if strings.Contains(err.Error(), "item not found") {
+			c.JSON(http.StatusNotFound, models.ErrorResponse{
+				Error: "item not found",
+				Code:  "not_found",
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to record purchase",
+			Code:  "internal_error",
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, event)
+}
 
 // RecordAdjustmentHandler handles POST /v1/inventory/items/:id/adjustment
-func RecordAdjustmentHandler(c *gin.Context)
+func RecordAdjustmentHandler(c *gin.Context) {
+	itemID := c.Param("id")
+	companyID := c.MustGet("company_id").(string)
+	db := c.MustGet("db").(*sql.DB)
+
+	// Parse request
+	var req models.RecordAdjustmentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error: "invalid JSON format",
+			Code:  "invalid_json",
+		})
+		return
+	}
+
+	// Validate request
+	if err := req.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error: err.Error(),
+			Code:  "validation_failed",
+		})
+		return
+	}
+
+	// Record adjustment
+	inventoryService := services.NewInventoryService(db)
+	event, err := inventoryService.RecordAdjustment(c.Request.Context(), companyID, itemID, &req)
+	if err != nil {
+		if strings.Contains(err.Error(), "item not found") {
+			c.JSON(http.StatusNotFound, models.ErrorResponse{
+				Error: "item not found",
+				Code:  "not_found",
+			})
+			return
+		}
+		if strings.Contains(err.Error(), "negative quantity") {
+			c.JSON(http.StatusBadRequest, models.ErrorResponse{
+				Error: err.Error(),
+				Code:  "invalid_quantity",
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to record adjustment",
+			Code:  "internal_error",
+		})
+		return
+	}
+
+	c.JSON(http.StatusCreated, event)
+}
 
 // GetInventoryStateHandler handles GET /v1/inventory/items/:id/state
-func GetInventoryStateHandler(c *gin.Context)
+func GetInventoryStateHandler(c *gin.Context) {
+	itemID := c.Param("id")
+	companyID := c.MustGet("company_id").(string)
+	db := c.MustGet("db").(*sql.DB)
+
+	inventoryService := services.NewInventoryService(db)
+	state, err := inventoryService.GetInventoryState(c.Request.Context(), companyID, itemID)
+	if err != nil {
+		if strings.Contains(err.Error(), "item not found") {
+			c.JSON(http.StatusNotFound, models.ErrorResponse{
+				Error: "item not found",
+				Code:  "not_found",
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to get inventory state",
+			Code:  "internal_error",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, state)
+}
 
 // ListInventoryStatesHandler handles GET /v1/inventory/states
-func ListInventoryStatesHandler(c *gin.Context)
+func ListInventoryStatesHandler(c *gin.Context) {
+	companyID := c.MustGet("company_id").(string)
+	db := c.MustGet("db").(*sql.DB)
+
+	// Parse query parameters
+	inStockOnly := c.DefaultQuery("in_stock_only", "false") == "true"
+
+	inventoryService := services.NewInventoryService(db)
+	states, err := inventoryService.ListInventoryStates(c.Request.Context(), companyID, inStockOnly)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to list inventory states",
+			Code:  "internal_error",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"states": states,
+		"count":  len(states),
+	})
+}
 
 // GetCostHistoryHandler handles GET /v1/inventory/items/:id/cost-history
-func GetCostHistoryHandler(c *gin.Context)
+func GetCostHistoryHandler(c *gin.Context) {
+	itemID := c.Param("id")
+	companyID := c.MustGet("company_id").(string)
+	db := c.MustGet("db").(*sql.DB)
+
+	// Parse query parameters
+	limit := 50 // default
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil {
+			limit = parsedLimit
+		}
+	}
+
+	inventoryService := services.NewInventoryService(db)
+	events, err := inventoryService.GetCostHistory(c.Request.Context(), companyID, itemID, limit)
+	if err != nil {
+		if strings.Contains(err.Error(), "item not found") {
+			c.JSON(http.StatusNotFound, models.ErrorResponse{
+				Error: "item not found",
+				Code:  "not_found",
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to get cost history",
+			Code:  "internal_error",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"events": events,
+		"count":  len(events),
+	})
+}
