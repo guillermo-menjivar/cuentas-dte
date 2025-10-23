@@ -31,6 +31,41 @@ find_item_by_sku() {
       -H "X-Company-ID: ${COMPANY_ID}" | jq -r --arg sku "$sku" '.items[] | select(.sku == $sku) | .id'
 }
 
+# Helper function to get or create item
+get_or_create_item() {
+    local sku=$1
+    local item_name=$2
+    local create_json=$3
+    
+    # Check if item already exists
+    local existing_id=$(find_item_by_sku "$sku")
+    
+    if [ ! -z "$existing_id" ] && [ "$existing_id" != "null" ]; then
+        echo -e "   ${YELLOW}⚠️  Item ya existe, usando existente${NC}"
+        echo -e "   ${CYAN}└─ ID: $existing_id${NC}\n"
+        echo "$existing_id"
+        return 0
+    fi
+    
+    # Create new item
+    local response=$(curl -s -X POST "${BASE_URL}/v1/inventory/items" \
+      -H "Content-Type: application/json" \
+      -H "X-Company-ID: ${COMPANY_ID}" \
+      -d "$create_json")
+    
+    local new_id=$(echo "$response" | jq -r '.id')
+    
+    if [ "$new_id" == "null" ] || [ -z "$new_id" ]; then
+        echo -e "   ${RED}❌ Error al crear item${NC}"
+        echo "$response" | jq '.'
+        return 1
+    fi
+    
+    echo "$response" | jq '.'
+    echo -e "   ${CYAN}└─ Nuevo item creado: $new_id${NC}\n"
+    echo "$new_id"
+}
+
 # Helper function to display moving average calculation
 show_calculation() {
     local prev_qty=$1
@@ -49,137 +84,88 @@ echo -e "${BLUE}SECCIÓN A: CREAR ARTÍCULOS DE INVENTARIO${NC}"
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}\n"
 
 # Test 1: Create Taxable Item - Laptop
-echo -e "${GREEN}🟢 Prueba 1: Creando Artículo Gravado - Laptop Dell${NC}"
-LAPTOP_RESPONSE=$(curl -s -X POST "${BASE_URL}/v1/inventory/items" \
-  -H "Content-Type: application/json" \
-  -H "X-Company-ID: ${COMPANY_ID}" \
-  -d '{
-    "tipo_item": "1",
-    "sku": "LAPTOP-DELL-001",
-    "name": "Laptop Dell Latitude 5520",
-    "description": "Laptop empresarial 15.6 pulgadas, Intel i7, 16GB RAM, 512GB SSD",
-    "manufacturer": "Dell",
-    "unit_price": 1200.00,
-    "unit_of_measure": "unidad",
-    "is_tax_exempt": false
-  }')
-
-echo "$LAPTOP_RESPONSE" | jq '.'
-LAPTOP_ID=$(echo "$LAPTOP_RESPONSE" | jq -r '.id')
-echo -e "   ${CYAN}└─ Laptop ID: $LAPTOP_ID${NC}\n"
+echo -e "${GREEN}🟢 Prueba 1: Obtener o Crear Artículo Gravado - Laptop Dell${NC}"
+LAPTOP_ID=$(get_or_create_item "LAPTOP-DELL-001" "Laptop Dell" '{
+  "tipo_item": "1",
+  "sku": "LAPTOP-DELL-001",
+  "name": "Laptop Dell Latitude 5520",
+  "description": "Laptop empresarial 15.6 pulgadas, Intel i7, 16GB RAM, 512GB SSD",
+  "manufacturer": "Dell",
+  "unit_price": 1200.00,
+  "unit_of_measure": "unidad",
+  "is_tax_exempt": false
+}')
 
 # Test 2: Create Tax-Exempt Item - Educational Textbook
-echo -e "${GREEN}🟢 Prueba 2: Creando Artículo Exento - Libro de Texto Educativo${NC}"
-TEXTBOOK_RESPONSE=$(curl -s -X POST "${BASE_URL}/v1/inventory/items" \
-  -H "Content-Type: application/json" \
-  -H "X-Company-ID: ${COMPANY_ID}" \
-  -d '{
-    "tipo_item": "1",
-    "sku": "LIBRO-MAT-SEC",
-    "name": "Matemáticas Secundaria - Libro de Texto",
-    "description": "Libro de texto educativo para matemáticas nivel secundaria, incluye ejercicios y soluciones",
-    "unit_price": 25.00,
-    "unit_of_measure": "unidad",
-    "is_tax_exempt": true,
-    "taxes": []
-  }')
-
-echo "$TEXTBOOK_RESPONSE" | jq '.'
-TEXTBOOK_ID=$(echo "$TEXTBOOK_RESPONSE" | jq -r '.id')
-echo -e "   ${CYAN}└─ Libro ID: $TEXTBOOK_ID${NC}\n"
+echo -e "${GREEN}🟢 Prueba 2: Obtener o Crear Artículo Exento - Libro de Texto Educativo${NC}"
+TEXTBOOK_ID=$(get_or_create_item "LIBRO-MAT-SEC" "Libro de Matemáticas" '{
+  "tipo_item": "1",
+  "sku": "LIBRO-MAT-SEC",
+  "name": "Matemáticas Secundaria - Libro de Texto",
+  "description": "Libro de texto educativo para matemáticas nivel secundaria, incluye ejercicios y soluciones",
+  "unit_price": 25.00,
+  "unit_of_measure": "unidad",
+  "is_tax_exempt": true,
+  "taxes": []
+}')
 
 # Test 3: Create Item - Mouse
-echo -e "${GREEN}🟢 Prueba 3: Creando Artículo - Mouse Logitech${NC}"
-MOUSE_RESPONSE=$(curl -s -X POST "${BASE_URL}/v1/inventory/items" \
-  -H "Content-Type: application/json" \
-  -H "X-Company-ID: ${COMPANY_ID}" \
-  -d '{
-    "tipo_item": "1",
-    "sku": "MOUSE-LOG-001",
-    "name": "Mouse Inalámbrico Logitech MX Master 3",
-    "description": "Mouse ergonómico inalámbrico con desplazamiento de precisión",
-    "manufacturer": "Logitech",
-    "unit_price": 99.99,
-    "unit_of_measure": "unidad"
-  }')
-
-echo "$MOUSE_RESPONSE" | jq '.'
-MOUSE_ID=$(echo "$MOUSE_RESPONSE" | jq -r '.id')
-echo -e "   ${CYAN}└─ Mouse ID: $MOUSE_ID${NC}\n"
+echo -e "${GREEN}🟢 Prueba 3: Obtener o Crear Artículo - Mouse Logitech${NC}"
+MOUSE_ID=$(get_or_create_item "MOUSE-LOG-001" "Mouse Logitech" '{
+  "tipo_item": "1",
+  "sku": "MOUSE-LOG-001",
+  "name": "Mouse Inalámbrico Logitech MX Master 3",
+  "description": "Mouse ergonómico inalámbrico con desplazamiento de precisión",
+  "manufacturer": "Logitech",
+  "unit_price": 99.99,
+  "unit_of_measure": "unidad"
+}')
 
 # Test 4: Create Item - Keyboard
-echo -e "${GREEN}🟢 Prueba 4: Creando Artículo - Teclado Mecánico${NC}"
-KEYBOARD_RESPONSE=$(curl -s -X POST "${BASE_URL}/v1/inventory/items" \
-  -H "Content-Type: application/json" \
-  -H "X-Company-ID: ${COMPANY_ID}" \
-  -d '{
-    "tipo_item": "1",
-    "sku": "TECLADO-MECA-001",
-    "name": "Teclado Mecánico Inalámbrico RGB",
-    "description": "Teclado mecánico con iluminación RGB, switches blue, conectividad Bluetooth",
-    "unit_price": 75.00,
-    "unit_of_measure": "unidad"
-  }')
-
-echo "$KEYBOARD_RESPONSE" | jq '.'
-KEYBOARD_ID=$(echo "$KEYBOARD_RESPONSE" | jq -r '.id')
-echo -e "   ${CYAN}└─ Teclado ID: $KEYBOARD_ID${NC}\n"
+echo -e "${GREEN}🟢 Prueba 4: Obtener o Crear Artículo - Teclado Mecánico${NC}"
+KEYBOARD_ID=$(get_or_create_item "TECLADO-MECA-001" "Teclado Mecánico" '{
+  "tipo_item": "1",
+  "sku": "TECLADO-MECA-001",
+  "name": "Teclado Mecánico Inalámbrico RGB",
+  "description": "Teclado mecánico con iluminación RGB, switches blue, conectividad Bluetooth",
+  "unit_price": 75.00,
+  "unit_of_measure": "unidad"
+}')
 
 # Test 5: Create Item - Monitor
-echo -e "${GREEN}🟢 Prueba 5: Creando Artículo - Monitor Dell${NC}"
-MONITOR_RESPONSE=$(curl -s -X POST "${BASE_URL}/v1/inventory/items" \
-  -H "Content-Type: application/json" \
-  -H "X-Company-ID: ${COMPANY_ID}" \
-  -d '{
-    "tipo_item": "1",
-    "sku": "MONITOR-DELL-27",
-    "name": "Monitor Dell 27 Pulgadas 4K UHD",
-    "description": "Monitor profesional 27 pulgadas, resolución 4K UHD, panel IPS",
-    "manufacturer": "Dell",
-    "unit_price": 450.00,
-    "unit_of_measure": "unidad"
-  }')
-
-echo "$MONITOR_RESPONSE" | jq '.'
-MONITOR_ID=$(echo "$MONITOR_RESPONSE" | jq -r '.id')
-echo -e "   ${CYAN}└─ Monitor ID: $MONITOR_ID${NC}\n"
+echo -e "${GREEN}🟢 Prueba 5: Obtener o Crear Artículo - Monitor Dell${NC}"
+MONITOR_ID=$(get_or_create_item "MONITOR-DELL-27" "Monitor Dell" '{
+  "tipo_item": "1",
+  "sku": "MONITOR-DELL-27",
+  "name": "Monitor Dell 27 Pulgadas 4K UHD",
+  "description": "Monitor profesional 27 pulgadas, resolución 4K UHD, panel IPS",
+  "manufacturer": "Dell",
+  "unit_price": 450.00,
+  "unit_of_measure": "unidad"
+}')
 
 # Test 6: Create Service
-echo -e "${GREEN}🟢 Prueba 6: Creando Servicio - Consultoría IT${NC}"
-SERVICE_RESPONSE=$(curl -s -X POST "${BASE_URL}/v1/inventory/items" \
-  -H "Content-Type: application/json" \
-  -H "X-Company-ID: ${COMPANY_ID}" \
-  -d '{
-    "tipo_item": "2",
-    "sku": "SRV-CONSULT-IT",
-    "name": "Servicios de Consultoría en Tecnología",
-    "description": "Consultoría profesional en tecnologías de información y arquitectura de sistemas",
-    "unit_price": 150.00,
-    "unit_of_measure": "hora"
-  }')
-
-echo "$SERVICE_RESPONSE" | jq '.'
-SERVICE_ID=$(echo "$SERVICE_RESPONSE" | jq -r '.id')
-echo -e "   ${CYAN}└─ Servicio ID: $SERVICE_ID${NC}\n"
+echo -e "${GREEN}🟢 Prueba 6: Obtener o Crear Servicio - Consultoría IT${NC}"
+SERVICE_ID=$(get_or_create_item "SRV-CONSULT-IT" "Consultoría IT" '{
+  "tipo_item": "2",
+  "sku": "SRV-CONSULT-IT",
+  "name": "Servicios de Consultoría en Tecnología",
+  "description": "Consultoría profesional en tecnologías de información y arquitectura de sistemas",
+  "unit_price": 150.00,
+  "unit_of_measure": "hora"
+}')
 
 echo -e "${YELLOW}📋 Resumen de Artículos Creados (buscar por SKU):${NC}"
-echo -e "   LAPTOP-DELL-001      - Laptop Dell Latitude"
-echo -e "   LIBRO-MAT-SEC        - Libro de Matemáticas (exento)"
-echo -e "   MOUSE-LOG-001        - Mouse Logitech"
-echo -e "   TECLADO-MECA-001     - Teclado Mecánico"
-echo -e "   MONITOR-DELL-27      - Monitor Dell 27\""
-echo -e "   SRV-CONSULT-IT       - Consultoría IT\n"
+echo -e "   LAPTOP-DELL-001      - Laptop Dell Latitude (ID: ${LAPTOP_ID})"
+echo -e "   LIBRO-MAT-SEC        - Libro de Matemáticas (exento) (ID: ${TEXTBOOK_ID})"
+echo -e "   MOUSE-LOG-001        - Mouse Logitech (ID: ${MOUSE_ID})"
+echo -e "   TECLADO-MECA-001     - Teclado Mecánico (ID: ${KEYBOARD_ID})"
+echo -e "   MONITOR-DELL-27      - Monitor Dell 27\" (ID: ${MONITOR_ID})"
+echo -e "   SRV-CONSULT-IT       - Consultoría IT (ID: ${SERVICE_ID})\n"
 
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}"
 echo -e "${BLUE}SECCIÓN B: REGISTRAR COMPRAS (Seguimiento de Costos)${NC}"
 echo -e "${BLUE}═══════════════════════════════════════════════════════════${NC}\n"
-
-# Re-fetch IDs dynamically from API (in case items already existed)
-LAPTOP_ID=$(find_item_by_sku "LAPTOP-DELL-001")
-MOUSE_ID=$(find_item_by_sku "MOUSE-LOG-001")
-KEYBOARD_ID=$(find_item_by_sku "TECLADO-MECA-001")
-MONITOR_ID=$(find_item_by_sku "MONITOR-DELL-27")
-TEXTBOOK_ID=$(find_item_by_sku "LIBRO-MAT-SEC")
 
 # Test 7: First Purchase - Laptop
 echo -e "${GREEN}🟢 Prueba 7: Registrar Primera Compra - Laptop${NC}"
@@ -444,7 +430,7 @@ curl -s -X POST "${BASE_URL}/v1/inventory/items/${LAPTOP_ID}/adjustment" \
 
 echo -e "   ${CYAN}└─ Nota: El promedio debe mantenerse igual, solo disminuye cantidad/costo total${NC}\n"
 
-# Test 16: Negative Adjustment - Damaged Textbooks
+# Test 16: Negative Adjustment - Expired Textbooks
 echo -e "${GREEN}🟢 Prueba 16: Ajuste Negativo - Libros Dañados${NC}"
 echo -e "   ├─ Cantidad: -50 unidades"
 echo -e "   └─ Razón: Libros dañados por humedad\n"
@@ -498,7 +484,7 @@ curl -s -X POST "${BASE_URL}/v1/inventory/items/${LAPTOP_ID}/adjustment" \
   -H "Content-Type: application/json" \
   -H "X-Company-ID: ${COMPANY_ID}" \
   -d '{
-    "quantity": -1000,
+    "quantity": -10000,
     "reason": "Prueba inventario negativo"
   }' | jq '.'
 
