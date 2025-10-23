@@ -343,3 +343,18 @@ func RemoveItemTaxHandler(c *gin.Context) {
 		"message": "tax removed successfully",
 	})
 }
+
+// RecordPurchaseHandler handles POST /v1/inventory/items/:id/purchase
+func RecordPurchaseHandler(c *gin.Context)
+
+// RecordAdjustmentHandler handles POST /v1/inventory/items/:id/adjustment
+func RecordAdjustmentHandler(c *gin.Context)
+
+// GetInventoryStateHandler handles GET /v1/inventory/items/:id/state
+func GetInventoryStateHandler(c *gin.Context)
+
+// ListInventoryStatesHandler handles GET /v1/inventory/states
+func ListInventoryStatesHandler(c *gin.Context)
+
+// GetCostHistoryHandler handles GET /v1/inventory/items/:id/cost-history
+func GetCostHistoryHandler(c *gin.Context)
