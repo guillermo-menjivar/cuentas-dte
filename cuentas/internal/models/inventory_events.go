@@ -54,3 +54,6 @@ type RecordAdjustmentRequest struct {
 	ReferenceType *string  `json:"reference_type"`
 	ReferenceID   *string  `json:"reference_id"`
 }
+
+func (r *RecordPurchaseRequest) Validate() error
+func (r *RecordAdjustmentRequest) Validate() error
