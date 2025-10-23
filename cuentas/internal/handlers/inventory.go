@@ -397,7 +397,7 @@ func RecordPurchaseHandler(c *gin.Context) {
 		return
 	}
 
-	log.Printf("[DEBUG] Purchase recorded successfully - EventID: %s", event.ID)
+	log.Printf("[DEBUG] Purchase recorded successfully - EventID: %s", event.EventID)
 	c.JSON(http.StatusCreated, event)
 }
 
