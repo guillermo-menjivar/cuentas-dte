@@ -242,7 +242,7 @@ func (s *InventoryService) RecordAdjustment(
 		newQuantity, newTotalCost,
 		currentState.CurrentAvgCost, newAvgCost,
 		req.ReferenceType, req.ReferenceID, nil,
-		eventDataJSON, &reason, nil,
+		eventDataJSON, req.Reason, nil,
 	).Scan(
 		&event.EventID, &event.CompanyID, &event.ItemID, &event.EventType, &event.EventTimestamp,
 		&event.AggregateVersion, &event.Quantity, &event.UnitCost, &event.TotalCost,
