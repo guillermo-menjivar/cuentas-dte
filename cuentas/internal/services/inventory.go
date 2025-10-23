@@ -55,11 +55,11 @@ func (s *InventoryService) CreateItem(ctx context.Context, companyID string, req
 		INSERT INTO inventory_items (
 			company_id, tipo_item, sku, codigo_barras,
 			name, description, manufacturer, image_url,
-			unit_of_measure, color
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			unit_of_measure, color, is_tax_exempt
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id, company_id, tipo_item, sku, codigo_barras,
 				  name, description, manufacturer, image_url,
-				  unit_of_measure, color,
+				  unit_of_measure, color, is_tax_exempt,
 				  active, created_at, updated_at
 	`
 
@@ -67,11 +67,11 @@ func (s *InventoryService) CreateItem(ctx context.Context, companyID string, req
 	err = tx.QueryRowContext(ctx, query,
 		companyID, req.TipoItem, sku, barcode,
 		req.Name, req.Description, req.Manufacturer, req.ImageURL,
-		req.UnitOfMeasure, req.Color,
+		req.UnitOfMeasure, req.Color, req.IsTaxExempt,
 	).Scan(
 		&item.ID, &item.CompanyID, &item.TipoItem, &item.SKU, &item.CodigoBarras,
 		&item.Name, &item.Description, &item.Manufacturer, &item.ImageURL,
-		&item.UnitOfMeasure, &item.Color,
+		&item.UnitOfMeasure, &item.Color, &item.IsTaxExempt,
 		&item.Active, &item.CreatedAt, &item.UpdatedAt,
 	)
 	if err != nil {
@@ -115,7 +115,7 @@ func (s *InventoryService) GetItemByID(ctx context.Context, companyID, itemID st
 	query := `
 		SELECT id, company_id, tipo_item, sku, codigo_barras,
 			   name, description, manufacturer, image_url,
-			   unit_of_measure, color,
+			   unit_of_measure, color, is_tax_exempt,
 			   active, created_at, updated_at
 		FROM inventory_items
 		WHERE id = $1 AND company_id = $2
@@ -125,7 +125,7 @@ func (s *InventoryService) GetItemByID(ctx context.Context, companyID, itemID st
 	err := s.db.QueryRowContext(ctx, query, itemID, companyID).Scan(
 		&item.ID, &item.CompanyID, &item.TipoItem, &item.SKU, &item.CodigoBarras,
 		&item.Name, &item.Description, &item.Manufacturer, &item.ImageURL,
-		&item.UnitOfMeasure, &item.Color,
+		&item.UnitOfMeasure, &item.Color, &item.IsTaxExempt,
 		&item.Active, &item.CreatedAt, &item.UpdatedAt,
 	)
 	if err != nil {
@@ -146,7 +146,7 @@ func (s *InventoryService) ListItems(ctx context.Context, companyID string, acti
 	query := `
 		SELECT id, company_id, tipo_item, sku, codigo_barras,
 			   name, description, manufacturer, image_url,
-			   unit_of_measure, color,
+			   unit_of_measure, color, is_tax_exempt,
 			   active, created_at, updated_at
 		FROM inventory_items
 		WHERE company_id = $1
@@ -181,7 +181,7 @@ func (s *InventoryService) ListItems(ctx context.Context, companyID string, acti
 		err := rows.Scan(
 			&item.ID, &item.CompanyID, &item.TipoItem, &item.SKU, &item.CodigoBarras,
 			&item.Name, &item.Description, &item.Manufacturer, &item.ImageURL,
-			&item.UnitOfMeasure, &item.Color,
+			&item.UnitOfMeasure, &item.Color, &item.IsTaxExempt,
 			&item.Active, &item.CreatedAt, &item.UpdatedAt,
 		)
 		if err != nil {
