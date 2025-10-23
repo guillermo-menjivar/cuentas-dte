@@ -53,7 +53,8 @@ type CreateInventoryItemRequest struct {
 	Color         *string  `json:"color"`
 
 	// Taxes to associate with the item (optional - will use defaults if empty)
-	Taxes []AddItemTaxRequest `json:"taxes"`
+	Taxes       []AddItemTaxRequest `json:"taxes"`
+	IsTaxExempt bool                `json:"is_tax_exempt"`
 }
 
 // UpdateInventoryItemRequest represents the request to update an inventory item
@@ -67,6 +68,7 @@ type UpdateInventoryItemRequest struct {
 	UnitPrice     *float64 `json:"unit_price"`
 	UnitOfMeasure *string  `json:"unit_of_measure"`
 	Color         *string  `json:"color"`
+	IsTaxExempt   bool     `json:"is_tax_exempt"`
 }
 
 // Valid units of measure
