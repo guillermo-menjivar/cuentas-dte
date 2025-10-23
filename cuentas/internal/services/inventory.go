@@ -21,6 +21,7 @@ func NewInventoryService(db *sql.DB) *InventoryService {
 }
 
 // CreateItem creates a new inventory item with its taxes
+// CreateItem creates a new inventory item with its taxes
 func (s *InventoryService) CreateItem(ctx context.Context, companyID string, req *models.CreateInventoryItemRequest) (*models.InventoryItem, error) {
 	// Generate SKU if not provided
 	sku := ""
@@ -43,6 +44,12 @@ func (s *InventoryService) CreateItem(ctx context.Context, companyID string, req
 		barcode = &generated
 	}
 
+	// Determine is_tax_exempt value
+	isTaxExempt := false
+	if req.IsTaxExempt != nil {
+		isTaxExempt = *req.IsTaxExempt
+	}
+
 	// Start a transaction
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -55,11 +62,11 @@ func (s *InventoryService) CreateItem(ctx context.Context, companyID string, req
 		INSERT INTO inventory_items (
 			company_id, tipo_item, sku, codigo_barras,
 			name, description, manufacturer, image_url,
-			unit_of_measure, color, is_tax_exempt
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+			unit_price, unit_of_measure, color, is_tax_exempt
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 		RETURNING id, company_id, tipo_item, sku, codigo_barras,
 				  name, description, manufacturer, image_url,
-				  unit_of_measure, color, is_tax_exempt,
+				  unit_price, unit_of_measure, color, is_tax_exempt,
 				  active, created_at, updated_at
 	`
 
@@ -67,32 +74,34 @@ func (s *InventoryService) CreateItem(ctx context.Context, companyID string, req
 	err = tx.QueryRowContext(ctx, query,
 		companyID, req.TipoItem, sku, barcode,
 		req.Name, req.Description, req.Manufacturer, req.ImageURL,
-		req.UnitOfMeasure, req.Color, req.IsTaxExempt,
+		req.UnitPrice, req.UnitOfMeasure, req.Color, isTaxExempt,
 	).Scan(
 		&item.ID, &item.CompanyID, &item.TipoItem, &item.SKU, &item.CodigoBarras,
 		&item.Name, &item.Description, &item.Manufacturer, &item.ImageURL,
-		&item.UnitOfMeasure, &item.Color, &item.IsTaxExempt,
+		&item.UnitPrice, &item.UnitOfMeasure, &item.Color, &item.IsTaxExempt,
 		&item.Active, &item.CreatedAt, &item.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create item: %w", err)
 	}
 
-	// If no taxes provided, add default based on tipo_item
+	// If no taxes provided, add default based on tipo_item (only if NOT tax exempt)
 	taxes := req.Taxes
-	if len(taxes) == 0 {
+	if len(taxes) == 0 && !isTaxExempt {
 		taxes = getDefaultTaxes(req.TipoItem)
 	}
 
-	// Insert taxes
-	for _, tax := range taxes {
-		taxQuery := `
-			INSERT INTO inventory_item_taxes (item_id, tributo_code)
-			VALUES ($1, $2)
-		`
-		_, err = tx.ExecContext(ctx, taxQuery, item.ID, tax.TributoCode)
-		if err != nil {
-			return nil, fmt.Errorf("failed to add tax %s: %w", tax.TributoCode, err)
+	// Insert taxes (only if not tax exempt)
+	if !isTaxExempt {
+		for _, tax := range taxes {
+			taxQuery := `
+				INSERT INTO inventory_item_taxes (item_id, tributo_code)
+				VALUES ($1, $2)
+			`
+			_, err = tx.ExecContext(ctx, taxQuery, item.ID, tax.TributoCode)
+			if err != nil {
+				return nil, fmt.Errorf("failed to add tax %s: %w", tax.TributoCode, err)
+			}
 		}
 	}
 
