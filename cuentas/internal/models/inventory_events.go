@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -55,5 +56,42 @@ type RecordAdjustmentRequest struct {
 	ReferenceID   *string  `json:"reference_id"`
 }
 
-func (r *RecordPurchaseRequest) Validate() error
-func (r *RecordAdjustmentRequest) Validate() error
+func (r *RecordAdjustmentRequest) Validate() error {
+	if r.Quantity == 0 {
+		return fmt.Errorf("quantity cannot be zero")
+	}
+
+	// If adding inventory (positive quantity), unit cost is required
+	if r.Quantity > 0 {
+		if r.UnitCost == nil {
+			return fmt.Errorf("unit_cost is required when adding inventory")
+		}
+		if *r.UnitCost < 0 {
+			return fmt.Errorf("unit_cost cannot be negative")
+		}
+	}
+
+	// If removing inventory (negative quantity), unit cost not needed
+	// Will use current moving average cost
+
+	if r.Reason == "" {
+		return fmt.Errorf("reason is required for adjustments")
+	}
+
+	return nil
+}
+
+func (r *RecordPurchaseRequest) Validate() error {
+	if r.Quantity <= 0 {
+		return fmt.Errorf("quantity must be greater than 0")
+	}
+	if r.UnitCost < 0 {
+		return fmt.Errorf("unit_cost cannot be negative")
+	}
+	return nil
+}
+
+// GetCostHistoryRequest represents query parameters for cost history
+type GetCostHistoryRequest struct {
+	Limit int `form:"limit"` // Default will be 50
+}
