@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strconv"
 )
 
 // Money represents a monetary value with proper rounding for accounting
@@ -47,6 +48,20 @@ func (m *Money) Scan(value interface{}) error {
 		*m = Money(v)
 	case int:
 		*m = Money(v)
+	case []byte:
+		// Handle PostgreSQL numeric/decimal as bytes
+		f, err := strconv.ParseFloat(string(v), 64)
+		if err != nil {
+			return fmt.Errorf("cannot parse []byte to Money: %v", err)
+		}
+		*m = NewMoney(f)
+	case string:
+		// Handle string representation
+		f, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			return fmt.Errorf("cannot parse string to Money: %v", err)
+		}
+		*m = NewMoney(f)
 	default:
 		return fmt.Errorf("cannot scan type %T into Money", value)
 	}

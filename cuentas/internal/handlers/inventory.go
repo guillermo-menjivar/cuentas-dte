@@ -461,7 +461,9 @@ func GetInventoryStateHandler(c *gin.Context) {
 	companyID := c.MustGet("company_id").(string)
 	db := c.MustGet("db").(*sql.DB)
 
+	fmt.Println("we are calling the new inventory service")
 	inventoryService := services.NewInventoryService(db)
+	fmt.Println("we are creating a state")
 	state, err := inventoryService.GetInventoryState(c.Request.Context(), companyID, itemID)
 	if err != nil {
 		if strings.Contains(err.Error(), "item not found") {

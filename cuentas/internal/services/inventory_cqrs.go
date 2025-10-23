@@ -276,6 +276,7 @@ func (s *InventoryService) GetInventoryState(
 	companyID, itemID string,
 ) (*models.InventoryState, error) {
 	// Verify item exists
+	fmt.Println("we are here... inside the state")
 	_, err := s.GetItemByID(ctx, companyID, itemID)
 	if err != nil {
 		return nil, fmt.Errorf("item not found: %w", err)
@@ -294,6 +295,7 @@ func (s *InventoryService) GetInventoryState(
 		&state.CurrentAvgCost, &state.LastEventID, &state.AggregateVersion, &state.UpdatedAt,
 	)
 	if err != nil {
+		fmt.Println("we failed to get inventory state", err)
 		if err == sql.ErrNoRows {
 			// No state yet - return zero state
 			return &models.InventoryState{
