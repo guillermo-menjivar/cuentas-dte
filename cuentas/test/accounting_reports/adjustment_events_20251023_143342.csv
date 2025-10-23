@@ -1,0 +1,8 @@
+Item ID,SKU,Item Name,Timestamp,Quantity,Unit Cost,Avg Cost Before,Avg Cost After,Cost Impact,Balance Qty After,Balance Value After,Reason
+cca73c44-413e-46c3-b651-5793f6c5f178,LAPTOP-DELL-001,Laptop Dell Latitude 5520,2025-10-23T12:31:58.371005-06:00,10,420,411.74,411.89,0.15,555,228600,Encontradas 10 unidades en bodega durante conteo físico de inventario
+cca73c44-413e-46c3-b651-5793f6c5f178,LAPTOP-DELL-001,Laptop Dell Latitude 5520,2025-10-23T12:29:07.623451-06:00,10,420,411.67,411.89,0.22,370,152400,Encontradas 10 unidades en bodega durante conteo físico de inventario
+cca73c44-413e-46c3-b651-5793f6c5f178,LAPTOP-DELL-001,Laptop Dell Latitude 5520,2025-10-23T12:01:30.61829-06:00,10,420,411.43,411.89,0.46,185,76200,Encontradas 10 unidades en bodega durante conteo físico de inventario
+0f409222-7102-4fae-885b-586980c8bb14,MOUSE-LOG-001,Logitech MX Master 3,2025-10-23T12:31:58.421362-06:00,25,9,8.53,8.55,0.02,1100,9400,Encontrada caja sin abrir en cuarto de almacenamiento
+0f409222-7102-4fae-885b-586980c8bb14,MOUSE-LOG-001,Logitech MX Master 3,2025-10-23T12:29:07.684406-06:00,25,9,8.53,8.55,0.02,825,7050,Encontrada caja sin abrir en cuarto de almacenamiento
+0f409222-7102-4fae-885b-586980c8bb14,MOUSE-LOG-001,Logitech MX Master 3,2025-10-23T12:01:30.66872-06:00,25,9,8.52,8.55,0.03,550,4700,Encontrada caja sin abrir en cuarto de almacenamiento
+0f409222-7102-4fae-885b-586980c8bb14,MOUSE-LOG-001,Logitech MX Master 3,2025-10-23T11:29:23.285141-06:00,25,9,8.5,8.55,0.05,275,2350,Encontrada caja sin abrir en cuarto de almacenamiento

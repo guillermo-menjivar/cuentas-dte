@@ -1,0 +1,43 @@
+Item ID,SKU,Item Name,Timestamp,Quantity,Unit Cost,Total Cost,Avg Cost After,Balance Qty After,Balance Value After,Notes
+cca73c44-413e-46c3-b651-5793f6c5f178,LAPTOP-DELL-001,Laptop Dell Latitude 5520,2025-10-23T12:31:58.185177-06:00,25,380,9500,411.74,545,224400,Compra con descuento por volumen
+cca73c44-413e-46c3-b651-5793f6c5f178,LAPTOP-DELL-001,Laptop Dell Latitude 5520,2025-10-23T12:31:58.169486-06:00,50,450,22500,413.27,520,214900,Segunda compra - precio incrementado por proveedor
+cca73c44-413e-46c3-b651-5793f6c5f178,LAPTOP-DELL-001,Laptop Dell Latitude 5520,2025-10-23T12:31:58.145899-06:00,100,400,40000,409.36,470,192400,Compra inicial de laptops Dell desde proveedor
+cca73c44-413e-46c3-b651-5793f6c5f178,LAPTOP-DELL-001,Laptop Dell Latitude 5520,2025-10-23T12:29:07.440405-06:00,25,380,9500,411.67,360,148200,Compra con descuento por volumen
+cca73c44-413e-46c3-b651-5793f6c5f178,LAPTOP-DELL-001,Laptop Dell Latitude 5520,2025-10-23T12:29:07.42242-06:00,50,450,22500,414.03,335,138700,Segunda compra - precio incrementado por proveedor
+cca73c44-413e-46c3-b651-5793f6c5f178,LAPTOP-DELL-001,Laptop Dell Latitude 5520,2025-10-23T12:29:07.397574-06:00,100,400,40000,407.72,285,116200,Compra inicial de laptops Dell desde proveedor
+cca73c44-413e-46c3-b651-5793f6c5f178,LAPTOP-DELL-001,Laptop Dell Latitude 5520,2025-10-23T12:01:30.443292-06:00,25,380,9500,411.43,175,72000,Compra con descuento por volumen
+cca73c44-413e-46c3-b651-5793f6c5f178,LAPTOP-DELL-001,Laptop Dell Latitude 5520,2025-10-23T12:01:30.428562-06:00,50,450,22500,416.67,150,62500,Segunda compra - precio incrementado por proveedor
+cca73c44-413e-46c3-b651-5793f6c5f178,LAPTOP-DELL-001,Laptop Dell Latitude 5520,2025-10-23T12:01:30.410516-06:00,100,400,40000,400,100,40000,Compra inicial de laptops Dell desde proveedor
+0f409222-7102-4fae-885b-586980c8bb14,MOUSE-LOG-001,Logitech MX Master 3,2025-10-23T12:31:58.243875-06:00,50,8.5,425,8.53,1075,9175,Tercera compra - mismo costo
+0f409222-7102-4fae-885b-586980c8bb14,MOUSE-LOG-001,Logitech MX Master 3,2025-10-23T12:31:58.223767-06:00,100,8.5,850,8.54,1025,8750,Segunda compra - mismo costo
+0f409222-7102-4fae-885b-586980c8bb14,MOUSE-LOG-001,Logitech MX Master 3,2025-10-23T12:31:58.204669-06:00,100,8.5,850,8.54,925,7900,Inventario inicial de mouse
+0f409222-7102-4fae-885b-586980c8bb14,MOUSE-LOG-001,Logitech MX Master 3,2025-10-23T12:29:07.485556-06:00,50,8.5,425,8.53,800,6825,Tercera compra - mismo costo
+0f409222-7102-4fae-885b-586980c8bb14,MOUSE-LOG-001,Logitech MX Master 3,2025-10-23T12:29:07.470961-06:00,100,8.5,850,8.53,750,6400,Segunda compra - mismo costo
+0f409222-7102-4fae-885b-586980c8bb14,MOUSE-LOG-001,Logitech MX Master 3,2025-10-23T12:29:07.456048-06:00,100,8.5,850,8.54,650,5550,Inventario inicial de mouse
+0f409222-7102-4fae-885b-586980c8bb14,MOUSE-LOG-001,Logitech MX Master 3,2025-10-23T12:01:30.483251-06:00,50,8.5,425,8.52,525,4475,Tercera compra - mismo costo
+0f409222-7102-4fae-885b-586980c8bb14,MOUSE-LOG-001,Logitech MX Master 3,2025-10-23T12:01:30.469377-06:00,100,8.5,850,8.53,475,4050,Segunda compra - mismo costo
+0f409222-7102-4fae-885b-586980c8bb14,MOUSE-LOG-001,Logitech MX Master 3,2025-10-23T12:01:30.456305-06:00,100,8.5,850,8.53,375,3200,Inventario inicial de mouse
+0f409222-7102-4fae-885b-586980c8bb14,MOUSE-LOG-001,Logitech MX Master 3,2025-10-23T11:29:23.117008-06:00,50,8.5,425,8.5,250,2125,Tercera compra - mismo costo
+0f409222-7102-4fae-885b-586980c8bb14,MOUSE-LOG-001,Logitech MX Master 3,2025-10-23T11:29:23.099254-06:00,100,8.5,850,8.5,200,1700,Segunda compra - mismo costo
+0f409222-7102-4fae-885b-586980c8bb14,MOUSE-LOG-001,Logitech MX Master 3,2025-10-23T11:29:23.066251-06:00,100,8.5,850,8.5,100,850,Inventario inicial de mouse
+ffd74f8f-c8ce-4fd8-b5a1-17c2d31baba0,LIBRO-MAT-SEC,Matemáticas Secundaria - Libro de Texto,2025-10-23T12:31:58.357034-06:00,500,12,6000,12,1500,18000,Compra inicial de libros de texto para distribución escolar
+ffd74f8f-c8ce-4fd8-b5a1-17c2d31baba0,LIBRO-MAT-SEC,Matemáticas Secundaria - Libro de Texto,2025-10-23T12:29:07.60275-06:00,500,12,6000,12,1000,12000,Compra inicial de libros de texto para distribución escolar
+ffd74f8f-c8ce-4fd8-b5a1-17c2d31baba0,LIBRO-MAT-SEC,Matemáticas Secundaria - Libro de Texto,2025-10-23T12:01:30.6015-06:00,500,12,6000,12,500,6000,Compra inicial de libros de texto para distribución escolar
+82ec7240-ab67-4439-99c7-2a42985b2f44,MONITOR-DELL-27,Monitor Dell 27 Pulgadas 4K UHD,2025-10-23T12:31:58.342078-06:00,25,180,4500,206.67,225,46500,Tercera compra - liquidación
+82ec7240-ab67-4439-99c7-2a42985b2f44,MONITOR-DELL-27,Monitor Dell 27 Pulgadas 4K UHD,2025-10-23T12:31:58.324951-06:00,20,250,5000,210,200,42000,Segunda compra - modelos premium
+82ec7240-ab67-4439-99c7-2a42985b2f44,MONITOR-DELL-27,Monitor Dell 27 Pulgadas 4K UHD,2025-10-23T12:31:58.310159-06:00,30,200,6000,205.56,180,37000,Compra inicial de monitores
+82ec7240-ab67-4439-99c7-2a42985b2f44,MONITOR-DELL-27,Monitor Dell 27 Pulgadas 4K UHD,2025-10-23T12:29:07.586064-06:00,25,180,4500,206.67,150,31000,Tercera compra - liquidación
+82ec7240-ab67-4439-99c7-2a42985b2f44,MONITOR-DELL-27,Monitor Dell 27 Pulgadas 4K UHD,2025-10-23T12:29:07.569279-06:00,20,250,5000,212,125,26500,Segunda compra - modelos premium
+82ec7240-ab67-4439-99c7-2a42985b2f44,MONITOR-DELL-27,Monitor Dell 27 Pulgadas 4K UHD,2025-10-23T12:29:07.552601-06:00,30,200,6000,204.76,105,21500,Compra inicial de monitores
+82ec7240-ab67-4439-99c7-2a42985b2f44,MONITOR-DELL-27,Monitor Dell 27 Pulgadas 4K UHD,2025-10-23T12:01:30.583006-06:00,25,180,4500,206.67,75,15500,Tercera compra - liquidación
+82ec7240-ab67-4439-99c7-2a42985b2f44,MONITOR-DELL-27,Monitor Dell 27 Pulgadas 4K UHD,2025-10-23T12:01:30.567508-06:00,20,250,5000,220,50,11000,Segunda compra - modelos premium
+82ec7240-ab67-4439-99c7-2a42985b2f44,MONITOR-DELL-27,Monitor Dell 27 Pulgadas 4K UHD,2025-10-23T12:01:30.550216-06:00,30,200,6000,200,30,6000,Compra inicial de monitores
+172c476e-c688-4967-b429-5107cfcb7bf6,TECLADO-MECA-001,Teclado Mecánico Inalámbrico RGB,2025-10-23T12:31:58.296305-06:00,50,30,1500,25,450,11250,Tercera compra - continúa incremento
+172c476e-c688-4967-b429-5107cfcb7bf6,TECLADO-MECA-001,Teclado Mecánico Inalámbrico RGB,2025-10-23T12:31:58.281226-06:00,50,25,1250,24.38,400,9750,Segunda compra - aumento de precio
+172c476e-c688-4967-b429-5107cfcb7bf6,TECLADO-MECA-001,Teclado Mecánico Inalámbrico RGB,2025-10-23T12:31:58.261249-06:00,50,20,1000,24.29,350,8500,Compra inicial de teclados
+172c476e-c688-4967-b429-5107cfcb7bf6,TECLADO-MECA-001,Teclado Mecánico Inalámbrico RGB,2025-10-23T12:29:07.536197-06:00,50,30,1500,25,300,7500,Tercera compra - continúa incremento
+172c476e-c688-4967-b429-5107cfcb7bf6,TECLADO-MECA-001,Teclado Mecánico Inalámbrico RGB,2025-10-23T12:29:07.520552-06:00,50,25,1250,24,250,6000,Segunda compra - aumento de precio
+172c476e-c688-4967-b429-5107cfcb7bf6,TECLADO-MECA-001,Teclado Mecánico Inalámbrico RGB,2025-10-23T12:29:07.506032-06:00,50,20,1000,23.75,200,4750,Compra inicial de teclados
+172c476e-c688-4967-b429-5107cfcb7bf6,TECLADO-MECA-001,Teclado Mecánico Inalámbrico RGB,2025-10-23T12:01:30.534108-06:00,50,30,1500,25,150,3750,Tercera compra - continúa incremento
+172c476e-c688-4967-b429-5107cfcb7bf6,TECLADO-MECA-001,Teclado Mecánico Inalámbrico RGB,2025-10-23T12:01:30.517881-06:00,50,25,1250,22.5,100,2250,Segunda compra - aumento de precio
+172c476e-c688-4967-b429-5107cfcb7bf6,TECLADO-MECA-001,Teclado Mecánico Inalámbrico RGB,2025-10-23T12:01:30.501599-06:00,50,20,1000,20,50,1000,Compra inicial de teclados
