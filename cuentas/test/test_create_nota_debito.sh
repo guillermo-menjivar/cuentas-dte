@@ -22,10 +22,11 @@ curl -X POST http://localhost:8080/v1/notas/debito \
     {
       \"related_ccf_id\": \"2EADAAE2-40C3-4910-B0E5-A81AD4F117EF\",
       \"is_new_item\": false,
-      \"inventory_item_id\": \"0f409222-7102-4fae-885b-586980c8bb14\",
-      \"item_name\": \"Logitech MX Master 3\",
+      \"ccf_line_item_id\": \"25161abf-b542-435d-a4ef-5158536484d4\",
+      \"inventory_item_id\": \"910a13c5-70ae-489b-ba0e-b72b31bfc1fd\",
+      \"item_name\": \"Dell Latitude 5520 Laptop\",
       \"quantity\": 1,
-      \"unit_price\": 150.00,
+      \"adjustment_amount\": 4876.00,
       \"discount_amount\": 0
     }
   ],
