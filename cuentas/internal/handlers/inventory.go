@@ -3,7 +3,9 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -351,9 +353,12 @@ func RecordPurchaseHandler(c *gin.Context) {
 	companyID := c.MustGet("company_id").(string)
 	db := c.MustGet("db").(*sql.DB)
 
+	log.Printf("[DEBUG] RecordPurchase called - ItemID: %s, CompanyID: %s", itemID, companyID)
+
 	// Parse request
 	var req models.RecordPurchaseRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Printf("[ERROR] Failed to bind JSON: %v", err)
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error: "invalid JSON format",
 			Code:  "invalid_json",
@@ -361,8 +366,11 @@ func RecordPurchaseHandler(c *gin.Context) {
 		return
 	}
 
+	log.Printf("[DEBUG] Request parsed - Quantity: %f, UnitCost: %f", req.Quantity, req.UnitCost)
+
 	// Validate request
 	if err := req.Validate(); err != nil {
+		log.Printf("[ERROR] Validation failed: %v", err)
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Error: err.Error(),
 			Code:  "validation_failed",
@@ -374,6 +382,7 @@ func RecordPurchaseHandler(c *gin.Context) {
 	inventoryService := services.NewInventoryService(db)
 	event, err := inventoryService.RecordPurchase(c.Request.Context(), companyID, itemID, &req)
 	if err != nil {
+		log.Printf("[ERROR] RecordPurchase failed: %v", err)
 		if strings.Contains(err.Error(), "item not found") {
 			c.JSON(http.StatusNotFound, models.ErrorResponse{
 				Error: "item not found",
@@ -381,14 +390,14 @@ func RecordPurchaseHandler(c *gin.Context) {
 			})
 			return
 		}
-
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
-			Error: "failed to record purchase",
+			Error: fmt.Sprintf("failed to record purchase: %v", err),
 			Code:  "internal_error",
 		})
 		return
 	}
 
+	log.Printf("[DEBUG] Purchase recorded successfully - EventID: %s", event.ID)
 	c.JSON(http.StatusCreated, event)
 }
 
