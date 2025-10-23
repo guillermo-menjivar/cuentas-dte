@@ -236,8 +236,10 @@ class InventoryReportExporter:
                     sku = item.get("sku", "Unknown")
                     name = item.get("name", "Unknown")
 
+                    # Use sort=asc for chronological order (oldest first)
                     history = self._get(
-                        f"/v1/inventory/items/{item_id}/cost-history", {"limit": "100"}
+                        f"/v1/inventory/items/{item_id}/cost-history",
+                        {"limit": "100", "sort": "asc"},
                     )
                     events = history.get("events", [])
 
