@@ -40,11 +40,13 @@ func (s *InventoryService) RecordPurchase(
 	}
 
 	// Calculate new values
+	purchaseTotal := req.UnitCost.Mul(req.Quantity)
+	newTotalCost := currentState.CurrentTotalCost.Add(purchaseTotal)
 	newQuantity := currentState.CurrentQuantity + req.Quantity
-	newTotalCost := currentState.CurrentTotalCost + (req.Quantity * req.UnitCost)
-	newAvgCost := float64(0)
+
+	var newAvgCost models.Money
 	if newQuantity > 0 {
-		newAvgCost = newTotalCost / newQuantity
+		newAvgCost = newTotalCost.Div(newQuantity)
 	}
 
 	nextVersion := currentState.AggregateVersion + 1
