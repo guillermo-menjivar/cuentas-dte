@@ -522,8 +522,13 @@ func GetCostHistoryHandler(c *gin.Context) {
 		}
 	}
 
+	sortOrder := c.DefaultQuery("sort", "desc")
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "desc"
+	}
+
 	inventoryService := services.NewInventoryService(db)
-	events, err := inventoryService.GetCostHistory(c.Request.Context(), companyID, itemID, limit)
+	events, err := inventoryService.GetCostHistory(c.Request.Context(), companyID, itemID, limit, sortOrder)
 	if err != nil {
 		if strings.Contains(err.Error(), "item not found") {
 			c.JSON(http.StatusNotFound, models.ErrorResponse{

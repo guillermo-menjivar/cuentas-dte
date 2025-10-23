@@ -112,5 +112,6 @@ func (r *RecordPurchaseRequest) Validate() error {
 
 // GetCostHistoryRequest represents query parameters for cost history
 type GetCostHistoryRequest struct {
-	Limit int `form:"limit"` // Default will be 50
+	Limit int    `form:"limit"` // Default will be 50
+	Sort  string `form:"sort"`
 }

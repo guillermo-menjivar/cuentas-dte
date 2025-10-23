@@ -363,6 +363,7 @@ func (s *InventoryService) GetCostHistory(
 	ctx context.Context,
 	companyID, itemID string,
 	limit int,
+	sortOrder string,
 ) ([]models.InventoryEvent, error) {
 	// Verify item exists
 	_, err := s.GetItemByID(ctx, companyID, itemID)
@@ -377,18 +378,23 @@ func (s *InventoryService) GetCostHistory(
 		limit = 1000 // Max limit
 	}
 
-	query := `
-		SELECT event_id, company_id, item_id, event_type, event_timestamp,
-			   aggregate_version, quantity, unit_cost, total_cost,
-			   balance_quantity_after, balance_total_cost_after,
-			   moving_avg_cost_before, moving_avg_cost_after,
-			   reference_type, reference_id, correlation_id,
-			   event_data, notes, created_by_user_id, created_at
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "desc"
+	}
+
+	query := fmt.Sprintf(`
+		SELECT
+			event_id, company_id, item_id, event_type, event_timestamp,
+			aggregate_version, quantity, unit_cost, total_cost,
+			balance_quantity_after, balance_total_cost_after,
+			moving_avg_cost_before, moving_avg_cost_after,
+			reference_type, reference_id, correlation_id,
+			event_data, notes, created_by_user_id, created_at
 		FROM inventory_events
 		WHERE company_id = $1 AND item_id = $2
-		ORDER BY created_at DESC
+		ORDER BY event_timestamp %s, event_id %s
 		LIMIT $3
-	`
+	`, sortOrder, sortOrder)
 
 	rows, err := s.db.QueryContext(ctx, query, companyID, itemID, limit)
 	if err != nil {
