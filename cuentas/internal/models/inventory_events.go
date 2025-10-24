@@ -64,8 +64,17 @@ type InventoryStateWithItem struct {
 
 // RecordPurchaseRequest represents a request to record a purchase
 type RecordPurchaseRequest struct {
-	Quantity      float64 `json:"quantity" binding:"required,gt=0"`
-	UnitCost      Money   `json:"unit_cost" binding:"required,gt=0"`
+	Quantity float64 `json:"quantity" binding:"required,gt=0"`
+	UnitCost Money   `json:"unit_cost" binding:"required,gt=0"`
+
+	// Legal compliance fields (Article 142-A)
+	DocumentType   string  `json:"document_type" binding:"required"`
+	DocumentNumber string  `json:"document_number" binding:"required"`
+	SupplierName   string  `json:"supplier_name" binding:"required"`
+	SupplierNIT    *string `json:"supplier_nit"` // Required if DocumentType == CCF (03)
+	CostSourceRef  *string `json:"cost_source_ref"`
+
+	// Existing optional fields
 	Notes         *string `json:"notes"`
 	ReferenceType *string `json:"reference_type"`
 	ReferenceID   *string `json:"reference_id"`
