@@ -2,6 +2,7 @@ package models
 
 import (
 	"cuentas/internal/codigos"
+	"cuentas/internal/dte"
 	"cuentas/internal/tools"
 	"encoding/json"
 	"fmt"
@@ -151,6 +152,10 @@ func (r *RecordPurchaseRequest) Validate() error {
 		if !tools.ValidateNIT(*r.SupplierNIT) {
 			return fmt.Errorf("invalid supplier_nit format, must be XXXX-XXXXXX-XXX-X")
 		}
+	}
+
+	if !dte.ValidateNumeroControl(r.DocumentNumber) {
+		return fmt.Errorf("document_number must be a valid DTE numero de control format (e.g., DTE-03-M001P001-000000000000001)")
 	}
 
 	if r.DocumentNumber == "" {
