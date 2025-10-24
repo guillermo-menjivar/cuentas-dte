@@ -275,6 +275,7 @@ func startServer() {
 		v1.GET("/inventory/items/:id/state", handlers.GetInventoryStateHandler)
 		v1.GET("/inventory/states", handlers.ListInventoryStatesHandler)
 		v1.GET("/inventory/items/:id/cost-history", handlers.GetCostHistoryHandler)
+		v1.GET("/inventory/items/:id/legal-register", handlers.GetLegalInventoryRegisterHandler)
 
 		v1.GET("/inventory/events", handlers.GetAllEventsHandler)             // All events across all items
 		v1.GET("/inventory/valuation", handlers.GetInventoryValuationHandler) // Point-in-time valuation
