@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"cuentas/internal/models"
@@ -505,48 +504,5 @@ func ListInventoryStatesHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"states": states,
 		"count":  len(states),
-	})
-}
-
-// GetCostHistoryHandler handles GET /v1/inventory/items/:id/cost-history
-func GetCostHistoryHandler(c *gin.Context) {
-	itemID := c.Param("id")
-	companyID := c.MustGet("company_id").(string)
-	db := c.MustGet("db").(*sql.DB)
-
-	// Parse query parameters
-	limit := 50 // default
-	if limitStr := c.Query("limit"); limitStr != "" {
-		if parsedLimit, err := strconv.Atoi(limitStr); err == nil {
-			limit = parsedLimit
-		}
-	}
-
-	sortOrder := c.DefaultQuery("sort", "desc")
-	if sortOrder != "asc" && sortOrder != "desc" {
-		sortOrder = "desc"
-	}
-
-	inventoryService := services.NewInventoryService(db)
-	events, err := inventoryService.GetCostHistory(c.Request.Context(), companyID, itemID, limit, sortOrder)
-	if err != nil {
-		if strings.Contains(err.Error(), "item not found") {
-			c.JSON(http.StatusNotFound, models.ErrorResponse{
-				Error: "item not found",
-				Code:  "not_found",
-			})
-			return
-		}
-
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
-			Error: "failed to get cost history",
-			Code:  "internal_error",
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"events": events,
-		"count":  len(events),
 	})
 }
