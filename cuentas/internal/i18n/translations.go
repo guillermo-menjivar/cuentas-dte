@@ -128,3 +128,53 @@ func (t *Translations) ValuationDetailHeaders() []string {
 	// Spanish headers
 	return []string{"SKU", "Nombre del Artículo", "Cantidad", "Costo Promedio", "Valor Total", "Fecha Último Evento"}
 }
+
+// InventoryRegisterHeaders returns CSV headers for legal inventory register (Article 142-A)
+func (t *Translations) InventoryRegisterHeaders() []string {
+	if t.lang == English {
+		return []string{
+			"Correlativo", "Date", "Doc Type", "Doc Number", "Supplier", "Nationality",
+			"Source/Ref", "Units In", "Units Out", "Balance Units",
+			"Cost In", "Cost Out", "Balance Cost",
+		}
+	}
+
+	// Spanish headers (Article 142-A compliance)
+	return []string{
+		"Correlativo", "Fecha", "Tipo Doc", "No. Documento", "Proveedor", "Nacionalidad",
+		"Fuente/Referencia", "Unidades Entrada", "Unidades Salida", "Saldo Unidades",
+		"Costo Entrada", "Costo Salida", "Saldo Costo",
+	}
+}
+
+// FormatRegisterHeader formats the header section for inventory register
+func (t *Translations) FormatRegisterHeader() string {
+	if t.lang == English {
+		return "INVENTORY CONTROL REGISTER"
+	}
+	return "REGISTRO DE CONTROL DE INVENTARIOS"
+}
+
+// FormatCompanyLabel returns label for company name
+func (t *Translations) FormatCompanyLabel() string {
+	if t.lang == English {
+		return "Company"
+	}
+	return "Empresa"
+}
+
+// FormatPeriodLabel returns label for period
+func (t *Translations) FormatPeriodLabel() string {
+	if t.lang == English {
+		return "Period"
+	}
+	return "Período"
+}
+
+// FormatItemLabel returns label for item/article
+func (t *Translations) FormatItemLabel() string {
+	if t.lang == English {
+		return "Item"
+	}
+	return "Artículo"
+}
