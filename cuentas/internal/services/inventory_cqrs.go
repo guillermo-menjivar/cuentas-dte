@@ -315,23 +315,27 @@ func (s *InventoryService) GetInventoryState(
 }
 
 // ListInventoryStates retrieves all inventory states for a company
+// ListInventoryStates gets inventory states with item details
 func (s *InventoryService) ListInventoryStates(
 	ctx context.Context,
 	companyID string,
 	inStockOnly bool,
-) ([]models.InventoryState, error) {
+) ([]models.InventoryStateWithItem, error) {
 	query := `
-		SELECT company_id, item_id, current_quantity, current_total_cost,
-			   current_avg_cost, last_event_id, aggregate_version, updated_at
-		FROM inventory_state
-		WHERE company_id = $1
+		SELECT 
+			s.company_id, s.item_id, s.current_quantity, s.current_total_cost,
+			s.current_avg_cost, s.last_event_id, s.aggregate_version, s.updated_at,
+			i.sku, i.name as item_name, i.tipo_item
+		FROM inventory_states s
+		JOIN inventory_items i ON s.item_id = i.id
+		WHERE s.company_id = $1
 	`
 
 	if inStockOnly {
-		query += " AND current_quantity > 0"
+		query += " AND s.current_quantity > 0"
 	}
 
-	query += " ORDER BY updated_at DESC"
+	query += " ORDER BY i.sku"
 
 	rows, err := s.db.QueryContext(ctx, query, companyID)
 	if err != nil {
@@ -339,21 +343,18 @@ func (s *InventoryService) ListInventoryStates(
 	}
 	defer rows.Close()
 
-	var states []models.InventoryState
+	var states []models.InventoryStateWithItem
 	for rows.Next() {
-		var state models.InventoryState
+		var state models.InventoryStateWithItem
 		err := rows.Scan(
 			&state.CompanyID, &state.ItemID, &state.CurrentQuantity, &state.CurrentTotalCost,
 			&state.CurrentAvgCost, &state.LastEventID, &state.AggregateVersion, &state.UpdatedAt,
+			&state.SKU, &state.ItemName, &state.TipoItem,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan state: %w", err)
+			return nil, fmt.Errorf("failed to scan inventory state: %w", err)
 		}
 		states = append(states, state)
-	}
-
-	if states == nil {
-		states = []models.InventoryState{}
 	}
 
 	return states, nil
