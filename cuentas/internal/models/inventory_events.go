@@ -49,8 +49,9 @@ type InventoryStateWithItem struct {
 	ItemName         string    `json:"item_name"`
 	TipoItem         string    `json:"tipo_item"`
 	CurrentQuantity  float64   `json:"current_quantity"`
-	CurrentTotalCost float64   `json:"current_total_cost"`
-	CurrentAvgCost   float64   `json:"current_avg_cost"`
+	CurrentTotalCost Money     `json:"current_total_cost"` // Changed from float64 to Money
+	CurrentAvgCost   Money     `json:"current_avg_cost"`   // Changed from float64 to Money
+	LastEventID      *int64    `json:"last_event_id,omitempty"`
 	AggregateVersion int       `json:"aggregate_version"`
 	UpdatedAt        time.Time `json:"updated_at"`
 }
