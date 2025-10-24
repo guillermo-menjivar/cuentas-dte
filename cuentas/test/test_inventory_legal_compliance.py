@@ -59,6 +59,47 @@ class InventoryLegalComplianceTest:
             print(f"❌ Failed to get items: {e}")
             sys.exit(1)
 
+    def test_invalid_document_format_should_fail(self):
+        """Test 7: Invalid document number format should fail"""
+        print("📝 Test 7: Invalid Document Number Format (should fail)")
+
+        url = f"{self.base_url}/v1/inventory/items/{self.test_item_id}/purchase"
+        payload = {
+            "quantity": 10,
+            "unit_cost": 400.00,
+            "document_type": "03",
+            "document_number": "FAKE-DOC-12345",  # Invalid format
+            "supplier_name": "Proveedor Test",
+            "supplier_nit": "0614-123456-001-2",
+        }
+
+        try:
+            response = requests.post(url, headers=self.headers, json=payload)
+
+            if response.status_code == 400:
+                error = response.json().get("error", "")
+                if "valid DTE numero de control" in error:
+                    self.log_test(
+                        "Document format validation",
+                        True,
+                        f"Correctly rejected: {error}",
+                    )
+                else:
+                    self.log_test(
+                        "Document format validation",
+                        False,
+                        f"Wrong error message: {error}",
+                    )
+            else:
+                self.log_test(
+                    "Document format validation",
+                    False,
+                    f"Expected 400, got {response.status_code}",
+                )
+
+        except requests.exceptions.RequestException as e:
+            self.log_test("Document format validation", False, f"Request failed: {e}")
+
     def test_ccf_purchase_with_nit(self):
         """Test 1: Record CCF purchase with NIT (should succeed)"""
         print("📝 Test 1: CCF Purchase with NIT")
@@ -68,7 +109,7 @@ class InventoryLegalComplianceTest:
             "quantity": 50,
             "unit_cost": 425.00,
             "document_type": "03",
-            "document_number": "DTE-03-00012345",
+            "document_number": "DTE-03-M001P001-000000000010011",
             "supplier_name": "Distribuidora Tech El Salvador S.A. de C.V.",
             "supplier_nit": "0614-987654-001-1",
             "cost_source_ref": "Libro de Compras Folio 45",
@@ -334,6 +375,7 @@ class InventoryLegalComplianceTest:
         self.test_invalid_document_type_should_fail()
         self.test_invalid_nit_format_should_fail()
         self.test_legal_register_has_data()
+        self.self.test_invalid_document_format_should_fail()
 
         # Summary
         print("=" * 70)
