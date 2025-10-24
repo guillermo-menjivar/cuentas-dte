@@ -327,7 +327,7 @@ func (s *InventoryService) ListInventoryStates(
 			i.sku, i.name as item_name, i.tipo_item,
 			s.current_quantity, s.current_total_cost, s.current_avg_cost,
 			s.last_event_id, s.aggregate_version, s.updated_at
-		FROM inventory_states s
+		FROM inventory_state s
 		JOIN inventory_items i ON s.item_id = i.id
 		WHERE s.company_id = $1
 	`
