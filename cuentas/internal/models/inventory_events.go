@@ -2,10 +2,10 @@ package models
 
 import (
 	"cuentas/internal/codigos"
-	"cuentas/internal/dte"
 	"cuentas/internal/tools"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"time"
 )
 
@@ -154,7 +154,7 @@ func (r *RecordPurchaseRequest) Validate() error {
 		}
 	}
 
-	if !dte.ValidateNumeroControl(r.DocumentNumber) {
+	if !validateNumeroControl(r.DocumentNumber) {
 		return fmt.Errorf("document_number must be a valid DTE numero de control format (e.g., DTE-03-M001P001-000000000000001)")
 	}
 
@@ -202,4 +202,12 @@ type ItemValuation struct {
 	TotalValue  Money     `json:"total_value"`
 	LastEventID int64     `json:"last_event_id"`
 	LastEventAt time.Time `json:"last_event_at"`
+}
+
+func validateNumeroControl(numeroControl string) bool {
+	var numeroControlRegex = regexp.MustCompile(`^DTE-[0-9]{2}-[MSBP][0-9]{3}P[0-9]{3}-[0-9]{15}$`)
+	if numeroControl == "" {
+		return false
+	}
+	return numeroControlRegex.MatchString(numeroControl)
 }
