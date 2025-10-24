@@ -15,26 +15,34 @@ type CompanyLegalInfo struct {
 }
 
 type InventoryEvent struct {
-	EventID               int64           `json:"event_id"`
-	CompanyID             string          `json:"company_id"`
-	ItemID                string          `json:"item_id"`
-	EventType             string          `json:"event_type"`
-	EventTimestamp        time.Time       `json:"event_timestamp"`
-	AggregateVersion      int             `json:"aggregate_version"`
-	Quantity              float64         `json:"quantity"`
-	UnitCost              Money           `json:"unit_cost"`
-	TotalCost             Money           `json:"total_cost"`
-	BalanceQuantityAfter  float64         `json:"balance_quantity_after"`
-	BalanceTotalCostAfter Money           `json:"balance_total_cost_after"`
-	MovingAvgCostBefore   Money           `json:"moving_avg_cost_before"`
-	MovingAvgCostAfter    Money           `json:"moving_avg_cost_after"`
-	ReferenceType         *string         `json:"reference_type,omitempty"`
-	ReferenceID           *string         `json:"reference_id,omitempty"`
-	CorrelationID         *string         `json:"correlation_id,omitempty"`
-	EventData             json.RawMessage `json:"event_data,omitempty"`
-	Notes                 *string         `json:"notes,omitempty"`
-	CreatedByUserID       *string         `json:"created_by_user_id,omitempty"`
-	CreatedAt             time.Time       `json:"created_at"`
+	EventID               int64     `json:"event_id"`
+	CompanyID             string    `json:"company_id"`
+	ItemID                string    `json:"item_id"`
+	EventType             string    `json:"event_type"`
+	EventTimestamp        time.Time `json:"event_timestamp"`
+	AggregateVersion      int       `json:"aggregate_version"`
+	Quantity              float64   `json:"quantity"`
+	UnitCost              Money     `json:"unit_cost"`
+	TotalCost             Money     `json:"total_cost"`
+	BalanceQuantityAfter  float64   `json:"balance_quantity_after"`
+	BalanceTotalCostAfter Money     `json:"balance_total_cost_after"`
+	MovingAvgCostBefore   Money     `json:"moving_avg_cost_before"`
+	MovingAvgCostAfter    Money     `json:"moving_avg_cost_after"`
+
+	DocumentType        *string `json:"document_type,omitempty"`
+	DocumentNumber      *string `json:"document_number,omitempty"`
+	SupplierName        *string `json:"supplier_name,omitempty"`
+	SupplierNIT         *string `json:"supplier_nit,omitempty"`
+	SupplierNationality *string `json:"supplier_nationality,omitempty"`
+	CostSourceRef       *string `json:"cost_source_ref,omitempty"`
+
+	ReferenceType   *string         `json:"reference_type,omitempty"`
+	ReferenceID     *string         `json:"reference_id,omitempty"`
+	CorrelationID   *string         `json:"correlation_id,omitempty"`
+	EventData       json.RawMessage `json:"event_data,omitempty"`
+	Notes           *string         `json:"notes,omitempty"`
+	CreatedByUserID *string         `json:"created_by_user_id,omitempty"`
+	CreatedAt       time.Time       `json:"created_at"`
 }
 
 // InventoryState represents the current state of inventory for an item
