@@ -323,9 +323,10 @@ func (s *InventoryService) ListInventoryStates(
 ) ([]models.InventoryStateWithItem, error) {
 	query := `
 		SELECT 
-			s.company_id, s.item_id, s.current_quantity, s.current_total_cost,
-			s.current_avg_cost, s.last_event_id, s.aggregate_version, s.updated_at,
-			i.sku, i.name as item_name, i.tipo_item
+			s.company_id, s.item_id, 
+			i.sku, i.name as item_name, i.tipo_item,
+			s.current_quantity, s.current_total_cost, s.current_avg_cost,
+			s.last_event_id, s.aggregate_version, s.updated_at
 		FROM inventory_states s
 		JOIN inventory_items i ON s.item_id = i.id
 		WHERE s.company_id = $1
@@ -346,14 +347,24 @@ func (s *InventoryService) ListInventoryStates(
 	var states []models.InventoryStateWithItem
 	for rows.Next() {
 		var state models.InventoryStateWithItem
+
 		err := rows.Scan(
-			&state.CompanyID, &state.ItemID, &state.CurrentQuantity, &state.CurrentTotalCost,
-			&state.CurrentAvgCost, &state.LastEventID, &state.AggregateVersion, &state.UpdatedAt,
-			&state.SKU, &state.ItemName, &state.TipoItem,
+			&state.CompanyID,
+			&state.ItemID,
+			&state.SKU,
+			&state.ItemName,
+			&state.TipoItem,
+			&state.CurrentQuantity,
+			&state.CurrentTotalCost, // Money.Scan() handles conversion
+			&state.CurrentAvgCost,   // Money.Scan() handles conversion
+			&state.LastEventID,
+			&state.AggregateVersion,
+			&state.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan inventory state: %w", err)
 		}
+
 		states = append(states, state)
 	}
 
