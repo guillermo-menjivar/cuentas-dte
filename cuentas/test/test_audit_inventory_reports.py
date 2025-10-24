@@ -15,10 +15,13 @@ import requests
 class InventoryReportExporter:
     """Exports inventory cost reports to CSV format"""
 
-    def __init__(self, base_url: str, company_id: str, output_dir: str):
+    def __init__(
+        self, base_url: str, company_id: str, output_dir: str, language: str = "es"
+    ):
         self.base_url = base_url.rstrip("/")
         self.company_id = company_id
         self.output_dir = Path(output_dir)
+        self.language = language  # Default: Spanish
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.headers = {"X-Company-ID": company_id}
 
@@ -29,6 +32,7 @@ class InventoryReportExporter:
         """Download CSV directly from API"""
         url = f"{self.base_url}{endpoint}"
         params["format"] = "csv"
+        params["language"] = self.language  # Add language parameter
 
         try:
             response = requests.get(url, headers=self.headers, params=params)
