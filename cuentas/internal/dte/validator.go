@@ -20,3 +20,10 @@ func ValidateEstablishmentCode(code string) error {
 	}
 	return nil
 }
+
+func ValidateNumeroControl(numeroControl string) bool {
+	if numeroControl == "" {
+		return false
+	}
+	return numeroControlRegex.MatchString(numeroControl)
+}
