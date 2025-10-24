@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"cuentas/internal/formats"
 	"cuentas/internal/models"
 	"cuentas/internal/services"
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -114,10 +116,11 @@ func GetAllEventsHandler(c *gin.Context) {
 	db := c.MustGet("db").(*sql.DB)
 
 	// Parse query params
-	startDate := c.Query("start_date") // ISO format: 2024-01-01
-	endDate := c.Query("end_date")     // ISO format: 2024-12-31
-	eventType := c.Query("event_type") // PURCHASE, ADJUSTMENT, SALE (future)
+	startDate := c.Query("start_date")
+	endDate := c.Query("end_date")
+	eventType := c.Query("event_type")
 	sortOrder := c.DefaultQuery("sort", "desc")
+	format := DetermineFormat(c.GetHeader("Accept"), c.Query("format"))
 
 	if sortOrder != "asc" && sortOrder != "desc" {
 		sortOrder = "desc"
@@ -142,7 +145,144 @@ func GetAllEventsHandler(c *gin.Context) {
 		return
 	}
 
+	// Return based on format
+	if format == "csv" {
+		csvData, err := formats.WriteEventsCSV(events)
+		if err != nil {
+			log.Printf("[ERROR] Failed to generate CSV: %v", err)
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+				Error: "failed to generate CSV",
+				Code:  "internal_error",
+			})
+			return
+		}
+
+		// Generate filename
+		filename := fmt.Sprintf("inventory_events_%s.csv", time.Now().Format("20060102_150405"))
+		if startDate != "" && endDate != "" {
+			filename = fmt.Sprintf("inventory_events_%s_to_%s.csv", startDate, endDate)
+		}
+
+		c.Header("Content-Type", "text/csv")
+		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+		c.Data(http.StatusOK, "text/csv", csvData)
+		return
+	}
+
+	// Default: JSON
 	c.JSON(http.StatusOK, gin.H{
 		"events": events,
+	})
+}
+
+// GetInventoryValuationHandler handles GET /v1/inventory/valuation
+func GetInventoryValuationHandler(c *gin.Context) {
+	companyID := c.MustGet("company_id").(string)
+	db := c.MustGet("db").(*sql.DB)
+
+	// Parse as_of_date (required)
+	asOfDate := c.Query("as_of_date")
+	if asOfDate == "" {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error: "as_of_date parameter is required (format: YYYY-MM-DD)",
+			Code:  "missing_parameter",
+		})
+		return
+	}
+
+	// Validate date format
+	_, err := time.Parse("2006-01-02", asOfDate)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error: "invalid date format, use YYYY-MM-DD",
+			Code:  "invalid_date",
+		})
+		return
+	}
+
+	format := DetermineFormat(c.GetHeader("Accept"), c.Query("format"))
+
+	// Get valuation
+	inventoryService := services.NewInventoryService(db)
+	valuation, err := inventoryService.GetInventoryValuationAtDate(c.Request.Context(), companyID, asOfDate)
+	if err != nil {
+		log.Printf("[ERROR] GetInventoryValuation failed: %v", err)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to get inventory valuation",
+			Code:  "internal_error",
+		})
+		return
+	}
+
+	// Return based on format
+	if format == "csv" {
+		csvData, err := WriteValuationCSV(valuation)
+		if err != nil {
+			log.Printf("[ERROR] Failed to generate CSV: %v", err)
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+				Error: "failed to generate CSV",
+				Code:  "internal_error",
+			})
+			return
+		}
+
+		filename := fmt.Sprintf("inventory_valuation_%s.csv", asOfDate)
+		c.Header("Content-Type", "text/csv")
+		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+		c.Data(http.StatusOK, "text/csv", csvData)
+		return
+	}
+
+	// Default: JSON
+	c.JSON(http.StatusOK, valuation)
+}
+
+// ListInventoryStatesHandler handles GET /v1/inventory/states
+func ListInventoryStatesHandler(c *gin.Context) {
+	companyID := c.MustGet("company_id").(string)
+	db := c.MustGet("db").(*sql.DB)
+
+	// Parse query params
+	inStockOnly := c.Query("in_stock_only") == "true"
+	format := DetermineFormat(c.GetHeader("Accept"), c.Query("format"))
+
+	// Get states
+	inventoryService := services.NewInventoryService(db)
+	states, err := inventoryService.ListInventoryStates(c.Request.Context(), companyID, inStockOnly)
+	if err != nil {
+		log.Printf("[ERROR] ListInventoryStates failed: %v", err)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to list inventory states",
+			Code:  "internal_error",
+		})
+		return
+	}
+
+	// Return based on format
+	if format == "csv" {
+		csvData, err := WriteInventoryStatesCSV(states)
+		if err != nil {
+			log.Printf("[ERROR] Failed to generate CSV: %v", err)
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+				Error: "failed to generate CSV",
+				Code:  "internal_error",
+			})
+			return
+		}
+
+		filename := "inventory_states.csv"
+		if inStockOnly {
+			filename = "inventory_in_stock.csv"
+		}
+
+		c.Header("Content-Type", "text/csv")
+		c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+		c.Data(http.StatusOK, "text/csv", csvData)
+		return
+	}
+
+	// Default: JSON
+	c.JSON(http.StatusOK, gin.H{
+		"states": states,
 	})
 }
