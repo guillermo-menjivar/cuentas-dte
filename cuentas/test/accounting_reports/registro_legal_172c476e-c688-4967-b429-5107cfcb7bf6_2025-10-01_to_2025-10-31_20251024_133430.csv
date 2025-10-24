@@ -1,0 +1,17 @@
+REGISTRO DE CONTROL DE INVENTARIOS
+Empresa,"Paredes & Paredes, S.A. de C.V"
+NIT,06143005061013
+NRC,1726313
+Período,Del 2025-10-01 al 2025-10-31
+Artículo,TECLADO-MECA-001 - Teclado Mecánico Inalámbrico RGB
+
+Correlativo,Fecha,Tipo Doc,No. Documento,Proveedor,Nacionalidad,Fuente/Referencia,Unidades Entrada,Unidades Salida,Saldo Unidades,Costo Entrada,Costo Salida,Saldo Costo
+11,2025-10-23 12:01:30,,,,,Compra inicial de teclados,50.00,,50.00,1000.00,,1000.00
+12,2025-10-23 12:01:30,,,,,Segunda compra - aumento de precio,50.00,,100.00,1250.00,,2250.00
+13,2025-10-23 12:01:30,,,,,Tercera compra - continúa incremento,50.00,,150.00,1500.00,,3750.00
+28,2025-10-23 12:29:07,,,,,Compra inicial de teclados,50.00,,200.00,1000.00,,4750.00
+29,2025-10-23 12:29:07,,,,,Segunda compra - aumento de precio,50.00,,250.00,1250.00,,6000.00
+30,2025-10-23 12:29:07,,,,,Tercera compra - continúa incremento,50.00,,300.00,1500.00,,7500.00
+45,2025-10-23 12:31:58,,,,,Compra inicial de teclados,50.00,,350.00,1000.00,,8500.00
+46,2025-10-23 12:31:58,,,,,Segunda compra - aumento de precio,50.00,,400.00,1250.00,,9750.00
+47,2025-10-23 12:31:58,,,,,Tercera compra - continúa incremento,50.00,,450.00,1500.00,,11250.00
