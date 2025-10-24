@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/yourusername/cuentas/internal/models"
+	"cuentas/internal/models"
 )
 
 // WriteEventsCSV writes inventory events to CSV format
