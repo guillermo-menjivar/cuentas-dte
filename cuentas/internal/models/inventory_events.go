@@ -1,6 +1,8 @@
 package models
 
 import (
+	"cuentas/internal/codigos"
+	"cuentas/internal/tools"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -120,9 +122,37 @@ func (r *RecordPurchaseRequest) Validate() error {
 	if r.Quantity <= 0 {
 		return fmt.Errorf("quantity must be greater than 0")
 	}
+
 	if r.UnitCost < 0 {
 		return fmt.Errorf("unit_cost cannot be negative")
 	}
+
+	// Validate document type using constants
+	if r.DocumentType != codigos.DocTypeFactura && r.DocumentType != codigos.DocTypeComprobanteCredito {
+		return fmt.Errorf("document_type must be %s (Factura) or %s (CCF)",
+			codigos.DocTypeFactura, codigos.DocTypeComprobanteCredito)
+	}
+
+	// CCF (03) requires supplier NIT
+	if r.DocumentType == codigos.DocTypeComprobanteCredito {
+		if r.SupplierNIT == nil || *r.SupplierNIT == "" {
+			return fmt.Errorf("supplier_nit is required for document type %s (CCF)",
+				codigos.DocTypeComprobanteCredito)
+		}
+		// Optional: Validate NIT format
+		if !tools.ValidateNIT(*r.SupplierNIT) {
+			return fmt.Errorf("invalid supplier_nit format, must be XXXX-XXXXXX-XXX-X")
+		}
+	}
+
+	if r.DocumentNumber == "" {
+		return fmt.Errorf("document_number is required")
+	}
+
+	if r.SupplierName == "" {
+		return fmt.Errorf("supplier_name is required")
+	}
+
 	return nil
 }
 
