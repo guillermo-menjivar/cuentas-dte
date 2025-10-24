@@ -482,27 +482,3 @@ func GetInventoryStateHandler(c *gin.Context) {
 
 	c.JSON(http.StatusOK, state)
 }
-
-// ListInventoryStatesHandler handles GET /v1/inventory/states
-func ListInventoryStatesHandler(c *gin.Context) {
-	companyID := c.MustGet("company_id").(string)
-	db := c.MustGet("db").(*sql.DB)
-
-	// Parse query parameters
-	inStockOnly := c.DefaultQuery("in_stock_only", "false") == "true"
-
-	inventoryService := services.NewInventoryService(db)
-	states, err := inventoryService.ListInventoryStates(c.Request.Context(), companyID, inStockOnly)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
-			Error: "failed to list inventory states",
-			Code:  "internal_error",
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"states": states,
-		"count":  len(states),
-	})
-}
