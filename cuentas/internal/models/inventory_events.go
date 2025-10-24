@@ -115,3 +115,32 @@ type GetCostHistoryRequest struct {
 	Limit int    `form:"limit"` // Default will be 50
 	Sort  string `form:"sort"`
 }
+
+// InventoryEventWithItem includes item details with the event
+type InventoryEventWithItem struct {
+	InventoryEvent
+	SKU      string `json:"sku"`
+	ItemName string `json:"item_name"`
+}
+
+// InventoryValuation represents inventory value at a specific point in time
+type InventoryValuation struct {
+	AsOfDate      time.Time       `json:"as_of_date"`
+	CompanyID     string          `json:"company_id"`
+	TotalValue    Money           `json:"total_value"`
+	TotalQuantity float64         `json:"total_quantity"`
+	ItemCount     int             `json:"item_count"`
+	ItemValues    []ItemValuation `json:"item_values"`
+}
+
+// ItemValuation represents a single item's valuation at a point in time
+type ItemValuation struct {
+	ItemID      string    `json:"item_id"`
+	SKU         string    `json:"sku"`
+	ItemName    string    `json:"item_name"`
+	Quantity    float64   `json:"quantity"`
+	AvgCost     Money     `json:"avg_cost"`
+	TotalValue  Money     `json:"total_value"`
+	LastEventID int64     `json:"last_event_id"`
+	LastEventAt time.Time `json:"last_event_at"`
+}
