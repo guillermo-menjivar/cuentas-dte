@@ -65,11 +65,33 @@ func WriteLegalInventoryRegisterCSV(
 		}
 
 		// Document info (will be empty until we update RecordPurchase)
+		//
 		docType := ""
+		if event.DocumentType != nil {
+			docType = *event.DocumentType
+		}
+
 		docNumber := ""
+		if event.DocumentNumber != nil {
+			docNumber = *event.DocumentNumber
+		}
+
 		supplier := ""
+		if event.SupplierName != nil {
+			supplier = *event.SupplierName
+		}
+
 		nationality := ""
+		if event.SupplierNationality != nil {
+			nationality = *event.SupplierNationality
+		}
+
 		sourceRef := ""
+		if event.CostSourceRef != nil {
+			sourceRef = *event.CostSourceRef
+		} else if event.Notes != nil {
+			sourceRef = *event.Notes // Fallback to notes
+		}
 
 		// For now, use notes as fallback for source reference
 		if event.Notes != nil {
