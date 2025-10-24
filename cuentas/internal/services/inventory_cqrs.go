@@ -74,36 +74,48 @@ func (s *InventoryService) RecordPurchase(
 	}
 
 	// Insert event
+	// Hardcode nationality to Nacional (all suppliers are Salvadoran for now)
+	supplierNationality := "Nacional"
+
+	// Insert event
 	eventQuery := `
-		INSERT INTO inventory_events (
-			company_id, item_id, event_type, event_timestamp,
-			aggregate_version, quantity, unit_cost, total_cost,
-			balance_quantity_after, balance_total_cost_after,
-			moving_avg_cost_before, moving_avg_cost_after,
-			reference_type, reference_id, correlation_id,
-			event_data, notes, created_by_user_id, created_at
-		) VALUES (
-			$1, $2, $3, NOW(),
-			$4, $5, $6, $7,
-			$8, $9,
-			$10, $11,
-			$12, $13, $14,
-			$15, $16, $17, NOW()
-		)
-		RETURNING event_id, company_id, item_id, event_type, event_timestamp,
-				  aggregate_version, quantity, unit_cost, total_cost,
-				  balance_quantity_after, balance_total_cost_after,
-				  moving_avg_cost_before, moving_avg_cost_after,
-				  reference_type, reference_id, correlation_id,
-				  event_data, notes, created_by_user_id, created_at
-	`
+	INSERT INTO inventory_events (
+		company_id, item_id, event_type, event_timestamp,
+		aggregate_version, quantity, unit_cost, total_cost,
+		balance_quantity_after, balance_total_cost_after,
+		moving_avg_cost_before, moving_avg_cost_after,
+		document_type, document_number, supplier_name, supplier_nit, 
+		supplier_nationality, cost_source_ref,
+		reference_type, reference_id, correlation_id,
+		event_data, notes, created_by_user_id, created_at
+	) VALUES (
+		$1, $2, $3, NOW(),
+		$4, $5, $6, $7,
+		$8, $9,
+		$10, $11,
+		$12, $13, $14, $15,
+		$16, $17,
+		$18, $19, $20,
+		$21, $22, $23, NOW()
+	)
+	RETURNING event_id, company_id, item_id, event_type, event_timestamp,
+			  aggregate_version, quantity, unit_cost, total_cost,
+			  balance_quantity_after, balance_total_cost_after,
+			  moving_avg_cost_before, moving_avg_cost_after,
+			  document_type, document_number, supplier_name, supplier_nit,
+			  supplier_nationality, cost_source_ref,
+			  reference_type, reference_id, correlation_id,
+			  event_data, notes, created_by_user_id, created_at
+`
 
 	var event models.InventoryEvent
-	err = tx.QueryRowContext(ctx, eventQuery, // Changed from tx.QueryRow to tx.QueryRowContext
+	err = tx.QueryRowContext(ctx, eventQuery,
 		companyID, itemID, "PURCHASE",
 		nextVersion, req.Quantity, req.UnitCost.Float64(), purchaseTotal.Float64(),
 		newQuantity, newTotalCost.Float64(),
 		currentState.CurrentAvgCost.Float64(), newAvgCost.Float64(),
+		req.DocumentType, req.DocumentNumber, req.SupplierName, req.SupplierNIT,
+		supplierNationality, req.CostSourceRef,
 		req.ReferenceType, req.ReferenceID, req.CorrelationID,
 		eventDataJSON, req.Notes, nil,
 	).Scan(
@@ -111,6 +123,8 @@ func (s *InventoryService) RecordPurchase(
 		&event.AggregateVersion, &event.Quantity, &event.UnitCost, &event.TotalCost,
 		&event.BalanceQuantityAfter, &event.BalanceTotalCostAfter,
 		&event.MovingAvgCostBefore, &event.MovingAvgCostAfter,
+		&event.DocumentType, &event.DocumentNumber, &event.SupplierName, &event.SupplierNIT,
+		&event.SupplierNationality, &event.CostSourceRef,
 		&event.ReferenceType, &event.ReferenceID, &event.CorrelationID,
 		&event.EventData, &event.Notes, &event.CreatedByUserID, &event.CreatedAt,
 	)
@@ -490,16 +504,18 @@ func (s *InventoryService) GetCostHistory(
 
 	// Build query with optional date filters
 	query := `
-		SELECT 
-			event_id, company_id, item_id, event_type, event_timestamp,
-			aggregate_version, quantity, unit_cost, total_cost,
-			balance_quantity_after, balance_total_cost_after,
-			moving_avg_cost_before, moving_avg_cost_after,
-			reference_type, reference_id, correlation_id,
-			event_data, notes, created_by_user_id, created_at
-		FROM inventory_events
-		WHERE company_id = $1 AND item_id = $2
-	`
+	SELECT 
+		event_id, company_id, item_id, event_type, event_timestamp,
+		aggregate_version, quantity, unit_cost, total_cost,
+		balance_quantity_after, balance_total_cost_after,
+		moving_avg_cost_before, moving_avg_cost_after,
+		document_type, document_number, supplier_name, supplier_nit,
+		supplier_nationality, cost_source_ref,
+		reference_type, reference_id, correlation_id,
+		event_data, notes, created_by_user_id, created_at
+	FROM inventory_events
+	WHERE company_id = $1 AND item_id = $2
+`
 
 	args := []interface{}{companyID, itemID}
 	argCount := 2
@@ -543,6 +559,8 @@ func (s *InventoryService) GetCostHistory(
 			&event.AggregateVersion, &event.Quantity, &event.UnitCost, &event.TotalCost,
 			&event.BalanceQuantityAfter, &event.BalanceTotalCostAfter,
 			&event.MovingAvgCostBefore, &event.MovingAvgCostAfter,
+			&event.DocumentType, &event.DocumentNumber, &event.SupplierName, &event.SupplierNIT,
+			&event.SupplierNationality, &event.CostSourceRef,
 			&event.ReferenceType, &event.ReferenceID, &event.CorrelationID,
 			&event.EventData, &event.Notes, &event.CreatedByUserID, &event.CreatedAt,
 		)
@@ -570,11 +588,13 @@ func (s *InventoryService) GetAllEvents(
 
 	// Build query
 	query := `
-		SELECT 
+		SELECT
 			e.event_id, e.company_id, e.item_id, e.event_type, e.event_timestamp,
 			e.aggregate_version, e.quantity, e.unit_cost, e.total_cost,
 			e.balance_quantity_after, e.balance_total_cost_after,
 			e.moving_avg_cost_before, e.moving_avg_cost_after,
+			e.document_type, e.document_number, e.supplier_name, e.supplier_nit,
+			e.supplier_nationality, e.cost_source_ref,
 			e.reference_type, e.reference_id, e.correlation_id,
 			e.event_data, e.notes, e.created_by_user_id, e.created_at,
 			i.sku, i.name as item_name
@@ -629,6 +649,8 @@ func (s *InventoryService) GetAllEvents(
 			&event.AggregateVersion, &event.Quantity, &event.UnitCost, &event.TotalCost,
 			&event.BalanceQuantityAfter, &event.BalanceTotalCostAfter,
 			&event.MovingAvgCostBefore, &event.MovingAvgCostAfter,
+			&event.DocumentType, &event.DocumentNumber, &event.SupplierName, &event.SupplierNIT,
+			&event.SupplierNationality, &event.CostSourceRef,
 			&event.ReferenceType, &event.ReferenceID, &event.CorrelationID,
 			&event.EventData, &event.Notes, &event.CreatedByUserID, &event.CreatedAt,
 			&event.SKU, &event.ItemName,
