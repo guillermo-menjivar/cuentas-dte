@@ -1,0 +1,238 @@
+# Inventory Cost Tracking System (CQRS/Event Sourcing)
+
+## Date: 2024-10-24
+
+## Overview
+Implemented complete inventory cost tracking system using CQRS and Event Sourcing patterns with moving average cost calculation for accounting compliance.
+
+## Architecture
+
+### Event Sourcing
+- All inventory changes stored as immutable events in `inventory_events` table
+- Event types: `PURCHASE`, `ADJUSTMENT`, `SALE` (future)
+- Each event records complete state transition with before/after balances
+- Events never deleted, only appended (audit trail preservation)
+
+### CQRS Pattern
+- **Write Side**: `RecordPurchase()`, `RecordAdjustment()` - append events, update state
+- **Read Side**: `GetInventoryState()`, `ListInventoryStates()`, `GetCostHistory()` - query current/historical state
+- State materialized in `inventory_state` table for fast reads
+- Optimistic concurrency via `aggregate_version` field
+
+## Database Schema
+
+### inventory_events (append-only)
+```sql
+event_id BIGSERIAL PRIMARY KEY
+company_id UUID NOT NULL
+item_id UUID NOT NULL
+event_type VARCHAR(20) NOT NULL
+event_timestamp TIMESTAMPTZ NOT NULL
+aggregate_version INT NOT NULL
+quantity NUMERIC(15,4) NOT NULL
+unit_cost NUMERIC(15,4) NOT NULL
+total_cost NUMERIC(15,4) NOT NULL
+balance_quantity_after NUMERIC(15,4) NOT NULL
+balance_total_cost_after NUMERIC(15,4) NOT NULL
+moving_avg_cost_before NUMERIC(15,4) NOT NULL
+moving_avg_cost_after NUMERIC(15,4) NOT NULL
+reference_type VARCHAR(50)
+reference_id VARCHAR(100)
+correlation_id UUID
+event_data JSONB
+notes TEXT
+created_by_user_id UUID
+created_at TIMESTAMPTZ DEFAULT NOW()
+
+UNIQUE(company_id, item_id, aggregate_version)
+INDEX ON (company_id, item_id, event_timestamp)
+```
+
+### inventory_state (materialized view)
+```sql
+company_id UUID NOT NULL
+item_id UUID NOT NULL
+current_quantity NUMERIC(15,4) NOT NULL
+current_total_cost NUMERIC(15,4) NOT NULL
+current_avg_cost NUMERIC(15,4) NOT NULL
+last_event_id BIGINT
+aggregate_version INT NOT NULL
+updated_at TIMESTAMPTZ NOT NULL
+
+PRIMARY KEY (company_id, item_id)
+```
+
+## Cost Calculation (Moving Average)
+
+### Formula
+```
+new_avg_cost = (current_total_cost + purchase_total) / (current_quantity + purchase_quantity)
+```
+
+### Implementation
+Custom `Money` type handles all monetary values:
+- Stores as `float64` internally
+- Rounds to 2 decimal places on all operations
+- Scans from PostgreSQL NUMERIC (handles `[]byte`, `float64`, `string`)
+- Implements `Add()`, `Sub()`, `Mul()`, `Div()` with automatic rounding
+- Prevents floating-point artifacts in accounting
+```go
+type Money float64
+
+func NewMoney(value float64) Money {
+    return Money(math.Round(value*100) / 100)
+}
+
+func (m Money) Add(other Money) Money {
+    return NewMoney(float64(m) + float64(other))
+}
+```
+
+## Transaction Flow
+
+### Purchase
+1. Validate request (quantity > 0, unit_cost provided)
+2. Begin DB transaction
+3. Get/create current state with row lock
+4. Calculate new values:
+   - `new_total_cost = current_total_cost + (quantity * unit_cost)`
+   - `new_quantity = current_quantity + quantity`
+   - `new_avg_cost = new_total_cost / new_quantity`
+5. Insert event with incremented `aggregate_version`
+6. Update state atomically (checks version for concurrency)
+7. Commit transaction
+
+### Adjustment
+- Positive: Add inventory (requires `unit_cost`)
+- Negative: Remove inventory (uses `current_avg_cost`)
+- Records reason in `notes` field
+- Prevents negative quantity (validation)
+
+## API Endpoints
+
+### Write Operations
+- `POST /v1/inventory/items/:id/purchase` - Record purchase
+- `POST /v1/inventory/items/:id/adjustment` - Record adjustment
+
+### Read Operations (with date filtering)
+- `GET /v1/inventory/states?in_stock_only=true` - Current state all items
+- `GET /v1/inventory/items/:id/state` - Current state single item
+- `GET /v1/inventory/items/:id/cost-history?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD&sort=asc` - Event history
+- `GET /v1/inventory/events?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD&event_type=PURCHASE` - All events (filterable)
+- `GET /v1/inventory/valuation?as_of_date=YYYY-MM-DD` - Point-in-time valuation
+
+### Content Negotiation
+- Query param: `?format=csv` or `?format=json`
+- Accept header: `Accept: text/csv` or `Accept: application/json`
+- Default: JSON
+
+### Internationalization
+- Query param: `?language=es` or `?language=en`
+- Default: Spanish (es)
+- Translates: Event types, column headers, item types
+- CSV headers and event type values localized
+
+## Reference Linking (for Sales Integration)
+
+Events support linking to source transactions:
+```go
+reference_type: "INVOICE"     // Source transaction type
+reference_id: "inv-2025-001"  // Source transaction ID
+correlation_id: UUID          // Groups related events
+```
+
+Usage pattern:
+```go
+// When creating invoice, record inventory impact
+inventoryService.RecordSale(ctx, companyID, itemID, &RecordSaleRequest{
+    Quantity: -5.0,
+    ReferenceType: "INVOICE",
+    ReferenceID: invoiceID,
+    CorrelationID: &correlationID,
+})
+```
+
+## Audit Reports (CSV Export)
+
+Python CLI tool generates audit packages:
+```bash
+./export_inventory_cost_reports.py COMPANY_ID \
+  --mode audit \
+  --start-date 2025-01-01 \
+  --end-date 2025-12-31 \
+  --language es \
+  --output-dir ./audit_2025
+```
+
+Generates:
+1. Opening balance (day before start)
+2. All movements (chronological)
+3. Purchases only
+4. Adjustments only
+5. Closing balance (end date)
+6. Manifest file
+
+## Key Design Decisions
+
+1. **Event Sourcing over state-only**: Provides complete audit trail, enables point-in-time queries
+2. **Moving average cost**: Standard accounting method, simpler than FIFO/LIFO
+3. **Separate read/write models**: Optimizes for different access patterns
+4. **Money type with rounding**: Prevents floating-point errors in financial calculations
+5. **Optimistic concurrency**: `aggregate_version` prevents lost updates without locking
+6. **Immutable events**: Corrections via new events (adjustments), never delete
+7. **Reference linking**: Future-proof for invoice/sales integration
+8. **CSV-first reporting**: Accountants prefer spreadsheets over JSON
+9. **Spanish default**: Primary user base in El Salvador
+
+## Testing Strategy
+
+Setup script creates test data:
+- Multiple purchases at different costs
+- Positive/negative adjustments
+- Validates moving average calculation
+- Verifies balance tracking
+
+Reports verify:
+- Clean 2-decimal formatting
+- Chronological ordering (oldest→newest)
+- No floating-point artifacts
+- Complete audit trail
+
+## Performance Considerations
+
+- `inventory_state` provides O(1) current state lookup
+- Events indexed by `(company_id, item_id, event_timestamp)` for history queries
+- Point-in-time queries replay events up to date (acceptable for audit use)
+- For high-volume systems, consider periodic snapshots
+
+## Future Enhancements
+
+1. Add `SALE` event type for invoice integration
+2. Implement event replay for state reconstruction
+3. Add snapshots for large event histories
+4. Support batch operations (import purchases)
+5. Add real-time inventory alerts (low stock)
+6. Implement FIFO/LIFO cost methods (configurable)
+
+## Files Modified/Created
+```
+internal/models/inventory_cqrs.go          # Event/state models, Money type
+internal/models/money.go                   # Money type implementation
+internal/services/inventory_cqrs.go        # CQRS service methods
+internal/handlers/inventory_reports.go     # HTTP handlers with i18n
+internal/handlers/csv_helper.go            # CSV generation
+internal/i18n/translations.go              # Spanish/English translations
+migrations/XXX_inventory_cqrs.sql          # Database schema
+export_inventory_cost_reports.py           # CLI audit tool
+```
+
+## Dependencies
+
+- PostgreSQL NUMERIC type for precise decimal storage
+- Gin framework for HTTP routing
+- Standard library `database/sql` (no ORM)
+- Python `requests` for CLI tool
+
+---
+
+**Summary**: Production-ready inventory cost tracking with full audit trail, proper accounting (moving average), date-range reporting, and Spanish localization for Salvadoran market.
