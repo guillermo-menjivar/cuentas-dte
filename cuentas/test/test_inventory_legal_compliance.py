@@ -375,7 +375,7 @@ class InventoryLegalComplianceTest:
         self.test_invalid_document_type_should_fail()
         self.test_invalid_nit_format_should_fail()
         self.test_legal_register_has_data()
-        self.self.test_invalid_document_format_should_fail()
+        self.test_invalid_document_format_should_fail()
 
         # Summary
         print("=" * 70)
