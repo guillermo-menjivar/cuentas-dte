@@ -28,6 +28,69 @@ class InventoryReportExporter:
         # Create output directory
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
+    def export_legal_register_for_item(
+        self, item_id: str, start_date: str, end_date: str
+    ) -> str:
+        """Export legal inventory register for a specific item (Article 142-A compliant)"""
+        print(
+            f"📊 Exporting Legal Register for Item {item_id} ({start_date} to {end_date})"
+        )
+
+        filename = (
+            f"registro_legal_{item_id}_{start_date}_to_{end_date}_{self.timestamp}.csv"
+        )
+        filepath = self._download_csv(
+            f"/v1/inventory/items/{item_id}/legal-register",
+            {"start_date": start_date, "end_date": end_date},
+            filename,
+        )
+
+        if filepath:
+            print(f"   ✅ Saved to: {filepath}\n")
+        return filepath
+
+    def export_legal_registers_all_items(
+        self, start_date: str, end_date: str
+    ) -> List[str]:
+        """Export legal registers for ALL product items (Article 142-A compliance)"""
+        print(
+            f"📊 Exporting Legal Registers for All Products ({start_date} to {end_date})"
+        )
+
+        # Get all product items
+        url = f"{self.base_url}/v1/inventory/items"
+        params = {"active": "true", "tipo_item": "1"}  # Only products
+
+        try:
+            response = requests.get(url, headers=self.headers, params=params)
+            response.raise_for_status()
+            items = response.json().get("items", [])
+
+            if not items:
+                print("   ⚠️  No product items found\n")
+                return []
+
+            print(f"   Found {len(items)} product items\n")
+
+            files = []
+            for item in items:
+                item_id = item["id"]
+                sku = item["sku"]
+                name = item["name"]
+                print(f"   📄 Generating register for: {sku} - {name}")
+
+                file = self.export_legal_register_for_item(
+                    item_id, start_date, end_date
+                )
+                if file:
+                    files.append(file)
+
+            return files
+
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Error getting items: {e}")
+            return []
+
     def _download_csv(self, endpoint: str, params: dict, filename: str) -> str:
         """Download CSV directly from API"""
         url = f"{self.base_url}{endpoint}"
@@ -185,7 +248,14 @@ class InventoryReportExporter:
             print(f"📊 Report 5: Closing Balance (as of {end_date})")
             files.append(self.export_valuation_at_date(end_date))
 
-            # 6. Create manifest
+            # 6. NEW: Legal registers for all items (Article 142-A compliance)
+            print(f"📊 Report 6: Legal Registers (Article 142-A) - One per Product")
+            legal_registers = self.export_legal_registers_all_items(
+                start_date, end_date
+            )
+            files.extend(legal_registers)
+
+            # 7. Create manifest
             files.append(self.create_audit_manifest(start_date, end_date, files))
 
             print("=" * 63)
@@ -204,6 +274,7 @@ class InventoryReportExporter:
             print(f"   • Opening balance on {opening_date}")
             print(f"   • All movements from {start_date} to {end_date}")
             print(f"   • Closing balance on {end_date}")
+            print(f"   • Legal registers (one per product) - Article 142-A compliant")
             print(f"   • Complete audit trail\n")
 
         except Exception as e:
