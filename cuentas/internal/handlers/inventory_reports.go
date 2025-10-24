@@ -1,0 +1,148 @@
+package handlers
+
+import (
+	"cuentas/internal/models"
+	"cuentas/internal/services"
+	"database/sql"
+	"log"
+	"net/http"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/gin-gonic/gin"
+)
+
+// GetCostHistoryHandler handles GET /v1/inventory/items/:id/cost-history
+func GetCostHistoryHandler(c *gin.Context) {
+	itemID := c.Param("id")
+	companyID := c.MustGet("company_id").(string)
+	db := c.MustGet("db").(*sql.DB)
+
+	// Parse query params
+	limit := 50 // default
+	if limitStr := c.Query("limit"); limitStr != "" {
+		if parsedLimit, err := strconv.Atoi(limitStr); err == nil && parsedLimit > 0 {
+			limit = parsedLimit
+		}
+	}
+
+	// Parse sort order (default: desc = newest first)
+	sortOrder := c.DefaultQuery("sort", "desc")
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "desc"
+	}
+
+	// Parse date range filters
+	startDate := c.Query("start_date") // ISO format: 2024-01-01
+	endDate := c.Query("end_date")     // ISO format: 2024-12-31
+
+	// Get cost history
+	inventoryService := services.NewInventoryService(db)
+	events, err := inventoryService.GetCostHistory(c.Request.Context(), companyID, itemID, limit, sortOrder, startDate, endDate)
+	if err != nil {
+		if strings.Contains(err.Error(), "item not found") {
+			c.JSON(http.StatusNotFound, models.ErrorResponse{
+				Error: "item not found",
+				Code:  "not_found",
+			})
+			return
+		}
+		if strings.Contains(err.Error(), "invalid date") {
+			c.JSON(http.StatusBadRequest, models.ErrorResponse{
+				Error: err.Error(),
+				Code:  "invalid_date",
+			})
+			return
+		}
+		log.Printf("[ERROR] GetCostHistory failed: %v", err)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to get cost history",
+			Code:  "internal_error",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"events": events,
+	})
+}
+
+// GetInventoryValuationHandler handles GET /v1/inventory/valuation
+func GetInventoryValuationHandler(c *gin.Context) {
+	companyID := c.MustGet("company_id").(string)
+	db := c.MustGet("db").(*sql.DB)
+
+	// Parse as_of_date (required)
+	asOfDate := c.Query("as_of_date") // ISO format: 2025-03-31
+	if asOfDate == "" {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error: "as_of_date parameter is required (format: YYYY-MM-DD)",
+			Code:  "missing_parameter",
+		})
+		return
+	}
+
+	// Validate date format
+	_, err := time.Parse("2006-01-02", asOfDate)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error: "invalid date format, use YYYY-MM-DD",
+			Code:  "invalid_date",
+		})
+		return
+	}
+
+	// Get valuation
+	inventoryService := services.NewInventoryService(db)
+	valuation, err := inventoryService.GetInventoryValuationAtDate(c.Request.Context(), companyID, asOfDate)
+	if err != nil {
+		log.Printf("[ERROR] GetInventoryValuation failed: %v", err)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to get inventory valuation",
+			Code:  "internal_error",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, valuation)
+}
+
+// GetAllEventsHandler handles GET /v1/inventory/events
+func GetAllEventsHandler(c *gin.Context) {
+	companyID := c.MustGet("company_id").(string)
+	db := c.MustGet("db").(*sql.DB)
+
+	// Parse query params
+	startDate := c.Query("start_date") // ISO format: 2024-01-01
+	endDate := c.Query("end_date")     // ISO format: 2024-12-31
+	eventType := c.Query("event_type") // PURCHASE, ADJUSTMENT, SALE (future)
+	sortOrder := c.DefaultQuery("sort", "desc")
+
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "desc"
+	}
+
+	// Get all events
+	inventoryService := services.NewInventoryService(db)
+	events, err := inventoryService.GetAllEvents(c.Request.Context(), companyID, startDate, endDate, eventType, sortOrder)
+	if err != nil {
+		if strings.Contains(err.Error(), "invalid date") {
+			c.JSON(http.StatusBadRequest, models.ErrorResponse{
+				Error: err.Error(),
+				Code:  "invalid_date",
+			})
+			return
+		}
+		log.Printf("[ERROR] GetAllEvents failed: %v", err)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to get events",
+			Code:  "internal_error",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"events": events,
+	})
+}
