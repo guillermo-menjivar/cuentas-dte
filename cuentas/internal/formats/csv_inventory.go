@@ -1,4 +1,4 @@
-package formats
+package handlers
 
 import (
 	"bytes"
@@ -6,46 +6,44 @@ import (
 	"fmt"
 	"time"
 
-	"cuentas/internal/models"
+	"github.com/yourusername/cuentas/internal/i18n"
+	"github.com/yourusername/cuentas/internal/models"
 )
 
-// WriteEventsCSV writes inventory events to CSV format
-func WriteEventsCSV(events []models.InventoryEventWithItem) ([]byte, error) {
+// WriteEventsCSV writes inventory events to CSV format with translations
+func WriteEventsCSV(events []models.InventoryEventWithItem, lang string) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	writer := csv.NewWriter(buf)
 
+	// Get translations
+	t := i18n.New(lang)
+
 	// Write header
-	header := []string{
-		"Event ID", "Timestamp", "SKU", "Item Name", "Event Type",
-		"Quantity", "Unit Cost", "Total Cost",
-		"Avg Cost Before", "Avg Cost After",
-		"Balance Qty", "Balance Value", "Notes",
-	}
-	if err := writer.Write(header); err != nil {
+	if err := writer.Write(t.InventoryEventsHeaders()); err != nil {
 		return nil, err
 	}
 
 	// Write data rows
 	for _, event := range events {
+		notes := ""
+		if event.Notes != nil {
+			notes = *event.Notes
+		}
+
 		row := []string{
 			fmt.Sprintf("%d", event.EventID),
 			event.EventTimestamp.Format(time.RFC3339),
 			event.SKU,
 			event.ItemName,
-			event.EventType,
+			t.EventType(event.EventType), // Translate event type
 			fmt.Sprintf("%.2f", event.Quantity),
-			fmt.Sprintf("%.2f", event.UnitCost),
-			fmt.Sprintf("%.2f", event.TotalCost),
-			fmt.Sprintf("%.2f", event.MovingAvgCostBefore),
-			fmt.Sprintf("%.2f", event.MovingAvgCostAfter),
+			fmt.Sprintf("%.2f", event.UnitCost.Float64()),
+			fmt.Sprintf("%.2f", event.TotalCost.Float64()),
+			fmt.Sprintf("%.2f", event.MovingAvgCostBefore.Float64()),
+			fmt.Sprintf("%.2f", event.MovingAvgCostAfter.Float64()),
 			fmt.Sprintf("%.2f", event.BalanceQuantityAfter),
-			fmt.Sprintf("%.2f", event.BalanceTotalCostAfter),
-		}
-
-		if event.Notes != nil {
-			row = append(row, *event.Notes)
-		} else {
-			row = append(row, "")
+			fmt.Sprintf("%.2f", event.BalanceTotalCostAfter.Float64()),
+			notes,
 		}
 
 		if err := writer.Write(row); err != nil {
@@ -61,18 +59,25 @@ func WriteEventsCSV(events []models.InventoryEventWithItem) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// WriteValuationCSV writes inventory valuation to CSV format
-func WriteValuationCSV(valuation *models.InventoryValuation) ([]byte, error) {
+// WriteValuationCSV writes inventory valuation to CSV format with translations
+func WriteValuationCSV(valuation *models.InventoryValuation, lang string) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	writer := csv.NewWriter(buf)
 
+	// Get translations
+	t := i18n.New(lang)
+
 	// Summary section
+	summaryHeader := t.ValuationSummaryHeaders()
+	if err := writer.Write(summaryHeader); err != nil {
+		return nil, err
+	}
+
 	summary := [][]string{
-		{"INVENTORY VALUATION SUMMARY"},
-		{"As of Date", valuation.AsOfDate.Format("2006-01-02")},
-		{"Total Value", fmt.Sprintf("%.2f", valuation.TotalValue)},
-		{"Total Quantity", fmt.Sprintf("%.2f", valuation.TotalQuantity)},
-		{"Item Count", fmt.Sprintf("%d", valuation.ItemCount)},
+		{t.ValuationSummaryRow("As of Date"), valuation.AsOfDate.Format("2006-01-02")},
+		{t.ValuationSummaryRow("Total Value"), fmt.Sprintf("%.2f", valuation.TotalValue.Float64())},
+		{t.ValuationSummaryRow("Total Quantity"), fmt.Sprintf("%.2f", valuation.TotalQuantity)},
+		{t.ValuationSummaryRow("Item Count"), fmt.Sprintf("%d", valuation.ItemCount)},
 		{}, // Blank row
 	}
 
@@ -83,8 +88,7 @@ func WriteValuationCSV(valuation *models.InventoryValuation) ([]byte, error) {
 	}
 
 	// Detail header
-	header := []string{"SKU", "Item Name", "Quantity", "Avg Cost", "Total Value", "Last Event Date"}
-	if err := writer.Write(header); err != nil {
+	if err := writer.Write(t.ValuationDetailHeaders()); err != nil {
 		return nil, err
 	}
 
@@ -94,8 +98,8 @@ func WriteValuationCSV(valuation *models.InventoryValuation) ([]byte, error) {
 			item.SKU,
 			item.ItemName,
 			fmt.Sprintf("%.2f", item.Quantity),
-			fmt.Sprintf("%.2f", item.AvgCost),
-			fmt.Sprintf("%.2f", item.TotalValue),
+			fmt.Sprintf("%.2f", item.AvgCost.Float64()),
+			fmt.Sprintf("%.2f", item.TotalValue.Float64()),
 			item.LastEventAt.Format(time.RFC3339),
 		}
 		if err := writer.Write(row); err != nil {
@@ -111,33 +115,28 @@ func WriteValuationCSV(valuation *models.InventoryValuation) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// WriteInventoryStatesCSV writes inventory states to CSV format
-func WriteInventoryStatesCSV(states []models.InventoryStateWithItem) ([]byte, error) {
+// WriteInventoryStatesCSV writes inventory states to CSV format with translations
+func WriteInventoryStatesCSV(states []models.InventoryStateWithItem, lang string) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	writer := csv.NewWriter(buf)
 
+	// Get translations
+	t := i18n.New(lang)
+
 	// Write header
-	header := []string{
-		"SKU", "Item Name", "Type", "Quantity", "Avg Cost", "Total Value", "Last Updated",
-	}
-	if err := writer.Write(header); err != nil {
+	if err := writer.Write(t.InventoryStatesHeaders()); err != nil {
 		return nil, err
 	}
 
 	// Write data rows
 	for _, state := range states {
-		itemType := "Service"
-		if state.TipoItem == "1" {
-			itemType = "Product"
-		}
-
 		row := []string{
 			state.SKU,
 			state.ItemName,
-			itemType,
+			t.ItemType(state.TipoItem), // Translate item type
 			fmt.Sprintf("%.2f", state.CurrentQuantity),
-			fmt.Sprintf("%.2f", state.CurrentAvgCost),
-			fmt.Sprintf("%.2f", state.CurrentTotalCost),
+			fmt.Sprintf("%.2f", state.CurrentAvgCost.Float64()),
+			fmt.Sprintf("%.2f", state.CurrentTotalCost.Float64()),
 			state.UpdatedAt.Format(time.RFC3339),
 		}
 
@@ -171,4 +170,13 @@ func DetermineFormat(acceptHeader, formatParam string) string {
 
 	// Default to JSON
 	return "json"
+}
+
+// DetermineLanguage determines language from query param (default: Spanish)
+func DetermineLanguage(langParam string) string {
+	if langParam == "en" {
+		return "en"
+	}
+	// Default to Spanish
+	return "es"
 }
