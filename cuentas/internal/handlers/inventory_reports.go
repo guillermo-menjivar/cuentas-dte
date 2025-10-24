@@ -249,3 +249,105 @@ func ListInventoryStatesHandler(c *gin.Context) {
 		"states": states,
 	})
 }
+
+// Generates Article 142-A compliant inventory register for a specific item
+func GetLegalInventoryRegisterHandler(c *gin.Context) {
+	itemID := c.Param("id")
+	companyID := c.MustGet("company_id").(string)
+	db := c.MustGet("db").(*sql.DB)
+
+	// Parse query params
+	startDate := c.Query("start_date")
+	endDate := c.Query("end_date")
+	language := formats.DetermineLanguage(c.Query("language"))
+
+	// Validate required parameters
+	if startDate == "" || endDate == "" {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error: "start_date and end_date are required",
+			Code:  "missing_parameters",
+		})
+		return
+	}
+
+	// Validate date formats
+	if _, err := time.Parse("2006-01-02", startDate); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error: "invalid start_date format, use YYYY-MM-DD",
+			Code:  "invalid_date",
+		})
+		return
+	}
+	if _, err := time.Parse("2006-01-02", endDate); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Error: "invalid end_date format, use YYYY-MM-DD",
+			Code:  "invalid_date",
+		})
+		return
+	}
+
+	inventoryService := services.NewInventoryService(db)
+
+	// Get company legal info for report header
+	var companyInfo models.CompanyLegalInfo
+	err := db.QueryRowContext(c.Request.Context(),
+		"SELECT COALESCE(nombre_comercial, name) as legal_name, nit, ncr FROM companies WHERE id = $1",
+		companyID,
+	).Scan(&companyInfo.LegalName, &companyInfo.NIT, &companyInfo.NRC)
+	if err != nil {
+		log.Printf("[ERROR] Failed to get company info: %v", err)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to get company information",
+			Code:  "internal_error",
+		})
+		return
+	}
+
+	// Get item info
+	item, err := inventoryService.GetItemByID(c.Request.Context(), companyID, itemID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, models.ErrorResponse{
+			Error: "item not found",
+			Code:  "not_found",
+		})
+		return
+	}
+
+	// Get events for this item in date range
+	events, err := inventoryService.GetCostHistory(c.Request.Context(), companyID, itemID, 10000, "asc", startDate, endDate)
+	if err != nil {
+		log.Printf("[ERROR] GetCostHistory failed: %v", err)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to get cost history",
+			Code:  "internal_error",
+		})
+		return
+	}
+
+	// Convert to InventoryEventWithItem (include SKU and name)
+	eventsWithItem := make([]models.InventoryEventWithItem, len(events))
+	for i, event := range events {
+		eventsWithItem[i] = models.InventoryEventWithItem{
+			InventoryEvent: event,
+			SKU:            item.SKU,
+			ItemName:       item.Name,
+		}
+	}
+
+	// Generate legal CSV register
+	csvData, err := formats.WriteLegalInventoryRegisterCSV(&companyInfo, item, eventsWithItem, startDate, endDate, language)
+	if err != nil {
+		log.Printf("[ERROR] Failed to generate legal register: %v", err)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Error: "failed to generate register",
+			Code:  "internal_error",
+		})
+		return
+	}
+
+	// Return CSV file
+	filename := fmt.Sprintf("registro_inventario_%s_%s_a_%s.csv", item.SKU, startDate, endDate)
+	c.Header("Content-Type", "text/csv; charset=utf-8")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
+	c.Data(http.StatusOK, "text/csv", csvData)
+}
