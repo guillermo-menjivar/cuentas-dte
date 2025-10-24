@@ -1,0 +1,24 @@
+REGISTRO DE CONTROL DE INVENTARIOS
+Empresa,"Paredes & Paredes, S.A. de C.V"
+NIT,06143005061013
+NRC,1726313
+Período,Del 2025-10-01 al 2025-10-31
+Artículo,MOUSE-LOG-001 - Logitech MX Master 3
+
+Correlativo,Fecha,Tipo Doc,No. Documento,Proveedor,Nacionalidad,Fuente/Referencia,Unidades Entrada,Unidades Salida,Saldo Unidades,Costo Entrada,Costo Salida,Saldo Costo
+1,2025-10-23 11:29:23,,,,,Inventario inicial de mouse,100.00,,100.00,850.00,,850.00
+2,2025-10-23 11:29:23,,,,,Segunda compra - mismo costo,100.00,,200.00,850.00,,1700.00
+3,2025-10-23 11:29:23,,,,,Tercera compra - mismo costo,50.00,,250.00,425.00,,2125.00
+4,2025-10-23 11:29:23,,,,,Encontrada caja sin abrir en cuarto de almacenamiento,25.00,,275.00,225.00,,2350.00
+8,2025-10-23 12:01:30,,,,,Inventario inicial de mouse,100.00,,375.00,850.00,,3200.00
+9,2025-10-23 12:01:30,,,,,Segunda compra - mismo costo,100.00,,475.00,850.00,,4050.00
+10,2025-10-23 12:01:30,,,,,Tercera compra - mismo costo,50.00,,525.00,425.00,,4475.00
+21,2025-10-23 12:01:30,,,,,Encontrada caja sin abrir en cuarto de almacenamiento,25.00,,550.00,225.00,,4700.00
+25,2025-10-23 12:29:07,,,,,Inventario inicial de mouse,100.00,,650.00,850.00,,5550.00
+26,2025-10-23 12:29:07,,,,,Segunda compra - mismo costo,100.00,,750.00,850.00,,6400.00
+27,2025-10-23 12:29:07,,,,,Tercera compra - mismo costo,50.00,,800.00,425.00,,6825.00
+38,2025-10-23 12:29:07,,,,,Encontrada caja sin abrir en cuarto de almacenamiento,25.00,,825.00,225.00,,7050.00
+42,2025-10-23 12:31:58,,,,,Inventario inicial de mouse,100.00,,925.00,850.00,,7900.00
+43,2025-10-23 12:31:58,,,,,Segunda compra - mismo costo,100.00,,1025.00,850.00,,8750.00
+44,2025-10-23 12:31:58,,,,,Tercera compra - mismo costo,50.00,,1075.00,425.00,,9175.00
+55,2025-10-23 12:31:58,,,,,Encontrada caja sin abrir en cuarto de almacenamiento,25.00,,1100.00,225.00,,9400.00
