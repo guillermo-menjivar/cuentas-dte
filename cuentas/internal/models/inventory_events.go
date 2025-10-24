@@ -6,6 +6,12 @@ import (
 	"time"
 )
 
+type CompanyLegalInfo struct {
+	LegalName string `json:"legal_name" db:"nombre_comercial"`
+	NIT       string `json:"nit" db:"nit"`
+	NRC       string `json:"nrc" db:"ncr"`
+}
+
 type InventoryEvent struct {
 	EventID               int64           `json:"event_id"`
 	CompanyID             string          `json:"company_id"`
