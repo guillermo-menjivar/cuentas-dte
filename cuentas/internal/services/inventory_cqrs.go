@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"cuentas/internal/models"
 )
@@ -518,4 +519,247 @@ func (s *InventoryService) updateInventoryStateTx(
 	}
 
 	return nil
+}
+
+// GetCostHistory gets the cost event history for an item with date filtering
+func (s *InventoryService) GetCostHistory(
+	ctx context.Context,
+	companyID, itemID string,
+	limit int,
+	sortOrder string,
+	startDate, endDate string,
+) ([]models.InventoryEvent, error) {
+	// Verify item exists and belongs to company
+	_, err := s.GetItemByID(ctx, companyID, itemID)
+	if err != nil {
+		return nil, fmt.Errorf("item not found: %w", err)
+	}
+
+	if limit <= 0 {
+		limit = 50 // Default limit
+	}
+
+	// Validate sort order
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "desc"
+	}
+
+	// Build query with optional date filters
+	query := `
+		SELECT 
+			event_id, company_id, item_id, event_type, event_timestamp,
+			aggregate_version, quantity, unit_cost, total_cost,
+			balance_quantity_after, balance_total_cost_after,
+			moving_avg_cost_before, moving_avg_cost_after,
+			reference_type, reference_id, correlation_id,
+			event_data, notes, created_by_user_id, created_at
+		FROM inventory_events
+		WHERE company_id = $1 AND item_id = $2
+	`
+
+	args := []interface{}{companyID, itemID}
+	argCount := 2
+
+	// Add date filters if provided
+	if startDate != "" {
+		// Validate date format
+		if _, err := time.Parse("2006-01-02", startDate); err != nil {
+			return nil, fmt.Errorf("invalid start_date format, use YYYY-MM-DD: %w", err)
+		}
+		argCount++
+		query += fmt.Sprintf(" AND event_timestamp >= $%d", argCount)
+		args = append(args, startDate+"T00:00:00Z")
+	}
+
+	if endDate != "" {
+		// Validate date format
+		if _, err := time.Parse("2006-01-02", endDate); err != nil {
+			return nil, fmt.Errorf("invalid end_date format, use YYYY-MM-DD: %w", err)
+		}
+		argCount++
+		query += fmt.Sprintf(" AND event_timestamp <= $%d", argCount)
+		args = append(args, endDate+"T23:59:59Z")
+	}
+
+	// Add ordering and limit
+	query += fmt.Sprintf(" ORDER BY event_timestamp %s, event_id %s LIMIT $%d", sortOrder, sortOrder, argCount+1)
+	args = append(args, limit)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get cost history: %w", err)
+	}
+	defer rows.Close()
+
+	var events []models.InventoryEvent
+	for rows.Next() {
+		var event models.InventoryEvent
+		err := rows.Scan(
+			&event.EventID, &event.CompanyID, &event.ItemID, &event.EventType, &event.EventTimestamp,
+			&event.AggregateVersion, &event.Quantity, &event.UnitCost, &event.TotalCost,
+			&event.BalanceQuantityAfter, &event.BalanceTotalCostAfter,
+			&event.MovingAvgCostBefore, &event.MovingAvgCostAfter,
+			&event.ReferenceType, &event.ReferenceID, &event.CorrelationID,
+			&event.EventData, &event.Notes, &event.CreatedByUserID, &event.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan event: %w", err)
+		}
+		events = append(events, event)
+	}
+
+	return events, nil
+}
+
+// GetAllEvents gets all inventory events across all items with filters
+func (s *InventoryService) GetAllEvents(
+	ctx context.Context,
+	companyID string,
+	startDate, endDate string,
+	eventType string,
+	sortOrder string,
+) ([]models.InventoryEventWithItem, error) {
+	// Validate sort order
+	if sortOrder != "asc" && sortOrder != "desc" {
+		sortOrder = "desc"
+	}
+
+	// Build query
+	query := `
+		SELECT 
+			e.event_id, e.company_id, e.item_id, e.event_type, e.event_timestamp,
+			e.aggregate_version, e.quantity, e.unit_cost, e.total_cost,
+			e.balance_quantity_after, e.balance_total_cost_after,
+			e.moving_avg_cost_before, e.moving_avg_cost_after,
+			e.reference_type, e.reference_id, e.correlation_id,
+			e.event_data, e.notes, e.created_by_user_id, e.created_at,
+			i.sku, i.name as item_name
+		FROM inventory_events e
+		JOIN inventory_items i ON e.item_id = i.id
+		WHERE e.company_id = $1
+	`
+
+	args := []interface{}{companyID}
+	argCount := 1
+
+	// Add date filters
+	if startDate != "" {
+		if _, err := time.Parse("2006-01-02", startDate); err != nil {
+			return nil, fmt.Errorf("invalid start_date format, use YYYY-MM-DD: %w", err)
+		}
+		argCount++
+		query += fmt.Sprintf(" AND e.event_timestamp >= $%d", argCount)
+		args = append(args, startDate+"T00:00:00Z")
+	}
+
+	if endDate != "" {
+		if _, err := time.Parse("2006-01-02", endDate); err != nil {
+			return nil, fmt.Errorf("invalid end_date format, use YYYY-MM-DD: %w", err)
+		}
+		argCount++
+		query += fmt.Sprintf(" AND e.event_timestamp <= $%d", argCount)
+		args = append(args, endDate+"T23:59:59Z")
+	}
+
+	// Add event type filter
+	if eventType != "" {
+		argCount++
+		query += fmt.Sprintf(" AND e.event_type = $%d", argCount)
+		args = append(args, eventType)
+	}
+
+	// Add ordering
+	query += fmt.Sprintf(" ORDER BY e.event_timestamp %s, e.event_id %s", sortOrder, sortOrder)
+
+	rows, err := s.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get events: %w", err)
+	}
+	defer rows.Close()
+
+	var events []models.InventoryEventWithItem
+	for rows.Next() {
+		var event models.InventoryEventWithItem
+		err := rows.Scan(
+			&event.EventID, &event.CompanyID, &event.ItemID, &event.EventType, &event.EventTimestamp,
+			&event.AggregateVersion, &event.Quantity, &event.UnitCost, &event.TotalCost,
+			&event.BalanceQuantityAfter, &event.BalanceTotalCostAfter,
+			&event.MovingAvgCostBefore, &event.MovingAvgCostAfter,
+			&event.ReferenceType, &event.ReferenceID, &event.CorrelationID,
+			&event.EventData, &event.Notes, &event.CreatedByUserID, &event.CreatedAt,
+			&event.SKU, &event.ItemName,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan event: %w", err)
+		}
+		events = append(events, event)
+	}
+
+	return events, nil
+}
+
+// GetInventoryValuationAtDate calculates total inventory value at a specific date
+func (s *InventoryService) GetInventoryValuationAtDate(
+	ctx context.Context,
+	companyID string,
+	asOfDate string,
+) (*models.InventoryValuation, error) {
+	// Validate date format
+	targetDate, err := time.Parse("2006-01-02", asOfDate)
+	if err != nil {
+		return nil, fmt.Errorf("invalid date format, use YYYY-MM-DD: %w", err)
+	}
+
+	// Get all product items
+	items, err := s.ListItems(ctx, companyID, false, "1") // tipo_item = "1" (products only)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list items: %w", err)
+	}
+
+	valuation := &models.InventoryValuation{
+		AsOfDate:   targetDate,
+		CompanyID:  companyID,
+		ItemValues: []models.ItemValuation{},
+	}
+
+	var totalValue models.Money
+	var totalQuantity float64
+
+	// For each item, calculate its value at the target date
+	for _, item := range items {
+		// Get all events up to the target date
+		events, err := s.GetCostHistory(ctx, companyID, item.ID, 10000, "asc", "", asOfDate)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get history for item %s: %w", item.ID, err)
+		}
+
+		if len(events) == 0 {
+			// No events before this date - item had zero inventory
+			continue
+		}
+
+		// Get the last event before the target date
+		lastEvent := events[len(events)-1]
+
+		itemVal := models.ItemValuation{
+			ItemID:      item.ID,
+			SKU:         item.SKU,
+			ItemName:    item.Name,
+			Quantity:    lastEvent.BalanceQuantityAfter,
+			AvgCost:     lastEvent.MovingAvgCostAfter,
+			TotalValue:  lastEvent.BalanceTotalCostAfter,
+			LastEventID: lastEvent.EventID,
+			LastEventAt: lastEvent.EventTimestamp,
+		}
+
+		valuation.ItemValues = append(valuation.ItemValues, itemVal)
+		totalValue = totalValue.Add(itemVal.TotalValue)
+		totalQuantity += itemVal.Quantity
+	}
+
+	valuation.TotalValue = totalValue
+	valuation.TotalQuantity = totalQuantity
+	valuation.ItemCount = len(valuation.ItemValues)
+
+	return valuation, nil
 }
