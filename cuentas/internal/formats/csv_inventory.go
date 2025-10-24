@@ -1,4 +1,4 @@
-package handlers
+package formats
 
 import (
 	"bytes"
@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/yourusername/cuentas/internal/i18n"
-	"github.com/yourusername/cuentas/internal/models"
+	"cuentas/internal/i18n"
+	"cuentas/internal/models"
 )
 
 // WriteEventsCSV writes inventory events to CSV format with translations

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"cuentas/internal/formats"
 	"cuentas/internal/models"
 	"cuentas/internal/services"
 	"database/sql"
@@ -79,8 +80,8 @@ func GetAllEventsHandler(c *gin.Context) {
 	endDate := c.Query("end_date")
 	eventType := c.Query("event_type")
 	sortOrder := c.DefaultQuery("sort", "desc")
-	format := DetermineFormat(c.GetHeader("Accept"), c.Query("format"))
-	language := DetermineLanguage(c.Query("language")) // Default: Spanish
+	format := formats.DetermineFormat(c.GetHeader("Accept"), c.Query("format"))
+	language := formats.DetermineLanguage(c.Query("language")) // Default: Spanish
 
 	if sortOrder != "asc" && sortOrder != "desc" {
 		sortOrder = "desc"
@@ -107,7 +108,7 @@ func GetAllEventsHandler(c *gin.Context) {
 
 	// Return based on format
 	if format == "csv" {
-		csvData, err := WriteEventsCSV(events, language) // Pass language
+		csvData, err := formats.WriteEventsCSV(events, language) // Pass language
 		if err != nil {
 			log.Printf("[ERROR] Failed to generate CSV: %v", err)
 			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
@@ -160,8 +161,8 @@ func GetInventoryValuationHandler(c *gin.Context) {
 		return
 	}
 
-	format := DetermineFormat(c.GetHeader("Accept"), c.Query("format"))
-	language := DetermineLanguage(c.Query("language")) // Default: Spanish
+	format := formats.DetermineFormat(c.GetHeader("Accept"), c.Query("format"))
+	language := formats.DetermineLanguage(c.Query("language")) // Default: Spanish
 
 	// Get valuation
 	inventoryService := services.NewInventoryService(db)
@@ -177,7 +178,7 @@ func GetInventoryValuationHandler(c *gin.Context) {
 
 	// Return based on format
 	if format == "csv" {
-		csvData, err := WriteValuationCSV(valuation, language) // Pass language
+		csvData, err := formats.WriteValuationCSV(valuation, language) // Pass language
 		if err != nil {
 			log.Printf("[ERROR] Failed to generate CSV: %v", err)
 			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
@@ -205,8 +206,8 @@ func ListInventoryStatesHandler(c *gin.Context) {
 
 	// Parse query params
 	inStockOnly := c.Query("in_stock_only") == "true"
-	format := DetermineFormat(c.GetHeader("Accept"), c.Query("format"))
-	language := DetermineLanguage(c.Query("language")) // Default: Spanish
+	format := formats.DetermineFormat(c.GetHeader("Accept"), c.Query("format"))
+	language := formats.DetermineLanguage(c.Query("language")) // Default: Spanish
 
 	// Get states
 	inventoryService := services.NewInventoryService(db)
@@ -222,7 +223,7 @@ func ListInventoryStatesHandler(c *gin.Context) {
 
 	// Return based on format
 	if format == "csv" {
-		csvData, err := WriteInventoryStatesCSV(states, language) // Pass language
+		csvData, err := formats.WriteInventoryStatesCSV(states, language) // Pass language
 		if err != nil {
 			log.Printf("[ERROR] Failed to generate CSV: %v", err)
 			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
