@@ -70,46 +70,6 @@ func GetCostHistoryHandler(c *gin.Context) {
 	})
 }
 
-// GetInventoryValuationHandler handles GET /v1/inventory/valuation
-func GetInventoryValuationHandler(c *gin.Context) {
-	companyID := c.MustGet("company_id").(string)
-	db := c.MustGet("db").(*sql.DB)
-
-	// Parse as_of_date (required)
-	asOfDate := c.Query("as_of_date") // ISO format: 2025-03-31
-	if asOfDate == "" {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
-			Error: "as_of_date parameter is required (format: YYYY-MM-DD)",
-			Code:  "missing_parameter",
-		})
-		return
-	}
-
-	// Validate date format
-	_, err := time.Parse("2006-01-02", asOfDate)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
-			Error: "invalid date format, use YYYY-MM-DD",
-			Code:  "invalid_date",
-		})
-		return
-	}
-
-	// Get valuation
-	inventoryService := services.NewInventoryService(db)
-	valuation, err := inventoryService.GetInventoryValuationAtDate(c.Request.Context(), companyID, asOfDate)
-	if err != nil {
-		log.Printf("[ERROR] GetInventoryValuation failed: %v", err)
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
-			Error: "failed to get inventory valuation",
-			Code:  "internal_error",
-		})
-		return
-	}
-
-	c.JSON(http.StatusOK, valuation)
-}
-
 // GetAllEventsHandler handles GET /v1/inventory/events
 func GetAllEventsHandler(c *gin.Context) {
 	companyID := c.MustGet("company_id").(string)
@@ -120,7 +80,7 @@ func GetAllEventsHandler(c *gin.Context) {
 	endDate := c.Query("end_date")
 	eventType := c.Query("event_type")
 	sortOrder := c.DefaultQuery("sort", "desc")
-	format := DetermineFormat(c.GetHeader("Accept"), c.Query("format"))
+	format := formats.DetermineFormat(c.GetHeader("Accept"), c.Query("format"))
 
 	if sortOrder != "asc" && sortOrder != "desc" {
 		sortOrder = "desc"
@@ -200,7 +160,7 @@ func GetInventoryValuationHandler(c *gin.Context) {
 		return
 	}
 
-	format := DetermineFormat(c.GetHeader("Accept"), c.Query("format"))
+	format := formats.DetermineFormat(c.GetHeader("Accept"), c.Query("format"))
 
 	// Get valuation
 	inventoryService := services.NewInventoryService(db)
@@ -216,7 +176,7 @@ func GetInventoryValuationHandler(c *gin.Context) {
 
 	// Return based on format
 	if format == "csv" {
-		csvData, err := WriteValuationCSV(valuation)
+		csvData, err := formats.WriteValuationCSV(valuation)
 		if err != nil {
 			log.Printf("[ERROR] Failed to generate CSV: %v", err)
 			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
@@ -244,7 +204,7 @@ func ListInventoryStatesHandler(c *gin.Context) {
 
 	// Parse query params
 	inStockOnly := c.Query("in_stock_only") == "true"
-	format := DetermineFormat(c.GetHeader("Accept"), c.Query("format"))
+	format := formats.DetermineFormat(c.GetHeader("Accept"), c.Query("format"))
 
 	// Get states
 	inventoryService := services.NewInventoryService(db)
@@ -260,7 +220,7 @@ func ListInventoryStatesHandler(c *gin.Context) {
 
 	// Return based on format
 	if format == "csv" {
-		csvData, err := WriteInventoryStatesCSV(states)
+		csvData, err := formats.WriteInventoryStatesCSV(states)
 		if err != nil {
 			log.Printf("[ERROR] Failed to generate CSV: %v", err)
 			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
