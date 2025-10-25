@@ -30,6 +30,7 @@ type InventoryEvent struct {
 	MovingAvgCostBefore   Money     `json:"moving_avg_cost_before"`
 	MovingAvgCostAfter    Money     `json:"moving_avg_cost_after"`
 
+	// Purchase/Document fields
 	DocumentType        *string `json:"document_type,omitempty"`
 	DocumentNumber      *string `json:"document_number,omitempty"`
 	SupplierName        *string `json:"supplier_name,omitempty"`
@@ -37,14 +38,7 @@ type InventoryEvent struct {
 	SupplierNationality *string `json:"supplier_nationality,omitempty"`
 	CostSourceRef       *string `json:"cost_source_ref,omitempty"`
 
-	ReferenceType   *string         `json:"reference_type,omitempty"`
-	ReferenceID     *string         `json:"reference_id,omitempty"`
-	CorrelationID   *string         `json:"correlation_id,omitempty"`
-	EventData       json.RawMessage `json:"event_data,omitempty"`
-	Notes           *string         `json:"notes,omitempty"`
-	CreatedByUserID *string         `json:"created_by_user_id,omitempty"`
-	CreatedAt       time.Time       `json:"created_at"`
-	// Sales fields (ADD THESE)
+	// Sales fields
 	SalePrice         *Money   `json:"sale_price,omitempty"`
 	DiscountAmount    *Money   `json:"discount_amount,omitempty"`
 	NetSalePrice      *Money   `json:"net_sale_price,omitempty"`
@@ -57,13 +51,14 @@ type InventoryEvent struct {
 	CustomerNIT       *string  `json:"customer_nit,omitempty"`
 	CustomerTaxExempt *bool    `json:"customer_tax_exempt,omitempty"`
 
-	ReferenceType   *string   `json:"reference_type,omitempty"`
-	ReferenceID     *string   `json:"reference_id,omitempty"`
-	CorrelationID   *string   `json:"correlation_id,omitempty"`
-	EventData       []byte    `json:"event_data,omitempty"`
-	Notes           *string   `json:"notes,omitempty"`
-	CreatedByUserID *string   `json:"created_by_user_id,omitempty"`
-	CreatedAt       time.Time `json:"created_at"`
+	// Common fields
+	ReferenceType   *string         `json:"reference_type,omitempty"`
+	ReferenceID     *string         `json:"reference_id,omitempty"`
+	CorrelationID   *string         `json:"correlation_id,omitempty"`
+	EventData       json.RawMessage `json:"event_data,omitempty"`
+	Notes           *string         `json:"notes,omitempty"`
+	CreatedByUserID *string         `json:"created_by_user_id,omitempty"`
+	CreatedAt       time.Time       `json:"created_at"`
 }
 
 // InventoryState represents the current state of inventory for an item
