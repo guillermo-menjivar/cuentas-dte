@@ -51,7 +51,7 @@ clean:
 	@read -p "Continue? [y/N] " -n 1 -r; \
 	echo; \
 	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
-		docker exec -i cuentas-postgres psql -U cuentas -d cuentas_dev -c \
+		docker exec -i cuentas-postgres psql -U cuentas_user -d cuentas -c \
 		"DELETE FROM inventory_events WHERE company_id = '$(COMPANY_ID)'; \
 		 DELETE FROM inventory_state WHERE company_id = '$(COMPANY_ID)';"; \
 		echo "$(GREEN)✅ Database cleaned$(NC)"; \
