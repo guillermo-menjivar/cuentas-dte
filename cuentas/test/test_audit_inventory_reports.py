@@ -29,16 +29,13 @@ class InventoryReportExporter:
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def export_legal_register_for_item(
-        self, item_id: str, start_date: str, end_date: str
+        self, item_id: str, sku: str, start_date: str, end_date: str
     ) -> str:
         """Export legal inventory register for a specific item (Article 142-A compliant)"""
-        print(
-            f"📊 Exporting Legal Register for Item {item_id} ({start_date} to {end_date})"
-        )
+        print(f"📊 Exporting Legal Register for {sku} ({start_date} to {end_date})")
 
-        filename = (
-            f"registro_legal_{item_id}_{start_date}_to_{end_date}_{self.timestamp}.csv"
-        )
+        # Use SKU in filename instead of UUID
+        filename = f"registro_legal_{sku}_{start_date}_to_{end_date}.csv"
         filepath = self._download_csv(
             f"/v1/inventory/items/{item_id}/legal-register",
             {"start_date": start_date, "end_date": end_date},
@@ -79,8 +76,9 @@ class InventoryReportExporter:
                 name = item["name"]
                 print(f"   📄 Generating register for: {sku} - {name}")
 
+                # Pass SKU to the function
                 file = self.export_legal_register_for_item(
-                    item_id, start_date, end_date
+                    item_id, sku, start_date, end_date
                 )
                 if file:
                     files.append(file)
@@ -140,12 +138,10 @@ class InventoryReportExporter:
         """Export all inventory events within a date range"""
         if event_type:
             print(f"📊 Exporting {event_type} Events from {start_date} to {end_date}")
-            filename = f"inventory_{event_type.lower()}_events_{start_date}_to_{end_date}_{self.timestamp}.csv"
+            filename = f"{event_type.lower()}_events_{start_date}_to_{end_date}.csv"
         else:
             print(f"📊 Exporting All Events from {start_date} to {end_date}")
-            filename = (
-                f"inventory_events_{start_date}_to_{end_date}_{self.timestamp}.csv"
-            )
+            filename = f"all_events_{start_date}_to_{end_date}.csv"
 
         params = {"start_date": start_date, "end_date": end_date, "sort": "asc"}
 
@@ -162,7 +158,8 @@ class InventoryReportExporter:
         """Export inventory valuation at a specific date"""
         print(f"📊 Exporting Inventory Valuation as of {as_of_date}")
 
-        filename = f"inventory_valuation_as_of_{as_of_date}_{self.timestamp}.csv"
+        filename = f"valuation_{as_of_date}.csv"  # Removed timestamp
+
         filepath = self._download_csv(
             "/v1/inventory/valuation", {"as_of_date": as_of_date}, filename
         )
