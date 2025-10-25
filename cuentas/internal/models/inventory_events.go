@@ -44,6 +44,26 @@ type InventoryEvent struct {
 	Notes           *string         `json:"notes,omitempty"`
 	CreatedByUserID *string         `json:"created_by_user_id,omitempty"`
 	CreatedAt       time.Time       `json:"created_at"`
+	// Sales fields (ADD THESE)
+	SalePrice         *Money   `json:"sale_price,omitempty"`
+	DiscountAmount    *Money   `json:"discount_amount,omitempty"`
+	NetSalePrice      *Money   `json:"net_sale_price,omitempty"`
+	TaxExempt         *bool    `json:"tax_exempt,omitempty"`
+	TaxRate           *float64 `json:"tax_rate,omitempty"`
+	TaxAmount         *Money   `json:"tax_amount,omitempty"`
+	InvoiceID         *string  `json:"invoice_id,omitempty"`
+	InvoiceLineID     *string  `json:"invoice_line_id,omitempty"`
+	CustomerName      *string  `json:"customer_name,omitempty"`
+	CustomerNIT       *string  `json:"customer_nit,omitempty"`
+	CustomerTaxExempt *bool    `json:"customer_tax_exempt,omitempty"`
+
+	ReferenceType   *string   `json:"reference_type,omitempty"`
+	ReferenceID     *string   `json:"reference_id,omitempty"`
+	CorrelationID   *string   `json:"correlation_id,omitempty"`
+	EventData       []byte    `json:"event_data,omitempty"`
+	Notes           *string   `json:"notes,omitempty"`
+	CreatedByUserID *string   `json:"created_by_user_id,omitempty"`
+	CreatedAt       time.Time `json:"created_at"`
 }
 
 // InventoryState represents the current state of inventory for an item
