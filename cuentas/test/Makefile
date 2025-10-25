@@ -7,7 +7,8 @@ BASE_URL := http://localhost:8080
 
 # Dynamic date calculation - current month
 START_DATE := $(shell date +%Y-%m-01)
-END_DATE := $(shell date +%Y-%m-%d)
+END_DATE := $(shell date -d "+1 day" +%Y-%m-%d 2>/dev/null || date -v +1d +%Y-%m-%d)
+
 MONTH_NAME := $(shell date +%B_%Y)
 OUTPUT_DIR := ./accounting_reports
 
