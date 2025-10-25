@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"math"
 	"strings"
 	"time"
@@ -1020,6 +1021,68 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 	fmt.Println("this is the numerocontrol I build", numeroControl)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate numero control: %w", err)
+	}
+
+	for _, lineItem := range invoice.LineItems {
+		if lineItem.ItemID != nil {
+			item, err := s.inventoryService.GetInventoryItemByID(ctx, *lineItem.ItemID, companyID)
+			if err != nil {
+				return nil, fmt.Errorf("no se pudo obtener el artículo del inventario: %w", err)
+			}
+
+			// Only deduct if item tracks inventory
+			if item.TrackInventory {
+				// Calculate tax info from line item
+				taxExempt := lineItem.TotalTaxes == 0
+				taxRate := 0.0
+				if !taxExempt && lineItem.TaxableAmount > 0 {
+					taxRate = lineItem.TotalTaxes / lineItem.TaxableAmount
+				}
+
+				// Calculate discount per unit
+				discountPerUnit := models.Money(0)
+				if lineItem.DiscountAmount > 0 && lineItem.Quantity > 0 {
+					discountPerUnit = models.Money(lineItem.DiscountAmount / lineItem.Quantity)
+				}
+
+				// Calculate net unit price (price after discount, before tax)
+				netUnitPrice := models.Money(lineItem.TaxableAmount / lineItem.Quantity)
+
+				// Prepare sale request
+				saleReq := &models.RecordSaleRequest{
+					Quantity:      lineItem.Quantity,
+					UnitSalePrice: models.Money(lineItem.UnitPrice),
+					DiscountAmount: func() *models.Money {
+						if discountPerUnit > 0 {
+							return &discountPerUnit
+						}
+						return nil
+					}(),
+					NetUnitPrice:      netUnitPrice,
+					TaxExempt:         taxExempt,
+					TaxRate:           taxRate,
+					TaxAmount:         models.Money(lineItem.TotalTaxes),
+					DocumentType:      tipoDte,       // Use the determined DTE type
+					DocumentNumber:    numeroControl, // Use the generated numero control
+					InvoiceID:         invoice.ID,
+					InvoiceLineID:     lineItem.ID,
+					CustomerName:      invoice.ClientName,
+					CustomerNIT:       invoice.ClientNit,
+					CustomerTaxExempt: invoice.ClientTipoContribuyente != nil && *invoice.ClientTipoContribuyente == "02", // 02 = Consumidor Final
+				}
+
+				// Record sale (deducts inventory)
+				// Note: RecordSale has its own transaction, but we're passing the parent context
+				// The inventory deduction will be part of this transaction scope
+				_, err = s.inventoryService.RecordSale(ctx, *lineItem.ItemID, companyID, saleReq)
+				if err != nil {
+					log.Printf("[ERROR] Failed to record sale for item %s: %v", *lineItem.ItemID, err)
+					return nil, fmt.Errorf("no se pudo registrar la venta del artículo %s: %w", item.Name, err)
+				}
+
+				log.Printf("[DEBUG] Inventory deducted for item %s: %.2f units", item.Name, lineItem.Quantity)
+			}
+		}
 	}
 
 	// 5. Calculate payment status based on amount paid
