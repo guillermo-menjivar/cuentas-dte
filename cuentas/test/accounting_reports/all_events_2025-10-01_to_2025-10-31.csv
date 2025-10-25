@@ -1,0 +1,6 @@
+ID de Evento,Fecha y Hora,SKU,Nombre del Artículo,Tipo de Evento,Cantidad,Costo Unitario,Costo Total,Costo Promedio Antes,Costo Promedio Después,Cantidad en Existencia,Valor en Existencia,Notas
+63,2025-10-24T14:09:11-06:00,PROD-20251021-0048,Dell Latitude 5520 Laptop,COMPRA,50.00,425.00,21250.00,0.00,425.00,50.00,21250.00,Compra de prueba con CCF
+64,2025-10-24T14:10:06-06:00,PROD-20251021-0048,Dell Latitude 5520 Laptop,COMPRA,50.00,425.00,21250.00,425.00,425.00,100.00,42500.00,Compra de prueba con CCF
+65,2025-10-24T21:14:35-06:00,PROD-20251021-0048,Dell Latitude 5520 Laptop,COMPRA,50.00,425.00,21250.00,425.00,425.00,150.00,63750.00,Compra de prueba con CCF
+66,2025-10-24T21:22:38-06:00,PROD-20251021-0048,Dell Latitude 5520 Laptop,COMPRA,50.00,425.00,21250.00,425.00,425.00,200.00,85000.00,Compra de prueba con CCF
+67,2025-10-24T21:22:38-06:00,PROD-20251021-0048,Dell Latitude 5520 Laptop,COMPRA,25.00,400.00,10000.00,425.00,422.22,225.00,95000.00,Compra menor con factura

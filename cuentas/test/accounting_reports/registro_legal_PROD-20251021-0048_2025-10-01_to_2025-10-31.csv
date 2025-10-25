@@ -1,0 +1,13 @@
+REGISTRO DE CONTROL DE INVENTARIOS
+Empresa,"Paredes & Paredes, S.A. de C.V"
+NIT,06143005061013
+NRC,1726313
+Período,Del 2025-10-01 al 2025-10-31
+Artículo,PROD-20251021-0048 - Dell Latitude 5520 Laptop
+
+Correlativo,Fecha,Tipo Doc,No. Documento,Proveedor,Nacionalidad,Fuente/Referencia,Unidades Entrada,Unidades Salida,Saldo Unidades,Costo Entrada,Costo Salida,Saldo Costo
+63,2025-10-24 14:09:11,03,DTE-03-M001P001-000000000010011,Distribuidora Tech El Salvador S.A. de C.V.,Nacional,Compra de prueba con CCF,50.00,,50.00,21250.00,,21250.00
+64,2025-10-24 14:10:06,03,DTE-03-M001P001-000000000010011,Distribuidora Tech El Salvador S.A. de C.V.,Nacional,Compra de prueba con CCF,50.00,,100.00,21250.00,,42500.00
+65,2025-10-24 21:14:35,03,DTE-03-M001P001-000000000010011,Distribuidora Tech El Salvador S.A. de C.V.,Nacional,Compra de prueba con CCF,50.00,,150.00,21250.00,,63750.00
+66,2025-10-24 21:22:38,03,DTE-03-M001P001-000000000010011,Distribuidora Tech El Salvador S.A. de C.V.,Nacional,Compra de prueba con CCF,50.00,,200.00,21250.00,,85000.00
+67,2025-10-24 21:22:38,01,DTE-01-B002P003-000000000000045,Tienda Local de Computadoras,Nacional,Compra menor con factura,25.00,,225.00,10000.00,,95000.00
