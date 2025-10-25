@@ -1,0 +1,18 @@
+REGISTRO DE CONTROL DE INVENTARIOS
+Empresa,"Paredes & Paredes, S.A. de C.V"
+NIT,06143005061013
+NRC,1726313
+Período,Del 2025-10-01 al 2025-10-25
+Artículo,LAPTOP-DELL-001 - Laptop Dell Latitude 5520
+
+Correlativo,Fecha,Tipo Doc,No. Documento,Proveedor,Nacionalidad,Fuente/Referencia,Unidades Entrada,Unidades Salida,Saldo Unidades,Costo Entrada,Costo Salida,Saldo Costo
+414,2025-10-24 23:33:06,03,DTE-03-M473P684-000001759730401,Proveedor Mayorista San Salvador,Nacional,Compra automática de prueba - 2025-10-06,66.00,,66.00,49659.72,,49659.72
+415,2025-10-24 23:33:06,01,DTE-01-B377P557-000001761112802,Distribuciones del Pacífico,Nacional,Compra automática de prueba - 2025-10-22,85.00,,151.00,63336.05,,112995.77
+416,2025-10-24 23:33:06,03,DTE-03-M634P578-000001759989603,Distribuciones del Pacífico,Nacional,Compra automática de prueba - 2025-10-09,23.00,,174.00,15596.07,,128591.84
+417,2025-10-24 23:33:06,03,DTE-03-P310P412-000001760940004,Distribuidora Nacional S.A. de C.V.,Nacional,Compra automática de prueba - 2025-10-20,68.00,,242.00,59610.84,,188202.68
+418,2025-10-24 23:33:06,03,DTE-03-S694P690-000001759471205,Comercial El Salvador Import Export,Nacional,Compra automática de prueba - 2025-10-03,75.00,,317.00,48311.25,,236513.93
+419,2025-10-24 23:33:06,01,DTE-01-P782P738-000001761026406,Distribuidora Nacional S.A. de C.V.,Nacional,Compra automática de prueba - 2025-10-21,31.00,,348.00,29222.15,,265736.08
+420,2025-10-24 23:33:06,03,DTE-03-B159P008-000001759644007,Global Trade El Salvador S.A.,Nacional,Compra automática de prueba - 2025-10-05,30.00,,378.00,26241.00,,291977.08
+421,2025-10-24 23:33:06,03,DTE-03-P682P852-000001759644008,Distribuciones del Pacífico,Nacional,Compra automática de prueba - 2025-10-05,66.00,,444.00,50024.70,,342001.78
+422,2025-10-24 23:33:06,03,DTE-03-S391P885-000001759557609,Importadora Tech Central America,Nacional,Compra automática de prueba - 2025-10-04,47.00,,491.00,35010.30,,377012.08
+423,2025-10-24 23:33:06,03,DTE-03-B935P020-000001759471210,Suministros Industriales SV,Nacional,Compra automática de prueba - 2025-10-03,55.00,,546.00,38366.90,,415378.98

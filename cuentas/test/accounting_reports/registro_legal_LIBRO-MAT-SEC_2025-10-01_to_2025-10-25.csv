@@ -1,0 +1,16 @@
+REGISTRO DE CONTROL DE INVENTARIOS
+Empresa,"Paredes & Paredes, S.A. de C.V"
+NIT,06143005061013
+NRC,1726313
+Período,Del 2025-10-01 al 2025-10-25
+Artículo,LIBRO-MAT-SEC - Matemáticas Secundaria - Libro de Texto
+
+Correlativo,Fecha,Tipo Doc,No. Documento,Proveedor,Nacionalidad,Fuente/Referencia,Unidades Entrada,Unidades Salida,Saldo Unidades,Costo Entrada,Costo Salida,Saldo Costo
+433,2025-10-24 23:33:06,01,DTE-01-M815P851-000001761372001,Suministros Industriales SV,Nacional,Compra automática de prueba - 2025-10-25,81.00,,81.00,1292.76,,1292.76
+434,2025-10-24 23:33:06,03,DTE-03-S284P619-000001760594402,Distribuciones del Pacífico,Nacional,Compra automática de prueba - 2025-10-16,16.00,,97.00,310.56,,1603.32
+435,2025-10-24 23:33:06,03,DTE-03-B603P264-000001760940003,Distribuciones del Pacífico,Nacional,Compra automática de prueba - 2025-10-20,72.00,,169.00,1247.76,,2851.08
+436,2025-10-24 23:33:06,01,DTE-01-P257P067-000001759816804,Distribuciones del Pacífico,Nacional,Compra automática de prueba - 2025-10-07,6.00,,175.00,80.76,,2931.84
+437,2025-10-24 23:33:06,03,DTE-03-S719P092-000001759384805,Distribuciones del Pacífico,Nacional,Compra automática de prueba - 2025-10-02,42.00,,217.00,616.14,,3547.98
+438,2025-10-24 23:33:06,01,DTE-01-M357P142-000001760853606,Global Trade El Salvador S.A.,Nacional,Compra automática de prueba - 2025-10-19,15.00,,232.00,278.85,,3826.83
+439,2025-10-24 23:33:06,01,DTE-01-B255P076-000001759384807,Distribuidora Nacional S.A. de C.V.,Nacional,Compra automática de prueba - 2025-10-02,56.00,,288.00,1020.32,,4847.15
+440,2025-10-24 23:33:06,03,DTE-03-P330P862-000001759730408,Distribuidora Nacional S.A. de C.V.,Nacional,Compra automática de prueba - 2025-10-06,59.00,,347.00,831.31,,5678.46
