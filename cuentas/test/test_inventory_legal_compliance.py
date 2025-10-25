@@ -148,7 +148,7 @@ class InventoryLegalComplianceTest:
             "quantity": 25,
             "unit_cost": 400.00,
             "document_type": "01",
-            "document_number": "FAC-00056789",
+            "document_number": "DTE-01-B002P003-000000000000045",
             "supplier_name": "Tienda Local de Computadoras",
             "cost_source_ref": "Libro de Compras Folio 46",
             "notes": "Compra menor con factura",
