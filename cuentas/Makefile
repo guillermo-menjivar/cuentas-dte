@@ -84,3 +84,7 @@ clean:
 .PHONY: db-connect
 db-connect:
 	docker exec -it cuentas-postgres psql -U cuentas_user -d cuentas
+
+.PHONY: refresh
+refresh:
+	docker-compose up --build -d cuentas
