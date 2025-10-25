@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"cuentas/internal/models"
@@ -144,6 +145,122 @@ func (s *InventoryService) RecordPurchase(
 	}
 
 	return &event, nil
+}
+
+// RecordSale records a sale transaction (deducts from inventory)
+func (s *InventoryService) RecordSale(ctx context.Context, itemID, companyID string, req *models.RecordSaleRequest) (*models.InventoryEventWithItem, error) {
+	log.Printf("[DEBUG] RecordSale called - ItemID: %s, CompanyID: %s", itemID, companyID)
+	log.Printf("[DEBUG] Request parsed - Quantity: %f, SalePrice: %f", req.Quantity, req.UnitSalePrice.Float64())
+
+	// Validate request
+	if err := req.Validate(); err != nil {
+		log.Printf("[ERROR] Validación falló: %v", err)
+		return nil, err
+	}
+
+	// Get current state
+	state, err := s.repo.GetInventoryState(ctx, companyID, itemID)
+	if err != nil {
+		log.Printf("[ERROR] RecordSale failed to get state: %v", err)
+		return nil, fmt.Errorf("no se pudo obtener el estado del inventario: %w", err)
+	}
+
+	// Check if item exists
+	if state == nil {
+		log.Printf("[ERROR] Item not found - ItemID: %s", itemID)
+		return nil, fmt.Errorf("el artículo no existe")
+	}
+
+	// Validate sufficient quantity
+	if state.CurrentQuantity < req.Quantity {
+		log.Printf("[ERROR] Insufficient stock - Need: %f, Have: %f", req.Quantity, state.CurrentQuantity)
+		return nil, fmt.Errorf("stock insuficiente: necesita %.2f, disponible %.2f",
+			req.Quantity, state.CurrentQuantity)
+	}
+
+	// Calculate new balances (sale decreases inventory)
+	newQuantity := state.CurrentQuantity - req.Quantity
+
+	// Use current moving average for COGS
+	unitCost := state.MovingAverageCost
+	totalCost := unitCost * req.Quantity
+
+	// New total cost after deduction
+	newTotalCost := state.TotalCost - totalCost
+
+	// Moving average stays the same (we're just selling existing inventory)
+	newMovingAvg := state.MovingAverageCost
+
+	// Prepare event data
+	eventData := map[string]interface{}{
+		"sale_transaction": true,
+		"invoice_id":       req.InvoiceID,
+		"invoice_line_id":  req.InvoiceLineID,
+	}
+
+	eventDataJSON, err := json.Marshal(eventData)
+	if err != nil {
+		return nil, fmt.Errorf("no se pudo serializar event_data: %w", err)
+	}
+
+	// Create event
+	event := &models.InventoryEvent{
+		CompanyID:        companyID,
+		ItemID:           itemID,
+		EventType:        "SALE",
+		EventTimestamp:   time.Now(),
+		AggregateVersion: state.AggregateVersion + 1,
+
+		// Inventory movement (negative quantity = deduction)
+		Quantity:  -req.Quantity,
+		UnitCost:  unitCost,
+		TotalCost: models.Money(totalCost),
+
+		// Balances after sale
+		BalanceQuantityAfter:  newQuantity,
+		BalanceTotalCostAfter: models.Money(newTotalCost),
+		MovingAvgCostBefore:   state.MovingAverageCost,
+		MovingAvgCostAfter:    newMovingAvg,
+
+		// Sales-specific fields
+		SalePrice:      &req.UnitSalePrice,
+		DiscountAmount: req.DiscountAmount,
+		NetSalePrice:   &req.NetUnitPrice,
+		TaxExempt:      &req.TaxExempt,
+		TaxRate:        &req.TaxRate,
+		TaxAmount:      &req.TaxAmount,
+
+		// Document info (reuses purchase columns)
+		DocumentType:   &req.DocumentType,
+		DocumentNumber: &req.DocumentNumber,
+
+		// Customer info
+		CustomerName:      &req.CustomerName,
+		CustomerNIT:       req.CustomerNIT,
+		CustomerTaxExempt: &req.CustomerTaxExempt,
+
+		// References
+		InvoiceID:     &req.InvoiceID,
+		InvoiceLineID: &req.InvoiceLineID,
+
+		// Additional fields
+		ReferenceType: nil,
+		ReferenceID:   nil,
+		CorrelationID: &req.InvoiceID, // Group all lines from same invoice
+		EventData:     eventDataJSON,
+		Notes:         req.Notes,
+	}
+
+	// Insert event (this updates state atomically via trigger)
+	insertedEvent, err := s.repo.InsertInventoryEvent(ctx, event)
+	if err != nil {
+		log.Printf("[ERROR] RecordSale failed: %v", err)
+		return nil, fmt.Errorf("no se pudo registrar la venta: %w", err)
+	}
+
+	log.Printf("[DEBUG] Sale recorded successfully - EventID: %d", insertedEvent.EventID)
+
+	return insertedEvent, nil
 }
 
 // RecordAdjustment corrects inventory quantities (add or remove)
