@@ -169,6 +169,89 @@ func (r *RecordPurchaseRequest) Validate() error {
 	return nil
 }
 
+type RecordSaleRequest struct {
+	// Inventory
+	Quantity float64 `json:"quantity" binding:"required"`
+
+	// Pricing (all amounts are per unit, tax-exclusive unless noted)
+	UnitSalePrice  Money  `json:"unit_sale_price" binding:"required"`
+	DiscountAmount *Money `json:"discount_amount"`
+	NetUnitPrice   Money  `json:"net_unit_price" binding:"required"`
+
+	// Tax
+	TaxExempt bool    `json:"tax_exempt"`
+	TaxRate   float64 `json:"tax_rate"`
+	TaxAmount Money   `json:"tax_amount"`
+
+	// Document (reuses existing columns)
+	DocumentType   string `json:"document_type" binding:"required"`   // "01" or "03"
+	DocumentNumber string `json:"document_number" binding:"required"` // DTE numero de control
+
+	// References
+	InvoiceID     string `json:"invoice_id" binding:"required"`
+	InvoiceLineID string `json:"invoice_line_id" binding:"required"`
+
+	// Customer
+	CustomerName      string  `json:"customer_name" binding:"required"`
+	CustomerNIT       *string `json:"customer_nit"`
+	CustomerTaxExempt bool    `json:"customer_tax_exempt"`
+
+	// Optional
+	Notes *string `json:"notes"`
+}
+
+// Validate validates the record sale request
+func (r *RecordSaleRequest) Validate() error {
+	if r.Quantity <= 0 {
+		return fmt.Errorf("la cantidad debe ser mayor que 0")
+	}
+
+	if r.UnitSalePrice.Float64() < 0 {
+		return fmt.Errorf("el precio de venta no puede ser negativo")
+	}
+
+	if r.NetUnitPrice.Float64() < 0 {
+		return fmt.Errorf("el precio neto no puede ser negativo")
+	}
+
+	// Validate document type
+	if r.DocumentType != codigos.DocTypeFactura && r.DocumentType != codigos.DocTypeComprobanteCredito {
+		return fmt.Errorf("document_type debe ser %s (Factura) o %s (CCF)",
+			codigos.DocTypeFactura, codigos.DocTypeComprobanteCredito)
+	}
+
+	if r.DocumentNumber == "" {
+		return fmt.Errorf("el número de documento es requerido")
+	}
+
+	if r.InvoiceID == "" {
+		return fmt.Errorf("el ID de factura es requerido")
+	}
+
+	if r.InvoiceLineID == "" {
+		return fmt.Errorf("el ID de línea de factura es requerido")
+	}
+
+	if r.CustomerName == "" {
+		return fmt.Errorf("el nombre del cliente es requerido")
+	}
+
+	// Validate tax logic
+	if !r.TaxExempt && r.TaxRate <= 0 {
+		return fmt.Errorf("la tasa de impuesto debe ser mayor que 0 para ventas gravadas")
+	}
+
+	if r.TaxExempt && r.TaxAmount.Float64() != 0 {
+		return fmt.Errorf("el monto de impuesto debe ser 0 para ventas exentas")
+	}
+
+	if !validateNumeroControl(r.DocumentNumber) {
+		return fmt.Errorf("document_number must be a valid DTE numero de control format (e.g., DTE-03-M001P001-000000000000001)")
+	}
+
+	return nil
+}
+
 // GetCostHistoryRequest represents query parameters for cost history
 type GetCostHistoryRequest struct {
 	Limit int    `form:"limit"` // Default will be 50
