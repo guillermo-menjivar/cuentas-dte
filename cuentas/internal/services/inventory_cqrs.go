@@ -148,9 +148,12 @@ func (s *InventoryService) RecordPurchase(
 }
 
 // RecordSale records a sale transaction (deducts from inventory)
-func (s *InventoryService) RecordSale(ctx context.Context, itemID, companyID string, req *models.RecordSaleRequest) (*models.InventoryEventWithItem, error) {
+func (s *InventoryService) RecordSale(
+	ctx context.Context,
+	companyID, itemID string,
+	req *models.RecordSaleRequest,
+) (*models.InventoryEvent, error) {
 	log.Printf("[DEBUG] RecordSale called - ItemID: %s, CompanyID: %s", itemID, companyID)
-	log.Printf("[DEBUG] Request parsed - Quantity: %f, SalePrice: %f", req.Quantity, req.UnitSalePrice.Float64())
 
 	// Validate request
 	if err := req.Validate(); err != nil {
@@ -158,44 +161,54 @@ func (s *InventoryService) RecordSale(ctx context.Context, itemID, companyID str
 		return nil, err
 	}
 
-	// Get current state
-	state, err := s.repo.GetInventoryState(ctx, companyID, itemID)
+	// Verify item exists and belongs to company
+	item, err := s.GetItemByID(ctx, companyID, itemID)
 	if err != nil {
-		log.Printf("[ERROR] RecordSale failed to get state: %v", err)
-		return nil, fmt.Errorf("no se pudo obtener el estado del inventario: %w", err)
+		return nil, fmt.Errorf("artículo no encontrado: %w", err)
 	}
 
-	// Check if item exists
-	if state == nil {
-		log.Printf("[ERROR] Item not found - ItemID: %s", itemID)
-		return nil, fmt.Errorf("el artículo no existe")
+	// Start transaction
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("no se pudo iniciar la transacción: %w", err)
+	}
+	defer tx.Rollback()
+
+	// Get current state
+	currentState, err := s.getOrCreateInventoryStateTx(ctx, tx, companyID, itemID)
+	if err != nil {
+		return nil, fmt.Errorf("no se pudo obtener el estado actual: %w", err)
 	}
 
 	// Validate sufficient quantity
-	if state.CurrentQuantity < req.Quantity {
-		log.Printf("[ERROR] Insufficient stock - Need: %f, Have: %f", req.Quantity, state.CurrentQuantity)
-		return nil, fmt.Errorf("stock insuficiente: necesita %.2f, disponible %.2f",
-			req.Quantity, state.CurrentQuantity)
+	if currentState.CurrentQuantity < req.Quantity {
+		log.Printf("[ERROR] Insufficient stock - Need: %f, Have: %f", req.Quantity, currentState.CurrentQuantity)
+		return nil, fmt.Errorf("stock insuficiente para %s: necesita %.2f, disponible %.2f",
+			item.Name, req.Quantity, currentState.CurrentQuantity)
 	}
 
-	// Calculate new balances (sale decreases inventory)
-	newQuantity := state.CurrentQuantity - req.Quantity
+	// Calculate values (sale decreases inventory)
+	costPerUnit := currentState.CurrentAvgCost
+	saleTotal := costPerUnit.Mul(req.Quantity)
+	newTotalCost := currentState.CurrentTotalCost.Sub(saleTotal)
+	newQuantity := currentState.CurrentQuantity - req.Quantity
 
-	// Use current moving average for COGS
-	unitCost := state.MovingAverageCost
-	totalCost := unitCost * req.Quantity
+	// Moving average stays the same (we're selling existing inventory)
+	newAvgCost := currentState.CurrentAvgCost
+	if newQuantity == 0 {
+		newAvgCost = models.Money(0)
+	}
 
-	// New total cost after deduction
-	newTotalCost := state.TotalCost - totalCost
+	nextVersion := currentState.AggregateVersion + 1
 
-	// Moving average stays the same (we're just selling existing inventory)
-	newMovingAvg := state.MovingAverageCost
-
-	// Prepare event data
+	// Build event data
 	eventData := map[string]interface{}{
 		"sale_transaction": true,
 		"invoice_id":       req.InvoiceID,
 		"invoice_line_id":  req.InvoiceLineID,
+	}
+	if req.Notes != nil {
+		eventData["notes"] = *req.Notes
 	}
 
 	eventDataJSON, err := json.Marshal(eventData)
@@ -203,64 +216,92 @@ func (s *InventoryService) RecordSale(ctx context.Context, itemID, companyID str
 		return nil, fmt.Errorf("no se pudo serializar event_data: %w", err)
 	}
 
-	// Create event
-	event := &models.InventoryEvent{
-		CompanyID:        companyID,
-		ItemID:           itemID,
-		EventType:        "SALE",
-		EventTimestamp:   time.Now(),
-		AggregateVersion: state.AggregateVersion + 1,
+	// Insert event with sales columns
+	eventQuery := `
+	INSERT INTO inventory_events (
+		company_id, item_id, event_type, event_timestamp,
+		aggregate_version, quantity, unit_cost, total_cost,
+		balance_quantity_after, balance_total_cost_after,
+		moving_avg_cost_before, moving_avg_cost_after,
+		document_type, document_number,
+		sale_price, discount_amount, net_sale_price,
+		tax_exempt, tax_rate, tax_amount,
+		invoice_id, invoice_line_id,
+		customer_name, customer_nit, customer_tax_exempt,
+		correlation_id, event_data, notes, created_at
+	) VALUES (
+		$1, $2, $3, NOW(),
+		$4, $5, $6, $7,
+		$8, $9,
+		$10, $11,
+		$12, $13,
+		$14, $15, $16,
+		$17, $18, $19,
+		$20, $21,
+		$22, $23, $24,
+		$25, $26, $27, NOW()
+	)
+	RETURNING event_id, company_id, item_id, event_type, event_timestamp,
+			  aggregate_version, quantity, unit_cost, total_cost,
+			  balance_quantity_after, balance_total_cost_after,
+			  moving_avg_cost_before, moving_avg_cost_after,
+			  document_type, document_number,
+			  sale_price, discount_amount, net_sale_price,
+			  tax_exempt, tax_rate, tax_amount,
+			  invoice_id, invoice_line_id,
+			  customer_name, customer_nit, customer_tax_exempt,
+			  correlation_id, event_data, notes, created_at
+	`
 
-		// Inventory movement (negative quantity = deduction)
-		Quantity:  -req.Quantity,
-		UnitCost:  unitCost,
-		TotalCost: models.Money(totalCost),
-
-		// Balances after sale
-		BalanceQuantityAfter:  newQuantity,
-		BalanceTotalCostAfter: models.Money(newTotalCost),
-		MovingAvgCostBefore:   state.MovingAverageCost,
-		MovingAvgCostAfter:    newMovingAvg,
-
-		// Sales-specific fields
-		SalePrice:      &req.UnitSalePrice,
-		DiscountAmount: req.DiscountAmount,
-		NetSalePrice:   &req.NetUnitPrice,
-		TaxExempt:      &req.TaxExempt,
-		TaxRate:        &req.TaxRate,
-		TaxAmount:      &req.TaxAmount,
-
-		// Document info (reuses purchase columns)
-		DocumentType:   &req.DocumentType,
-		DocumentNumber: &req.DocumentNumber,
-
-		// Customer info
-		CustomerName:      &req.CustomerName,
-		CustomerNIT:       req.CustomerNIT,
-		CustomerTaxExempt: &req.CustomerTaxExempt,
-
-		// References
-		InvoiceID:     &req.InvoiceID,
-		InvoiceLineID: &req.InvoiceLineID,
-
-		// Additional fields
-		ReferenceType: nil,
-		ReferenceID:   nil,
-		CorrelationID: &req.InvoiceID, // Group all lines from same invoice
-		EventData:     eventDataJSON,
-		Notes:         req.Notes,
-	}
-
-	// Insert event (this updates state atomically via trigger)
-	insertedEvent, err := s.repo.InsertInventoryEvent(ctx, event)
+	var event models.InventoryEvent
+	err = tx.QueryRowContext(ctx, eventQuery,
+		companyID, itemID, "SALE",
+		nextVersion, -req.Quantity, costPerUnit.Float64(), saleTotal.Float64(),
+		newQuantity, newTotalCost.Float64(),
+		currentState.CurrentAvgCost.Float64(), newAvgCost.Float64(),
+		req.DocumentType, req.DocumentNumber,
+		req.UnitSalePrice.Float64(),
+		func() interface{} {
+			if req.DiscountAmount != nil {
+				return req.DiscountAmount.Float64()
+			}
+			return nil
+		}(),
+		req.NetUnitPrice.Float64(),
+		req.TaxExempt, req.TaxRate, req.TaxAmount.Float64(),
+		req.InvoiceID, req.InvoiceLineID,
+		req.CustomerName, req.CustomerNIT, req.CustomerTaxExempt,
+		req.InvoiceID, eventDataJSON, req.Notes,
+	).Scan(
+		&event.EventID, &event.CompanyID, &event.ItemID, &event.EventType, &event.EventTimestamp,
+		&event.AggregateVersion, &event.Quantity, &event.UnitCost, &event.TotalCost,
+		&event.BalanceQuantityAfter, &event.BalanceTotalCostAfter,
+		&event.MovingAvgCostBefore, &event.MovingAvgCostAfter,
+		&event.DocumentType, &event.DocumentNumber,
+		&event.SalePrice, &event.DiscountAmount, &event.NetSalePrice,
+		&event.TaxExempt, &event.TaxRate, &event.TaxAmount,
+		&event.InvoiceID, &event.InvoiceLineID,
+		&event.CustomerName, &event.CustomerNIT, &event.CustomerTaxExempt,
+		&event.CorrelationID, &event.EventData, &event.Notes, &event.CreatedAt,
+	)
 	if err != nil {
-		log.Printf("[ERROR] RecordSale failed: %v", err)
+		log.Printf("[ERROR] Failed to insert sale event: %v", err)
 		return nil, fmt.Errorf("no se pudo registrar la venta: %w", err)
 	}
 
-	log.Printf("[DEBUG] Sale recorded successfully - EventID: %d", insertedEvent.EventID)
+	// Update state
+	err = s.updateInventoryStateTx(ctx, tx, companyID, itemID, newQuantity, newTotalCost.Float64(), event.EventID, nextVersion, currentState.AggregateVersion)
+	if err != nil {
+		return nil, fmt.Errorf("no se pudo actualizar el estado: %w", err)
+	}
 
-	return insertedEvent, nil
+	// Commit transaction
+	if err = tx.Commit(); err != nil {
+		return nil, fmt.Errorf("no se pudo confirmar la transacción: %w", err)
+	}
+
+	log.Printf("[DEBUG] Sale recorded successfully - EventID: %d", event.EventID)
+	return &event, nil
 }
 
 // RecordAdjustment corrects inventory quantities (add or remove)
