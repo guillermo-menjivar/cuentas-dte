@@ -258,11 +258,14 @@ class InventoryLegalComplianceTest:
         """Test 5: Legal register CSV should contain populated fields"""
         print("📝 Test 5: Legal Register Contains Data")
 
-        today = datetime.now().strftime("%Y-%m-%d")
+        from datetime import timedelta
+
+        tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+
         url = f"{self.base_url}/v1/inventory/items/{self.test_item_id}/legal-register"
         params = {
             "start_date": "2025-01-01",
-            "end_date": today,
+            "end_date": tomorrow,
             "format": "csv",
             "language": "es",
         }

@@ -63,7 +63,7 @@ clean:
 # Seed inventory with random purchases
 seed:
 	@echo "$(BLUE)🌱 Seeding inventory with random purchases...$(NC)"
-	@./test_seed_inventory_purchases.py $(COMPANY_ID) \
+	@./seed_inventory_purchases.py $(COMPANY_ID) \
 		--base-url $(BASE_URL) \
 		--start-date $(START_DATE) \
 		--end-date $(END_DATE) \
