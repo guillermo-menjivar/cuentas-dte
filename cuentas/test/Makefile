@@ -9,7 +9,7 @@ BASE_URL := http://localhost:8080
 START_DATE := $(shell date +%Y-%m-01)
 END_DATE := $(shell date +%Y-%m-%d)
 MONTH_NAME := $(shell date +%B_%Y)
-OUTPUT_DIR := ./audit_reports_$(MONTH_NAME)_$(shell date +%Y%m%d_%H%M%S)
+OUTPUT_DIR := ./accounting_reports
 
 # Colors for output
 GREEN := \033[0;32m
@@ -46,6 +46,8 @@ help:
 
 # Clean old test data
 clean:
+	@echo "Cleanind accounting reports directory"
+	rm -rf $(OUTPUT_DIR)/*
 	@echo "$(BLUE)🧹 Cleaning old test data...$(NC)"
 	@echo "⚠️  This will delete ALL inventory events and state for company $(COMPANY_ID)"
 	@read -p "Continue? [y/N] " -n 1 -r; \
