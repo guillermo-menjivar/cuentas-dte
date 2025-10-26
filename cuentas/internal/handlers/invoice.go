@@ -15,7 +15,7 @@ type InvoiceHandler struct {
 	invoiceService *services.InvoiceService
 }
 
-func NewInvoiceHandler(svc services.InvoiceService) *InvoiceHandler {
+func NewInvoiceHandler(svc *services.InvoiceService) *InvoiceHandler {
 	return &InvoiceHandler{
 		invoiceService: svc,
 	}
