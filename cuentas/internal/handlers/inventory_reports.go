@@ -16,10 +16,9 @@ import (
 )
 
 // GetCostHistoryHandler handles GET /v1/inventory/items/:id/cost-history
-func GetCostHistoryHandler(c *gin.Context) {
+func (h *InventoryHandler) GetCostHistoryHandler(c *gin.Context) {
 	itemID := c.Param("id")
 	companyID := c.MustGet("company_id").(string)
-	db := c.MustGet("db").(*sql.DB)
 
 	// Parse query params
 	limit := 50 // default
@@ -40,8 +39,7 @@ func GetCostHistoryHandler(c *gin.Context) {
 	endDate := c.Query("end_date")     // ISO format: 2024-12-31
 
 	// Get cost history
-	inventoryService := services.NewInventoryService(db)
-	events, err := inventoryService.GetCostHistory(c.Request.Context(), companyID, itemID, limit, sortOrder, startDate, endDate)
+	events, err := h.service.GetCostHistory(c.Request.Context(), companyID, itemID, limit, sortOrder, startDate, endDate)
 	if err != nil {
 		if strings.Contains(err.Error(), "item not found") {
 			c.JSON(http.StatusNotFound, models.ErrorResponse{
@@ -71,9 +69,8 @@ func GetCostHistoryHandler(c *gin.Context) {
 }
 
 // GetAllEventsHandler handles GET /v1/inventory/events
-func GetAllEventsHandler(c *gin.Context) {
+func (h *InventoryHandler) GetAllEventsHandler(c *gin.Context) {
 	companyID := c.MustGet("company_id").(string)
-	db := c.MustGet("db").(*sql.DB)
 
 	// Parse query params
 	startDate := c.Query("start_date")
@@ -88,8 +85,7 @@ func GetAllEventsHandler(c *gin.Context) {
 	}
 
 	// Get all events
-	inventoryService := services.NewInventoryService(db)
-	events, err := inventoryService.GetAllEvents(c.Request.Context(), companyID, startDate, endDate, eventType, sortOrder)
+	events, err := h.service.GetAllEvents(c.Request.Context(), companyID, startDate, endDate, eventType, sortOrder)
 	if err != nil {
 		if strings.Contains(err.Error(), "invalid date") {
 			c.JSON(http.StatusBadRequest, models.ErrorResponse{
@@ -137,9 +133,8 @@ func GetAllEventsHandler(c *gin.Context) {
 }
 
 // GetInventoryValuationHandler handles GET /v1/inventory/valuation
-func GetInventoryValuationHandler(c *gin.Context) {
+func (h *InventoryHandler) GetInventoryValuationHandler(c *gin.Context) {
 	companyID := c.MustGet("company_id").(string)
-	db := c.MustGet("db").(*sql.DB)
 
 	// Parse as_of_date (required)
 	asOfDate := c.Query("as_of_date")
@@ -165,8 +160,7 @@ func GetInventoryValuationHandler(c *gin.Context) {
 	language := formats.DetermineLanguage(c.Query("language")) // Default: Spanish
 
 	// Get valuation
-	inventoryService := services.NewInventoryService(db)
-	valuation, err := inventoryService.GetInventoryValuationAtDate(c.Request.Context(), companyID, asOfDate)
+	valuation, err := h.service.GetInventoryValuationAtDate(c.Request.Context(), companyID, asOfDate)
 	if err != nil {
 		log.Printf("[ERROR] GetInventoryValuation failed: %v", err)
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
@@ -200,9 +194,8 @@ func GetInventoryValuationHandler(c *gin.Context) {
 }
 
 // ListInventoryStatesHandler handles GET /v1/inventory/states
-func ListInventoryStatesHandler(c *gin.Context) {
+func (h *InventoryHandler) ListInventoryStatesHandler(c *gin.Context) {
 	companyID := c.MustGet("company_id").(string)
-	db := c.MustGet("db").(*sql.DB)
 
 	// Parse query params
 	inStockOnly := c.Query("in_stock_only") == "true"
@@ -210,8 +203,7 @@ func ListInventoryStatesHandler(c *gin.Context) {
 	language := formats.DetermineLanguage(c.Query("language")) // Default: Spanish
 
 	// Get states
-	inventoryService := services.NewInventoryService(db)
-	states, err := inventoryService.ListInventoryStates(c.Request.Context(), companyID, inStockOnly)
+	states, err := h.service.ListInventoryStates(c.Request.Context(), companyID, inStockOnly)
 	if err != nil {
 		log.Printf("[ERROR] ListInventoryStates failed: %v", err)
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
@@ -253,7 +245,7 @@ func ListInventoryStatesHandler(c *gin.Context) {
 // Generates Article 142-A compliant inventory register for a specific item
 // GetLegalInventoryRegisterHandler handles GET /v1/inventory/items/:id/legal-register
 // Generates Article 142-A compliant inventory register for a specific item
-func GetLegalInventoryRegisterHandler(c *gin.Context) {
+func (h *InventoryHandler) GetLegalInventoryRegisterHandler(c *gin.Context) {
 	itemID := c.Param("id")
 	companyID := c.MustGet("company_id").(string)
 	db := c.MustGet("db").(*sql.DB)

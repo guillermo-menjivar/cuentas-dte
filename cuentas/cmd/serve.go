@@ -260,6 +260,7 @@ func startServer() {
 		// Inventory item routes
 		inventorySvc := services.NewInventoryService(database.DB)
 		inventoryHandler := handlers.NewInventoryHandler()
+
 		v1.POST("/inventory/items", inventoryHandler.CreateInventoryItemHandler)
 		v1.GET("/inventory/items/:id", inventoryHandler.GetInventoryItemHandler)
 		v1.GET("/inventory/items", inventoryHandler.ListInventoryItemsHandler)
