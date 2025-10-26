@@ -49,12 +49,20 @@ func WriteLegalInventoryRegisterCSV(
 		// Separate units in/out
 		unitsIn := ""
 		unitsOut := ""
-		if event.Quantity > 0 {
-			unitsIn = fmt.Sprintf("%.2f", event.Quantity)
-		} else if event.Quantity < 0 {
-			unitsOut = fmt.Sprintf("%.2f", -event.Quantity) // Show as positive
+		if event.EventType == "PURCHASE" || event.EventType == "ADJUSTMENT" {
+			if event.Quantity > 0 {
+				unitsIn = fmt.Sprintf("%.2f", event.Quantity)
+			} else if event.Quantity < 0 {
+				unitsOut = fmt.Sprintf("%.2f", -event.Quantity)
+			}
+		} else if event.EventType == "SALE" || event.EventType == "RETURN" {
+			// Sales are negative quantity (outflow)
+			if event.Quantity < 0 {
+				unitsOut = fmt.Sprintf("%.2f", -event.Quantity)
+			} else if event.Quantity > 0 {
+				unitsIn = fmt.Sprintf("%.2f", event.Quantity)
+			}
 		}
-
 		// Separate cost in/out
 		costIn := ""
 		costOut := ""
@@ -76,21 +84,30 @@ func WriteLegalInventoryRegisterCSV(
 			docNumber = *event.DocumentNumber
 		}
 
-		supplier := ""
-		if event.SupplierName != nil {
-			supplier = *event.SupplierName
+		supplierOrCustomer := ""
+		if event.EventType == "PURCHASE" {
+			if event.SupplierName != nil {
+				supplierOrCustomer = *event.SupplierName
+			}
+		} else if event.EventType == "SALE" {
+			if event.CustomerName != nil {
+				supplierOrCustomer = *event.CustomerName
+			}
 		}
 
 		nationality := ""
-		if event.SupplierNationality != nil {
+		if event.EventType == "PURCHASE" && event.SupplierNationality != nil {
 			nationality = *event.SupplierNationality
 		}
 
 		sourceRef := ""
 		if event.CostSourceRef != nil {
 			sourceRef = *event.CostSourceRef
+		} else if event.InvoiceID != nil {
+			// For sales, reference the invoice
+			sourceRef = fmt.Sprintf("Factura %s", *event.InvoiceID)
 		} else if event.Notes != nil {
-			sourceRef = *event.Notes // Fallback to notes
+			sourceRef = *event.Notes
 		}
 
 		// For now, use notes as fallback for source reference
@@ -101,9 +118,9 @@ func WriteLegalInventoryRegisterCSV(
 		row := []string{
 			fmt.Sprintf("%d", event.EventID),                   // Correlativo
 			event.EventTimestamp.Format("2006-01-02 15:04:05"), // Fecha
-			docType,     // Tipo Doc
-			docNumber,   // No. Documento
-			supplier,    // Proveedor
+			docType,   // Tipo Doc
+			docNumber, // No. Documento
+			supplierOrCustomer,
 			nationality, // Nacionalidad
 			sourceRef,   // Fuente/Referencia
 			unitsIn,     // Unidades Entrada
