@@ -95,7 +95,7 @@ reports:
 	@echo ""
 
 # Run everything
-all: clean seed test reports
+all: clean seed test seed-invoices reports
 	@echo "$(BLUE)═══════════════════════════════════════════════════════════════$(NC)"
 	@echo "$(GREEN)✅ COMPLETE WORKFLOW FINISHED$(NC)"
 	@echo "$(BLUE)═══════════════════════════════════════════════════════════════$(NC)"
