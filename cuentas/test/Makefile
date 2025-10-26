@@ -18,7 +18,42 @@ YELLOW := \033[0;33m
 BLUE := \033[0;34m
 NC := \033[0m # No Color
 
-.PHONY: help clean seed test reports all seed-only reports-only
+
+COMPANY_ID := $(shell cat .company_id 2>/dev/null || echo "")
+
+# Initialize: Register company THEN capture ID
+init:
+	@echo "$(BLUE)🚀 Step 1: Registering company...$(NC)"
+	@bash register_david_company.sh
+	@echo ""
+	@echo "$(BLUE)🔍 Step 2: Fetching company ID...$(NC)"
+	@./test_list_companies.sh | jq -r '.companies[0].id' > .company_id
+	@echo "$(GREEN)✓ Company ID saved to .company_id$(NC)"
+	@echo "Company ID: $$(cat .company_id)"
+	@echo ""
+	@echo "$(YELLOW)💡 You can now run other make targets:$(NC)"
+	@echo "   make seed-purchases"
+	@echo "   make seed-invoices"
+	@echo "   make reports"
+	@echo ""
+
+# Show current company ID
+show-company:
+	@if [ -z "$(COMPANY_ID)" ]; then \
+		echo "$(RED)❌ No company ID set. Run 'make init' first.$(NC)"; \
+		exit 1; \
+	else \
+		echo "Current Company ID: $(COMPANY_ID)"; \
+	fi
+
+# Validate company ID is set (helper target)
+check-company:
+	@if [ -z "$(COMPANY_ID)" ]; then \
+		echo "$(RED)❌ No company ID set. Run 'make init' first.$(NC)"; \
+		exit 1; \
+	fi
+
+.PHONY: help clean seed test reports all seed-only reports-only init show-company check-company
 
 # Default target
 help:
