@@ -133,3 +133,6 @@ seed-invoices:
 	@echo ""
 # Generate reports only (no seeding/testing)
 reports-only: reports
+
+init:
+	bash bash register_david_company.sh
