@@ -258,6 +258,7 @@ func startServer() {
 		v1.DELETE("/clients/:id", handlers.DeleteClientHandler)
 
 		// Inventory item routes
+		inventorySvc := services.NewInventoryService(database.DB)
 		inventoryHandler := handlers.NewInventoryHandler(inventorySvc)
 
 		v1.POST("/inventory/items", inventoryHandler.CreateInventoryItemHandler)
