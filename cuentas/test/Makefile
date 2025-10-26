@@ -123,5 +123,13 @@ seed-only:
 		--max 5
 	@echo ""
 
+seed-invoices:
+	@echo "$(BLUE)🧾 Creating and finalizing invoices with sales...$(NC)"
+	@./test_seed_invoices_with_sales.py $(COMPANY_ID) \
+		--base-url $(BASE_URL) \
+		--start-date $(START_DATE) \
+		--end-date $(END_DATE) \
+		--count 30
+	@echo ""
 # Generate reports only (no seeding/testing)
 reports-only: reports
