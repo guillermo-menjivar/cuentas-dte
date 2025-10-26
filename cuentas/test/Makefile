@@ -2,7 +2,6 @@
 # Usage: make seed, make reports, make all
 
 # Configuration
-COMPANY_ID := b46cbf8c-efd1-4799-9f33-2ae8049ae331
 BASE_URL := http://localhost:8080
 
 # Dynamic date calculation - current month
@@ -36,6 +35,8 @@ init:
 	@echo "   make seed-invoices"
 	@echo "   make reports"
 	@echo ""
+	@echo "creating clients with credito fiscal"
+	./test_create_ccf_clients.py $(COMPANY_ID)
 
 # Show current company ID
 show-company:
