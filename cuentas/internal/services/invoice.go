@@ -17,10 +17,14 @@ import (
 	"cuentas/internal/models/dte"
 )
 
-type InvoiceService struct{}
+type InvoiceService struct {
+	inventoryService *InventoryService
+}
 
-func NewInvoiceService() *InvoiceService {
-	return &InvoiceService{}
+func NewInvoiceService(inventoryService *InventoryService) *InvoiceService {
+	return &InvoiceService{
+		inventoryService: inventoryService,
+	}
 }
 
 func (s *InvoiceService) validatePointOfSale(ctx context.Context, tx *sql.Tx, companyID, establishmentID, posID string) error {

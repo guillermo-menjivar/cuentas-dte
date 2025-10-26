@@ -15,8 +15,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type InventoryHandler struct {
+	service *services.InventoryService
+}
+
+func NewInventoryHandler(service *services.InventoryService) *InventoryHandler {
+	return &InventoryHandler{
+		service: service,
+	}
+}
+
 // CreateInventoryItemHandler handles POST /v1/inventory/items
-func CreateInventoryItemHandler(c *gin.Context) {
+func (h *InventoryHandler) CreateInventoryItemHandler(c *gin.Context) {
 	// Get company_id from context (set by middleware)
 	companyID, exists := c.Get("company_id")
 	if !exists {
@@ -56,11 +66,9 @@ func CreateInventoryItemHandler(c *gin.Context) {
 	}
 
 	// Get database connection
-	db := c.MustGet("db").(*sql.DB)
 
 	// Create item
-	inventoryService := services.NewInventoryService(db)
-	item, err := inventoryService.CreateItem(c.Request.Context(), companyID.(string), &req)
+	item, err := s.service.CreateItem(c.Request.Context(), companyID.(string), &req)
 	if err != nil {
 		// Handle specific database errors
 		if strings.Contains(err.Error(), "unique_company_sku") {
@@ -89,13 +97,11 @@ func CreateInventoryItemHandler(c *gin.Context) {
 }
 
 // GetInventoryItemHandler handles GET /v1/inventory/items/:id
-func GetInventoryItemHandler(c *gin.Context) {
+func (h *InventoryHandler) GetInventoryItemHandler(c *gin.Context) {
 	itemID := c.Param("id")
 	companyID := c.MustGet("company_id").(string)
-	db := c.MustGet("db").(*sql.DB)
 
-	inventoryService := services.NewInventoryService(db)
-	item, err := inventoryService.GetItemByID(c.Request.Context(), companyID, itemID)
+	item, err := h.service.GetItemByID(c.Request.Context(), companyID, itemID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, models.ErrorResponse{
@@ -116,16 +122,14 @@ func GetInventoryItemHandler(c *gin.Context) {
 }
 
 // ListInventoryItemsHandler handles GET /v1/inventory/items
-func ListInventoryItemsHandler(c *gin.Context) {
+func (h *InventoryHandler) ListInventoryItemsHandler(c *gin.Context) {
 	companyID := c.MustGet("company_id").(string)
-	db := c.MustGet("db").(*sql.DB)
 
 	// Parse query parameters
 	activeOnly := c.DefaultQuery("active", "true") == "true"
 	tipoItem := c.Query("tipo_item") // "" means no filter
 
-	inventoryService := services.NewInventoryService(db)
-	items, err := inventoryService.ListItems(c.Request.Context(), companyID, activeOnly, tipoItem)
+	items, err := h.service.ListItems(c.Request.Context(), companyID, activeOnly, tipoItem)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "failed to list items",
@@ -146,10 +150,9 @@ func ListInventoryItemsHandler(c *gin.Context) {
 }
 
 // UpdateInventoryItemHandler handles PUT /v1/inventory/items/:id
-func UpdateInventoryItemHandler(c *gin.Context) {
+func (h *InventoryHandler) UpdateInventoryItemHandler(c *gin.Context) {
 	itemID := c.Param("id")
 	companyID := c.MustGet("company_id").(string)
-	db := c.MustGet("db").(*sql.DB)
 
 	// Read and parse request body
 	bodyBytes, err := io.ReadAll(c.Request.Body)
@@ -180,8 +183,7 @@ func UpdateInventoryItemHandler(c *gin.Context) {
 	}
 
 	// Update item
-	inventoryService := services.NewInventoryService(db)
-	item, err := inventoryService.UpdateItem(c.Request.Context(), companyID, itemID, &req)
+	item, err := h.service.UpdateItem(c.Request.Context(), companyID, itemID, &req)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, models.ErrorResponse{
@@ -202,13 +204,11 @@ func UpdateInventoryItemHandler(c *gin.Context) {
 }
 
 // DeleteInventoryItemHandler handles DELETE /v1/inventory/items/:id
-func DeleteInventoryItemHandler(c *gin.Context) {
+func (h *InventoryHandler) DeleteInventoryItemHandler(c *gin.Context) {
 	itemID := c.Param("id")
 	companyID := c.MustGet("company_id").(string)
-	db := c.MustGet("db").(*sql.DB)
 
-	inventoryService := services.NewInventoryService(db)
-	err := inventoryService.DeleteItem(c.Request.Context(), companyID, itemID)
+	err := h.service.DeleteItem(c.Request.Context(), companyID, itemID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, models.ErrorResponse{
@@ -231,13 +231,11 @@ func DeleteInventoryItemHandler(c *gin.Context) {
 }
 
 // GetItemTaxesHandler handles GET /v1/inventory/items/:id/taxes
-func GetItemTaxesHandler(c *gin.Context) {
+func (h *InventoryHandler) GetItemTaxesHandler(c *gin.Context) {
 	itemID := c.Param("id")
 	companyID := c.MustGet("company_id").(string)
-	db := c.MustGet("db").(*sql.DB)
 
-	inventoryService := services.NewInventoryService(db)
-	taxes, err := inventoryService.GetItemTaxes(c.Request.Context(), companyID, itemID)
+	taxes, err := h.service.GetItemTaxes(c.Request.Context(), companyID, itemID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Error: "failed to get taxes",
@@ -258,10 +256,9 @@ func GetItemTaxesHandler(c *gin.Context) {
 }
 
 // AddItemTaxHandler handles POST /v1/inventory/items/:id/taxes
-func AddItemTaxHandler(c *gin.Context) {
+func (h *InventoryHandler) AddItemTaxHandler(c *gin.Context) {
 	itemID := c.Param("id")
 	companyID := c.MustGet("company_id").(string)
-	db := c.MustGet("db").(*sql.DB)
 
 	var req models.AddItemTaxRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -281,8 +278,7 @@ func AddItemTaxHandler(c *gin.Context) {
 		return
 	}
 
-	inventoryService := services.NewInventoryService(db)
-	tax, err := inventoryService.AddItemTax(c.Request.Context(), companyID, itemID, &req)
+	tax, err := h.service.AddItemTax(c.Request.Context(), companyID, itemID, &req)
 	if err != nil {
 		if strings.Contains(err.Error(), "unique_item_tributo") {
 			c.JSON(http.StatusConflict, models.ErrorResponse{
@@ -310,14 +306,12 @@ func AddItemTaxHandler(c *gin.Context) {
 }
 
 // RemoveItemTaxHandler handles DELETE /v1/inventory/items/:id/taxes/:code
-func RemoveItemTaxHandler(c *gin.Context) {
+func (h *InventoryHandler) RemoveItemTaxHandler(c *gin.Context) {
 	itemID := c.Param("id")
 	tributoCode := c.Param("code")
 	companyID := c.MustGet("company_id").(string)
-	db := c.MustGet("db").(*sql.DB)
 
-	inventoryService := services.NewInventoryService(db)
-	err := inventoryService.RemoveItemTax(c.Request.Context(), companyID, itemID, tributoCode)
+	err := h.service.RemoveItemTax(c.Request.Context(), companyID, itemID, tributoCode)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			c.JSON(http.StatusNotFound, models.ErrorResponse{
@@ -347,10 +341,9 @@ func RemoveItemTaxHandler(c *gin.Context) {
 }
 
 // RecordPurchaseHandler handles POST /v1/inventory/items/:id/purchase
-func RecordPurchaseHandler(c *gin.Context) {
+func (h *InventoryHandler) RecordPurchaseHandler(c *gin.Context) {
 	itemID := c.Param("id")
 	companyID := c.MustGet("company_id").(string)
-	db := c.MustGet("db").(*sql.DB)
 
 	log.Printf("[DEBUG] RecordPurchase called - ItemID: %s, CompanyID: %s", itemID, companyID)
 
@@ -378,8 +371,7 @@ func RecordPurchaseHandler(c *gin.Context) {
 	}
 
 	// Record purchase
-	inventoryService := services.NewInventoryService(db)
-	event, err := inventoryService.RecordPurchase(c.Request.Context(), companyID, itemID, &req)
+	event, err := h.service.RecordPurchase(c.Request.Context(), companyID, itemID, &req)
 	if err != nil {
 		log.Printf("[ERROR] RecordPurchase failed: %v", err)
 		if strings.Contains(err.Error(), "item not found") {
@@ -401,10 +393,9 @@ func RecordPurchaseHandler(c *gin.Context) {
 }
 
 // RecordAdjustmentHandler handles POST /v1/inventory/items/:id/adjustment
-func RecordAdjustmentHandler(c *gin.Context) {
+func (h *InventoryHandler) RecordAdjustmentHandler(c *gin.Context) {
 	itemID := c.Param("id")
 	companyID := c.MustGet("company_id").(string)
-	db := c.MustGet("db").(*sql.DB)
 
 	// Parse request
 	var req models.RecordAdjustmentRequest
@@ -426,8 +417,7 @@ func RecordAdjustmentHandler(c *gin.Context) {
 	}
 
 	// Record adjustment
-	inventoryService := services.NewInventoryService(db)
-	event, err := inventoryService.RecordAdjustment(c.Request.Context(), companyID, itemID, &req)
+	event, err := s.service.RecordAdjustment(c.Request.Context(), companyID, itemID, &req)
 	if err != nil {
 		if strings.Contains(err.Error(), "item not found") {
 			c.JSON(http.StatusNotFound, models.ErrorResponse{
@@ -455,15 +445,13 @@ func RecordAdjustmentHandler(c *gin.Context) {
 }
 
 // GetInventoryStateHandler handles GET /v1/inventory/items/:id/state
-func GetInventoryStateHandler(c *gin.Context) {
+func (h *InventoryHandler) GetInventoryStateHandler(c *gin.Context) {
 	itemID := c.Param("id")
 	companyID := c.MustGet("company_id").(string)
-	db := c.MustGet("db").(*sql.DB)
 
 	fmt.Println("we are calling the new inventory service")
-	inventoryService := services.NewInventoryService(db)
 	fmt.Println("we are creating a state")
-	state, err := inventoryService.GetInventoryState(c.Request.Context(), companyID, itemID)
+	state, err := s.service.GetInventoryState(c.Request.Context(), companyID, itemID)
 	if err != nil {
 		if strings.Contains(err.Error(), "item not found") {
 			c.JSON(http.StatusNotFound, models.ErrorResponse{

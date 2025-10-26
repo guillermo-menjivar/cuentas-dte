@@ -258,30 +258,32 @@ func startServer() {
 		v1.DELETE("/clients/:id", handlers.DeleteClientHandler)
 
 		// Inventory item routes
-		v1.POST("/inventory/items", handlers.CreateInventoryItemHandler)
-		v1.GET("/inventory/items/:id", handlers.GetInventoryItemHandler)
-		v1.GET("/inventory/items", handlers.ListInventoryItemsHandler)
-		v1.PUT("/inventory/items/:id", handlers.UpdateInventoryItemHandler)
-		v1.DELETE("/inventory/items/:id", handlers.DeleteInventoryItemHandler)
+		inventorySvc := services.NewInventoryService(database.DB)
+		inventoryHandler := handlers.NewInventoryHandler()
+		v1.POST("/inventory/items", inventoryHandler.CreateInventoryItemHandler)
+		v1.GET("/inventory/items/:id", inventoryHandler.GetInventoryItemHandler)
+		v1.GET("/inventory/items", inventoryHandler.ListInventoryItemsHandler)
+		v1.PUT("/inventory/items/:id", inventoryHandler.UpdateInventoryItemHandler)
+		v1.DELETE("/inventory/items/:id", inventoryHandler.DeleteInventoryItemHandler)
 
 		// Inventory tax routes
-		v1.GET("/inventory/items/:id/taxes", handlers.GetItemTaxesHandler)
-		v1.POST("/inventory/items/:id/taxes", handlers.AddItemTaxHandler)
-		v1.DELETE("/inventory/items/:id/taxes/:code", handlers.RemoveItemTaxHandler)
+		v1.GET("/inventory/items/:id/taxes", inventoryHandler.GetItemTaxesHandler)
+		v1.POST("/inventory/items/:id/taxes", inventoryHandler.AddItemTaxHandler)
+		v1.DELETE("/inventory/items/:id/taxes/:code", inventoryHandler.RemoveItemTaxHandler)
 
 		// Inventory cost tracking (CQRS)
-		v1.POST("/inventory/items/:id/purchase", handlers.RecordPurchaseHandler)
-		v1.POST("/inventory/items/:id/adjustment", handlers.RecordAdjustmentHandler)
-		v1.GET("/inventory/items/:id/state", handlers.GetInventoryStateHandler)
-		v1.GET("/inventory/states", handlers.ListInventoryStatesHandler)
-		v1.GET("/inventory/items/:id/cost-history", handlers.GetCostHistoryHandler)
-		v1.GET("/inventory/items/:id/legal-register", handlers.GetLegalInventoryRegisterHandler)
+		v1.POST("/inventory/items/:id/purchase", inventoryHandler.RecordPurchaseHandler)
+		v1.POST("/inventory/items/:id/adjustment", inventoryHandler.RecordAdjustmentHandler)
+		v1.GET("/inventory/items/:id/state", inventoryHandler.GetInventoryStateHandler)
+		v1.GET("/inventory/states", inventoryHandler.ListInventoryStatesHandler)
+		v1.GET("/inventory/items/:id/cost-history", inventoryHandler.GetCostHistoryHandler)
+		v1.GET("/inventory/items/:id/legal-register", inventoryHandler.GetLegalInventoryRegisterHandler)
 
-		v1.GET("/inventory/events", handlers.GetAllEventsHandler)             // All events across all items
-		v1.GET("/inventory/valuation", handlers.GetInventoryValuationHandler) // Point-in-time valuation
+		v1.GET("/inventory/events", inventoryHandler.GetAllEventsHandler)             // All events across all items
+		v1.GET("/inventory/valuation", inventoryHandler.GetInventoryValuationHandler) // Point-in-time valuation
 
 		// Invoice routes
-		invoiceHandler := handlers.NewInvoiceHandler()
+		invoiceHandler := handlers.NewInvoiceHandler(inventorySvc)
 		v1.POST("/invoices", invoiceHandler.CreateInvoice)
 		v1.GET("/invoices", invoiceHandler.ListInvoices)
 		v1.GET("/invoices/:id", invoiceHandler.GetInvoice)
