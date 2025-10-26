@@ -284,7 +284,7 @@ func startServer() {
 		v1.GET("/inventory/valuation", inventoryHandler.GetInventoryValuationHandler) // Point-in-time valuation
 
 		// Invoice routes
-		invoiceService := services.NewInvoiceService()
+		invoiceService := services.NewInvoiceService(inventorySvc)
 
 		invoiceHandler := handlers.NewInvoiceHandler(invoiceService)
 		v1.POST("/invoices", invoiceHandler.CreateInvoice)
