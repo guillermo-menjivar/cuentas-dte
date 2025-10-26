@@ -35,7 +35,7 @@ init:
 	@echo "   make seed-invoices"
 	@echo "   make reports"
 	@echo ""
-	@echo "creating clients with credito fiscal"
+	@echo "creating clients with credito fiscal for $(COMPANY_ID)"
 	./test_create_ccf_clients.py $(COMPANY_ID)
 
 # Show current company ID
@@ -98,6 +98,7 @@ clean:
 		echo "$(YELLOW)⏭️  Skipped cleaning$(NC)"; \
 	fi
 	@echo ""
+	rm -rf .company_id
 
 # Seed inventory with random purchases
 seed:
