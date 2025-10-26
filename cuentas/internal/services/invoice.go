@@ -1029,13 +1029,13 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 
 	for _, lineItem := range invoice.LineItems {
 		if lineItem.ItemID != nil {
-			item, err := s.inventoryService.GetInventoryItemByID(ctx, *lineItem.ItemID, companyID)
+			item, err := s.inventoryService.GetItemByID(ctx, *lineItem.ItemID, companyID)
 			if err != nil {
 				return nil, fmt.Errorf("no se pudo obtener el artículo del inventario: %w", err)
 			}
 
 			// Only deduct if item tracks inventory
-			if item.TrackInventory {
+			if item.TipoItem == "1" {
 				// Calculate tax info from line item
 				taxExempt := lineItem.TotalTaxes == 0
 				taxRate := 0.0
