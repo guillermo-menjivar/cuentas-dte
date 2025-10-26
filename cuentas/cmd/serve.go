@@ -284,7 +284,9 @@ func startServer() {
 		v1.GET("/inventory/valuation", inventoryHandler.GetInventoryValuationHandler) // Point-in-time valuation
 
 		// Invoice routes
-		invoiceHandler := handlers.NewInvoiceHandler(inventorySvc)
+		invoiceService := services.NewInvoiceService()
+
+		invoiceHandler := handlers.NewInvoiceHandler(invoiceService)
 		v1.POST("/invoices", invoiceHandler.CreateInvoice)
 		v1.GET("/invoices", invoiceHandler.ListInvoices)
 		v1.GET("/invoices/:id", invoiceHandler.GetInvoice)
@@ -318,7 +320,6 @@ func startServer() {
 		v1.GET("/dte/commit-log/:codigo_generacion", handlers.GetDTECommitLogEntryHandler)
 		// notas
 
-		invoiceService := services.NewInvoiceService()
 		notaService := services.NewNotaService()
 		notasHandler := handlers.NewNotaHandler(notaService, invoiceService)
 
