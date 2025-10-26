@@ -4,9 +4,6 @@
 
 API_URL="http://localhost:8080/v1/companies"
 
-echo "Listing all companies..."
-echo ""
-
 # Note: This endpoint might not exist in your current API
 # If it doesn't, you'll need to add it to your handlers
 
