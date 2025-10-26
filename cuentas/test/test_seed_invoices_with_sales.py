@@ -91,6 +91,20 @@ class InvoiceSalesSeeder:
         except requests.exceptions.RequestException:
             return None
 
+    def determine_client_type(self, client: Dict) -> tuple:
+        """Determine client type and appropriate document type"""
+        # CCF clients: Have NIT + NCR (business)
+        if client.get("nit") and client.get("ncr"):
+            return ("CCF", "03")
+
+        # Factura clients: Only DUI or labeled as Consumidor Final
+        tipo_contrib = client.get("tipo_contribuyente", "")
+        if client.get("dui") or "Consumidor Final" in tipo_contrib:
+            return ("Factura (Consumidor Final)", "01")
+
+        # Default to Factura for safety
+        return ("Factura", "01")
+
     def create_invoice(
         self,
         client: Dict,
@@ -119,10 +133,12 @@ class InvoiceSalesSeeder:
                 }
             )
 
-        # Determine payment terms
-        client_type = client.get("tipo_contribuyente", "02")
+        # Determine payment terms based on client type
+        _, doc_type = self.determine_client_type(client)
         payment_terms = "cash"
-        if client_type in ["01", "03"]:  # Business clients
+
+        # Business clients (CCF) might use credit terms
+        if doc_type == "03":
             payment_terms = random.choice(["cash", "cash", "net_30", "cuenta"])
 
         payload = {
@@ -232,21 +248,29 @@ class InvoiceSalesSeeder:
             print("❌ No points of sale found. Please create POS first.")
             sys.exit(1)
 
+        # Categorize clients by type
+        ccf_clients = []
+        factura_clients = []
+
+        for client in clients:
+            client_type, doc_type = self.determine_client_type(client)
+            if doc_type == "03":  # CCF
+                ccf_clients.append(client)
+            else:  # Factura
+                factura_clients.append(client)
+
         print(f"📊 Data Summary:")
         print(f"   Clients: {len(clients)}")
         print(f"   Establishments: {len(establishments_with_pos)}")
         print(f"   Inventory Items: {len(inventory_items)}")
+        print(f"   CCF Clients (NIT+NCR): {len(ccf_clients)}")
+        print(f"   Factura Clients (DUI/Consumidor Final): {len(factura_clients)}")
         print()
 
-        # Separate clients by type
-        ccf_clients = [
-            c for c in clients if c.get("tipo_contribuyente") in ["01", "03"]
-        ]
-        consumidor_final = [c for c in clients if c.get("tipo_contribuyente") == "02"]
-
-        print(f"   CCF Clients: {len(ccf_clients)}")
-        print(f"   Consumidor Final: {len(consumidor_final)}")
-        print()
+        # Validate we have at least some clients
+        if not ccf_clients and not factura_clients:
+            print("❌ No valid clients found.")
+            sys.exit(1)
 
         # Parse date range
         start = datetime.strptime(start_date, "%Y-%m-%d")
@@ -261,13 +285,13 @@ class InvoiceSalesSeeder:
             random_days = random.randint(0, max(date_range_days, 1))
             invoice_date = start + timedelta(days=random_days)
 
-            # Select random client (70% consumidor final, 30% CCF)
-            if consumidor_final and (not ccf_clients or random.random() < 0.7):
-                client = random.choice(consumidor_final)
-                client_type = "Consumidor Final"
+            # Select random client (70% factura, 30% CCF if available)
+            if factura_clients and (not ccf_clients or random.random() < 0.7):
+                client = random.choice(factura_clients)
             else:
-                client = random.choice(ccf_clients if ccf_clients else consumidor_final)
-                client_type = "CCF"
+                client = random.choice(ccf_clients if ccf_clients else factura_clients)
+
+            client_type, doc_type = self.determine_client_type(client)
 
             # Select random establishment and POS
             est_with_pos = random.choice(establishments_with_pos)
@@ -311,7 +335,7 @@ class InvoiceSalesSeeder:
             total = invoice.get("total", 0)
 
             print(f"      ✅ Invoice created: {invoice_id}")
-            print(f"         Client: {client['nombre_legal']} ({client_type})")
+            print(f"         Client: {client['legal_business_name']} ({client_type})")
             print(f"         Establishment: {establishment['nombre']}")
             print(f"         POS: {pos['nombre']}")
             print(f"         Items: {len(selected_items)}")
