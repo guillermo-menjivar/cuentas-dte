@@ -170,4 +170,4 @@ seed-invoices:
 reports-only: reports
 
 init:
-	bash bash register_david_company.sh
+	bash register_david_company.sh
