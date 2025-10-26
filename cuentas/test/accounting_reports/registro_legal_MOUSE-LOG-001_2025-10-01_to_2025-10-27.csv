@@ -1,0 +1,15 @@
+REGISTRO DE CONTROL DE INVENTARIOS
+Empresa,"Paredes & Paredes, S.A. de C.V"
+NIT,06143005061013
+NRC,1726313
+Período,Del 2025-10-01 al 2025-10-27
+Artículo,MOUSE-LOG-001 - Logitech MX Master 3
+
+Correlativo,Fecha,Tipo Doc,No. Documento,Proveedor,Nacionalidad,Fuente/Referencia,Unidades Entrada,Unidades Salida,Saldo Unidades,Costo Entrada,Costo Salida,Saldo Costo
+554,2025-10-26 13:28:18,01,DTE-01-S345P795-000001759471201,Proveedor Mayorista San Salvador,Nacional,Compra automática de prueba - 2025-10-03,38.00,,38.00,1930.02,,1930.02
+555,2025-10-26 13:28:18,03,DTE-03-S552P777-000001760853602,Distribuidora Nacional S.A. de C.V.,Nacional,Compra automática de prueba - 2025-10-19,88.00,,126.00,5589.76,,7519.78
+556,2025-10-26 13:28:18,01,DTE-01-P329P145-000001759989603,Importadora Tech Central America,Nacional,Compra automática de prueba - 2025-10-09,5.00,,131.00,348.85,,7868.63
+557,2025-10-26 13:28:18,03,DTE-03-M456P373-000001761372004,Comercial El Salvador Import Export,Nacional,Compra automática de prueba - 2025-10-25,99.00,,230.00,7660.62,,15529.25
+558,2025-10-26 13:28:18,03,DTE-03-P601P305-000001759471205,Comercial El Salvador Import Export,Nacional,Compra automática de prueba - 2025-10-03,79.00,,309.00,4189.37,,19718.62
+559,2025-10-26 13:28:18,03,DTE-03-M301P946-000001759644006,Comercial El Salvador Import Export,Nacional,Compra automática de prueba - 2025-10-05,26.00,,335.00,1998.10,,21716.72
+560,2025-10-26 13:28:18,03,DTE-03-B926P761-000001759298407,Proveedor Mayorista San Salvador,Nacional,Compra automática de prueba - 2025-10-01,43.00,,378.00,2377.47,,24094.19

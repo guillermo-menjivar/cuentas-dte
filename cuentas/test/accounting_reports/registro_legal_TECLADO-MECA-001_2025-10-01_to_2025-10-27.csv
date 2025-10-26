@@ -1,0 +1,14 @@
+REGISTRO DE CONTROL DE INVENTARIOS
+Empresa,"Paredes & Paredes, S.A. de C.V"
+NIT,06143005061013
+NRC,1726313
+Período,Del 2025-10-01 al 2025-10-27
+Artículo,TECLADO-MECA-001 - Teclado Mecánico Inalámbrico RGB
+
+Correlativo,Fecha,Tipo Doc,No. Documento,Proveedor,Nacionalidad,Fuente/Referencia,Unidades Entrada,Unidades Salida,Saldo Unidades,Costo Entrada,Costo Salida,Saldo Costo
+580,2025-10-26 13:28:18,03,DTE-03-S890P689-000001760508001,Comercial El Salvador Import Export,Nacional,Compra automática de prueba - 2025-10-15,66.00,,66.00,3220.14,,3220.14
+581,2025-10-26 13:28:18,01,DTE-01-B695P799-000001759816802,Distribuciones del Pacífico,Nacional,Compra automática de prueba - 2025-10-07,100.00,,166.00,5696.00,,8916.14
+582,2025-10-26 13:28:18,01,DTE-01-P652P746-000001760076003,Proveedor Mayorista San Salvador,Nacional,Compra automática de prueba - 2025-10-10,7.00,,173.00,341.32,,9257.46
+583,2025-10-26 13:28:18,03,DTE-03-M909P247-000001759816804,Suministros Industriales SV,Nacional,Compra automática de prueba - 2025-10-07,48.00,,221.00,2332.32,,11589.78
+584,2025-10-26 13:28:18,03,DTE-03-M344P227-000001759471205,Proveedor Mayorista San Salvador,Nacional,Compra automática de prueba - 2025-10-03,37.00,,258.00,1951.01,,13540.79
+585,2025-10-26 13:28:18,01,DTE-01-S039P279-000001760767206,Importadora Tech Central America,Nacional,Compra automática de prueba - 2025-10-18,6.00,,264.00,279.54,,13820.33
