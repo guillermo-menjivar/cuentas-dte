@@ -68,7 +68,7 @@ func (h *InventoryHandler) CreateInventoryItemHandler(c *gin.Context) {
 	// Get database connection
 
 	// Create item
-	item, err := s.service.CreateItem(c.Request.Context(), companyID.(string), &req)
+	item, err := h.service.CreateItem(c.Request.Context(), companyID.(string), &req)
 	if err != nil {
 		// Handle specific database errors
 		if strings.Contains(err.Error(), "unique_company_sku") {
@@ -417,7 +417,7 @@ func (h *InventoryHandler) RecordAdjustmentHandler(c *gin.Context) {
 	}
 
 	// Record adjustment
-	event, err := s.service.RecordAdjustment(c.Request.Context(), companyID, itemID, &req)
+	event, err := h.service.RecordAdjustment(c.Request.Context(), companyID, itemID, &req)
 	if err != nil {
 		if strings.Contains(err.Error(), "item not found") {
 			c.JSON(http.StatusNotFound, models.ErrorResponse{
@@ -451,7 +451,7 @@ func (h *InventoryHandler) GetInventoryStateHandler(c *gin.Context) {
 
 	fmt.Println("we are calling the new inventory service")
 	fmt.Println("we are creating a state")
-	state, err := s.service.GetInventoryState(c.Request.Context(), companyID, itemID)
+	state, err := h.service.GetInventoryState(c.Request.Context(), companyID, itemID)
 	if err != nil {
 		if strings.Contains(err.Error(), "item not found") {
 			c.JSON(http.StatusNotFound, models.ErrorResponse{
