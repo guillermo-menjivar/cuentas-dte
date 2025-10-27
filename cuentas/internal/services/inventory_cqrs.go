@@ -256,7 +256,7 @@ func (s *InventoryService) RecordSale(
 	var event models.InventoryEvent
 	err = tx.QueryRowContext(ctx, eventQuery,
 		companyID, itemID, "SALE",
-		nextVersion, -req.Quantity, costPerUnit.Float64(), saleTotal.Float64(),
+		nextVersion, req.Quantity, costPerUnit.Float64(), saleTotal.Float64(),
 		newQuantity, newTotalCost.Float64(),
 		currentState.CurrentAvgCost.Float64(), newAvgCost.Float64(),
 		req.DocumentType, req.DocumentNumber,
