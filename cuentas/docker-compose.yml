@@ -109,6 +109,11 @@ services:
       CUENTAS_VAULT_URL: "http://vault:8200"
       CUENTAS_FIRMADOR_URL: "http://167.172.230.154:8113"
       TZ: "America/El_Salvador"
+      CUENTAS_HACIENDA_CONSULTA_URL: "https://apitest.dtes.mh.gob.sv/fesv/recepcion/consultadte/"
+      CUENTAS_HACIENDA_TIMEOUT: "60s"
+      CUENTAS_HACIENDA_RETRY_MAX: "3"
+      CUENTAS_HACIENDA_RETRY_WAIT_MIN: "2s"
+      CUENTAS_HACIENDA_RETRY_WAIT_MAX: "10s"
     volumes:
       - ./config.yaml:/app/config.yaml
       - vault_data:/vault/data
