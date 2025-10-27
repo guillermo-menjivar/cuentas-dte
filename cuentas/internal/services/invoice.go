@@ -1240,7 +1240,7 @@ func (s *InvoiceService) getInvoiceForUpdate(ctx context.Context, tx *sql.Tx, co
 			client_name, client_legal_name, client_nit, client_ncr, client_dui,
 			client_address, client_tipo_contribuyente, client_tipo_persona,
 			subtotal, total_discount, total_taxes, total,
-			currency, payment_terms, payment_method, payment_status, 
+			currency, payment_terms, payment_method, payment_status,
 			amount_paid, balance_due, due_date,
 			created_at
 		FROM invoices
@@ -1266,6 +1266,53 @@ func (s *InvoiceService) getInvoiceForUpdate(ctx context.Context, tx *sql.Tx, co
 	if err != nil {
 		return nil, fmt.Errorf("failed to query invoice: %w", err)
 	}
+
+	// Load line items
+	log.Printf("[DEBUG] getInvoiceForUpdate: Loading line items for invoice %s", invoiceID)
+
+	lineItemsQuery := `
+		SELECT 
+			id, invoice_id, item_id, quantity, unit_price,
+			discount_percentage, discount_amount, taxable_amount,
+			total_taxes, line_total, line_item_order
+		FROM invoice_line_items
+		WHERE invoice_id = $1
+		ORDER BY line_item_order
+	`
+
+	rows, err := tx.QueryContext(ctx, lineItemsQuery, invoiceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load line items: %w", err)
+	}
+	defer rows.Close()
+
+	invoice.LineItems = []models.InvoiceLineItem{}
+	for rows.Next() {
+		var lineItem models.InvoiceLineItem
+		err := rows.Scan(
+			&lineItem.ID,
+			&lineItem.InvoiceID,
+			&lineItem.ItemID,
+			&lineItem.Quantity,
+			&lineItem.UnitPrice,
+			&lineItem.DiscountPercentage,
+			&lineItem.DiscountAmount,
+			&lineItem.TaxableAmount,
+			&lineItem.TotalTaxes,
+			&lineItem.LineTotal,
+			&lineItem.LineItemOrder,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan line item: %w", err)
+		}
+		invoice.LineItems = append(invoice.LineItems, lineItem)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating line items: %w", err)
+	}
+
+	log.Printf("[DEBUG] getInvoiceForUpdate: Loaded %d line items for invoice %s", len(invoice.LineItems), invoiceID)
 
 	return invoice, nil
 }
