@@ -1,0 +1,12 @@
+REGISTRO DE CONTROL DE INVENTARIOS
+Empresa,"Paredes & Paredes, S.A. de C.V"
+NIT,06143005061013
+NRC,1726313
+Período,Del 2025-10-01 al 2025-10-27
+Artículo,PROD-20251027-2839 - Pilsener Beer 12oz
+
+Correlativo,Fecha,Tipo Doc,No. Documento,Proveedor,Nacionalidad,Fuente/Referencia,Unidades Entrada,Unidades Salida,Saldo Unidades,Costo Entrada,Costo Salida,Saldo Costo
+13,2025-10-26 21:11:59,01,DTE-01-B169P696-000001761372001,Comercial El Salvador Import Export,Nacional,Compra automática de prueba - 2025-10-25,51.00,,51.00,43.86,,43.86
+14,2025-10-26 21:11:59,03,DTE-03-P972P700-000001761458402,Distribuidora Nacional S.A. de C.V.,Nacional,Compra automática de prueba - 2025-10-26,81.00,,132.00,89.91,,133.77
+15,2025-10-26 21:11:59,03,DTE-03-S507P612-000001761544803,Importadora Tech Central America,Nacional,Compra automática de prueba - 2025-10-27,84.00,,216.00,99.12,,232.89
+16,2025-10-26 21:11:59,03,DTE-03-B439P119-000001761285604,Distribuidora Nacional S.A. de C.V.,Nacional,Compra automática de prueba - 2025-10-24,74.00,,290.00,77.70,,310.59
