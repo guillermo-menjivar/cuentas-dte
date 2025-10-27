@@ -48,45 +48,36 @@ class InventoryPurchaseSeeder:
 
         return f"DTE-{tipo}-{establecimiento_tipo}{establecimiento}P{punto_venta}-{correlativo}"
 
-    def generate_random_nit(self) -> str:
-        """Generate a valid random NIT"""
-        # Format: XXXX-XXXXXX-XXX-X
-        part1 = f"{random.randint(100, 9999):04d}"
-        part2 = f"{random.randint(100000, 999999):06d}"
-        part3 = f"{random.randint(100, 999):03d}"
-        part4 = random.randint(1, 9)
-        return f"{part1}-{part2}-{part3}-{part4}"
-
     def generate_suppliers(self) -> List[Dict]:
-        """Generate a pool of realistic suppliers"""
+        """Generate a pool of realistic suppliers with normalized NITs"""
         return [
             {
                 "name": "Distribuidora Nacional S.A. de C.V.",
-                "nit": "0614-123456-001-2",
+                "nit": "0614123456001-2",  # Normalized (removed internal dashes)
             },
             {
                 "name": "Comercial El Salvador Import Export",
-                "nit": "0614-234567-002-3",
+                "nit": "0614234567002-3",
             },
             {
                 "name": "Importadora Tech Central America",
-                "nit": "0614-345678-003-4",
+                "nit": "0614345678003-4",
             },
             {
                 "name": "Proveedor Mayorista San Salvador",
-                "nit": "0614-456789-004-5",
+                "nit": "0614456789004-5",
             },
             {
                 "name": "Suministros Industriales SV",
-                "nit": "0614-567890-005-6",
+                "nit": "0614567890005-6",
             },
             {
                 "name": "Global Trade El Salvador S.A.",
-                "nit": "0614-678901-006-7",
+                "nit": "0614678901006-7",
             },
             {
                 "name": "Distribuciones del Pacífico",
-                "nit": "0614-789012-007-8",
+                "nit": "0614789012007-8",
             },
         ]
 
@@ -112,19 +103,18 @@ class InventoryPurchaseSeeder:
         dte_seed = int(date.timestamp()) + purchase_num
         document_number = self.generate_random_dte_number(doc_type, dte_seed)
 
+        # CRITICAL FIX: ALWAYS include supplier name and NIT
         payload = {
             "quantity": quantity,
             "unit_cost": unit_cost,
             "document_type": doc_type,
             "document_number": document_number,
-            "supplier_name": supplier["name"],
+            "supplier_name": supplier["name"],  # ✅ ALWAYS present
+            "supplier_nit": supplier["nit"],  # ✅ ALWAYS present (even for tipo 01)
+            "supplier_nationality": "Nacional",  # ✅ ALWAYS present
             "cost_source_ref": f"Libro de Compras Folio {random.randint(10, 200)}",
             "notes": f"Compra automática de prueba - {date.strftime('%Y-%m-%d')}",
         }
-
-        # Only add NIT for CCF (03)
-        if doc_type == "03":
-            payload["supplier_nit"] = supplier["nit"]
 
         return payload
 
@@ -198,7 +188,7 @@ class InventoryPurchaseSeeder:
                 doc_type_name = "CCF" if payload["document_type"] == "03" else "Factura"
                 if self.create_purchase(item_id, payload):
                     print(
-                        f"         ✅ Purchase {i+1}/{num_purchases}: {payload['quantity']} units @ ${payload['unit_cost']} ({doc_type_name})"
+                        f"         ✅ Purchase {i+1}/{num_purchases}: {payload['quantity']} units @ ${payload['unit_cost']} ({doc_type_name}) - {payload['supplier_name']}"
                     )
                 else:
                     print(f"         ❌ Purchase {i+1}/{num_purchases} failed")
@@ -218,7 +208,7 @@ class InventoryPurchaseSeeder:
             print("\n🎉 All purchases created successfully!")
             print("\n💡 Next steps:")
             print(
-                "   1. Run: ./export_inventory_cost_reports.py [COMPANY_ID] --mode audit ..."
+                "   1. Run: ./test_audit_inventory_reports.py [COMPANY_ID] --mode audit ..."
             )
             print("   2. Check legal registers - all products should have data now!\n")
         else:
