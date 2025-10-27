@@ -243,3 +243,13 @@ func (h *HaciendaService) UpdateLastActivity(ctx context.Context, companyID stri
 
 	return nil
 }
+
+func (h *HaciendaService) GetAuthToken(ctx context.Context, companyID string) (string, error) {
+	authResponse, err := h.AuthenticateCompany(ctx, companyID)
+	if err != nil {
+		return "", err
+	}
+
+	// Return the token in the format Hacienda expects (no "Bearer " prefix)
+	return authResponse.Body.Token, nil
+}
