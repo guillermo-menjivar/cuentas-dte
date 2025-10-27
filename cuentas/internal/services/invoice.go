@@ -1078,7 +1078,7 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 				// Record sale (deducts inventory)
 				// Note: RecordSale has its own transaction, but we're passing the parent context
 				// The inventory deduction will be part of this transaction scope
-				_, err = s.inventoryService.RecordSale(ctx, *lineItem.ItemID, companyID, saleReq)
+				_, err = s.inventoryService.RecordSale(ctx, companyID, *lineItem.ItemID, saleReq)
 				if err != nil {
 					log.Printf("[ERROR] Failed to record sale for item %s: %v", *lineItem.ItemID, err)
 					return nil, fmt.Errorf("no se pudo registrar la venta del artículo %s: %w", item.Name, err)
