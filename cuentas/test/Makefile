@@ -46,6 +46,8 @@ init:
 	@echo "$(BLUE)🔍 Step 3: Creating CCF clients...$(NC)"
 	@SAVED_ID=$$(cat .company_id); \
 	./test_create_ccf_clients.py $$SAVED_ID
+	@echo "configuring establishments"
+	./test_establishments.sh $$SAVED_ID
 
 
 # Show current company ID
