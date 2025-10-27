@@ -1,0 +1,16 @@
+REGISTRO DE CONTROL DE INVENTARIOS
+Empresa,"Paredes & Paredes, S.A. de C.V"
+NIT,06143005061013
+NRC,1726313
+Período,Del 2025-10-01 al 2025-10-27
+Artículo,PROD-20251027-3970 - Pilsener Beer 12oz
+
+Correlativo,Fecha,Tipo Doc,No. Documento,Proveedor,Nacionalidad,Fuente/Referencia,Unidades Entrada,Unidades Salida,Saldo Unidades,Costo Entrada,Costo Salida,Saldo Costo
+15,2025-10-26 20:19:55,03,DTE-03-S764P720-000001760421601,Distribuciones del Pacífico,Nacional,Compra automática de prueba - 2025-10-14,17.00,,17.00,14.11,,14.11
+16,2025-10-26 20:19:55,01,DTE-01-S015P838-000001760508002,Suministros Industriales SV,Nacional,Compra automática de prueba - 2025-10-15,52.00,,69.00,43.16,,57.27
+17,2025-10-26 20:19:55,01,DTE-01-S320P374-000001760940003,Suministros Industriales SV,Nacional,Compra automática de prueba - 2025-10-20,58.00,,127.00,57.42,,114.69
+18,2025-10-26 20:19:55,01,DTE-01-S013P207-000001759557604,Comercial El Salvador Import Export,Nacional,Compra automática de prueba - 2025-10-04,24.00,,151.00,26.88,,141.57
+19,2025-10-26 20:19:55,03,DTE-03-S482P046-000001761544805,Suministros Industriales SV,Nacional,Compra automática de prueba - 2025-10-27,33.00,,184.00,25.41,,166.98
+20,2025-10-26 20:19:55,01,DTE-01-S364P184-000001760421606,Comercial El Salvador Import Export,Nacional,Compra automática de prueba - 2025-10-14,42.00,,226.00,45.78,,212.76
+21,2025-10-26 20:19:55,01,DTE-01-B865P323-000001761026407,Distribuidora Nacional S.A. de C.V.,Nacional,Compra automática de prueba - 2025-10-21,36.00,,262.00,34.92,,247.68
+22,2025-10-26 20:19:55,03,DTE-03-P985P040-000001759989608,Comercial El Salvador Import Export,Nacional,Compra automática de prueba - 2025-10-09,47.00,,309.00,45.12,,292.80

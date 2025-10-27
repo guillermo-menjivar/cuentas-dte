@@ -68,7 +68,7 @@ check-company:
 		exit 1; \
 	fi
 
-.PHONY: help clean seed test reports all seed-only reports-only init show-company check-company
+.PHONY: help clean seed test reports all seed-only reports-only init show-company check-company seed-invoices
 
 # Default target
 help:
