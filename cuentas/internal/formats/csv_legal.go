@@ -42,7 +42,7 @@ func WriteLegalInventoryRegisterCSV(
 	}
 
 	// Data rows
-	for _, event := range events {
+	for i, event := range events {
 		// Separate units in/out based on event type
 		unitsIn := ""
 		unitsOut := ""
@@ -135,7 +135,7 @@ func WriteLegalInventoryRegisterCSV(
 		}
 
 		row := []string{
-			fmt.Sprintf("%d", event.EventID),                   // Correlativo
+			fmt.Sprintf("%d", i+1),                             // Correlativo
 			event.EventTimestamp.Format("2006-01-02 15:04:05"), // Fecha
 			docType,            // Tipo Doc
 			docNumber,          // No. Documento
