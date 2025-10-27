@@ -26,17 +26,27 @@ init:
 	@bash register_david_company.sh
 	@echo ""
 	@echo "$(BLUE)🔍 Step 2: Fetching company ID...$(NC)"
-	@./test_list_companies.sh | jq -r '.companies[0].id' > .company_id
-	@echo "$(GREEN)✓ Company ID saved to .company_id$(NC)"
-	@echo "Company ID: $$(cat .company_id)"
+	@FETCHED_ID=$$(./test_list_companies.sh | jq -r '.companies[0].id'); \
+	if [ -z "$$FETCHED_ID" ] || [ "$$FETCHED_ID" = "null" ]; then \
+		echo "$(RED)❌ Failed to fetch company ID from API$(NC)"; \
+		echo "$(YELLOW)Debug: Running test_list_companies.sh manually:$(NC)"; \
+		./test_list_companies.sh; \
+		exit 1; \
+	else \
+		echo "$$FETCHED_ID" > .company_id; \
+		echo "$(GREEN)✓ Company ID saved to .company_id$(NC)"; \
+		echo "Company ID: $$FETCHED_ID"; \
+	fi
 	@echo ""
 	@echo "$(YELLOW)💡 You can now run other make targets:$(NC)"
 	@echo "   make seed-purchases"
 	@echo "   make seed-invoices"
 	@echo "   make reports"
 	@echo ""
-	@echo "creating clients with credito fiscal for $(COMPANY_ID)"
-	./test_create_ccf_clients.py $(COMPANY_ID)
+	@echo "$(BLUE)🔍 Step 3: Creating CCF clients...$(NC)"
+	@SAVED_ID=$$(cat .company_id); \
+	./test_create_ccf_clients.py $$SAVED_ID
+
 
 # Show current company ID
 show-company:
