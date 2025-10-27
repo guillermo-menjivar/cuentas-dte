@@ -33,63 +33,6 @@ type ConsultaDTEResponse struct {
 	Observaciones    []string `json:"observaciones,omitempty"`
 }
 
-// ReceptionRequest represents the request to submit a DTE to Hacienda
-type ReceptionRequest struct {
-	Ambiente         string `json:"ambiente"`
-	IDEnvio          int    `json:"idEnvio"`
-	Version          int    `json:"version"`
-	TipoDte          string `json:"tipoDte"`
-	Documento        string `json:"documento"`
-	CodigoGeneracion string `json:"codigoGeneracion"`
-}
-
-// ReceptionResponse represents the response from Hacienda
-type ReceptionResponse struct {
-	Version          int      `json:"version"`
-	Ambiente         string   `json:"ambiente"`
-	VersionApp       int      `json:"versionApp"`
-	Estado           string   `json:"estado"`
-	CodigoGeneracion string   `json:"codigoGeneracion"`
-	SelloRecibido    string   `json:"selloRecibido,omitempty"`
-	FhProcesamiento  string   `json:"fhProcesamiento"`
-	ClasificacionMsg string   `json:"clasificacionMsg,omitempty"`
-	CodigoMsg        string   `json:"codigoMsg,omitempty"`
-	DescripcionMsg   string   `json:"descripcionMsg,omitempty"`
-	Observaciones    []string `json:"observaciones,omitempty"`
-}
-
-// ConsultaDTERequest represents the request to query a DTE from Hacienda
-type ConsultaDTERequest struct {
-	NitEmisor        string `json:"nitEmisor"`
-	TipoDTE          string `json:"tdte"`
-	CodigoGeneracion string `json:"codigoGeneracion"`
-}
-
-// ConsultaDTEResponse represents the response from Hacienda's consultation endpoint
-type ConsultaDTEResponse struct {
-	Version          int      `json:"version"`
-	Ambiente         string   `json:"ambiente"`
-	VersionApp       int      `json:"versionApp"`
-	Estado           string   `json:"estado"`
-	CodigoGeneracion string   `json:"codigoGeneracion"`
-	SelloRecibido    string   `json:"selloRecibido,omitempty"`
-	FhProcesamiento  string   `json:"fhProcesamiento"`
-	FechaEmision     string   `json:"fechaEmision,omitempty"`
-	ClasificaMsg     string   `json:"clasificaMsg,omitempty"`
-	CodigoMsg        string   `json:"codigoMsg,omitempty"`
-	DescripcionMsg   string   `json:"descripcionMsg,omitempty"`
-	Observaciones    []string `json:"observaciones,omitempty"`
-}
-
-// HaciendaError represents an error from the Hacienda service
-type HaciendaError struct {
-	Type      string
-	Code      string
-	Message   string
-	Details   interface{}
-	Timestamp time.Time
-}
-
 // GetConsultaURL returns the configured URL for DTE consultation
 func (c *Client) GetConsultaURL() string {
 	return c.consultaURL

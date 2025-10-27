@@ -14,6 +14,20 @@ import (
 	"github.com/spf13/viper"
 )
 
+type ReceptionResponse struct {
+	Version          int      `json:"version"`
+	Ambiente         string   `json:"ambiente"`
+	VersionApp       int      `json:"versionApp"`
+	Estado           string   `json:"estado"`
+	CodigoGeneracion string   `json:"codigoGeneracion"`
+	SelloRecibido    string   `json:"selloRecibido,omitempty"`
+	FhProcesamiento  string   `json:"fhProcesamiento"`
+	ClasificacionMsg string   `json:"clasificacionMsg,omitempty"`
+	CodigoMsg        string   `json:"codigoMsg,omitempty"`
+	DescripcionMsg   string   `json:"descripcionMsg,omitempty"`
+	Observaciones    []string `json:"observaciones,omitempty"`
+}
+
 // Client handles communication with the Ministerio de Hacienda API
 type Client struct {
 	baseURL     string
@@ -39,21 +53,6 @@ type ReceptionRequest struct {
 	TipoDte          string `json:"tipoDte"`          // "01" = Factura, "03" = CCF, etc.
 	Documento        string `json:"documento"`        // The signed JWT from Firmador
 	CodigoGeneracion string `json:"codigoGeneracion"` // UUID from the DTE
-}
-
-// ReceptionResponse represents the response from Hacienda
-type ReceptionResponse struct {
-	Version          int      `json:"version"`
-	Ambiente         string   `json:"ambiente"`
-	VersionApp       int      `json:"versionApp"`
-	Estado           string   `json:"estado"` // "PROCESADO", "RECHAZADO", "RECIBIDO"
-	CodigoGeneracion string   `json:"codigoGeneracion"`
-	SelloRecibido    string   `json:"selloRecibido,omitempty"`
-	FhProcesamiento  string   `json:"fhProcesamiento"`
-	ClasificacionMsg string   `json:"clasificacionMsg,omitempty"`
-	CodigoMsg        string   `json:"codigoMsg,omitempty"`
-	DescripcionMsg   string   `json:"descripcionMsg,omitempty"`
-	Observaciones    []string `json:"observaciones,omitempty"`
 }
 
 // HaciendaError represents an error from the Hacienda service
