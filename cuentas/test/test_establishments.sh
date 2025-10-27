@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Test script for Establishment and Point of Sale endpoints
+# Usage: ./test_establishments.sh <company_id>
 
 BASE_URL="http://localhost:8080/v1"
 CONTENT_TYPE="Content-Type: application/json"
@@ -9,6 +10,7 @@ CONTENT_TYPE="Content-Type: application/json"
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Check if jq is installed
@@ -17,17 +19,25 @@ if ! command -v jq &> /dev/null; then
     exit 1
 fi
 
-echo -e "${BLUE}=== Establishment and POS Testing ===${NC}\n"
+# Check for company ID argument
+if [ "$#" -ne 1 ]; then
+    echo -e "${RED}Error: Company ID is required${NC}"
+    echo "Usage: $0 <company_id>"
+    echo "Example: $0 bda93a7d-45dd-4d62-823f-4213806ff68f"
+    exit 1
+fi
 
-# Get Company ID
-read -p "Enter Company ID: " COMPANY_ID
+COMPANY_ID=$1
 
 if [ -z "$COMPANY_ID" ]; then
-    echo -e "${RED}Company ID is required${NC}"
+    echo -e "${RED}Company ID cannot be empty${NC}"
     exit 1
 fi
 
 COMPANY_HEADER="X-Company-ID: $COMPANY_ID"
+
+echo -e "${BLUE}=== Establishment and POS Testing ===${NC}"
+echo -e "Company ID: ${YELLOW}$COMPANY_ID${NC}\n"
 
 # Test 1: Create Establishment
 echo -e "${BLUE}Test 1: Creating Establishment (Casa Matriz)${NC}"
