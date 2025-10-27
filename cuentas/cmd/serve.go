@@ -338,6 +338,15 @@ func startServer() {
 			//notas.DELETE("/:id", notaHandler.DeleteNota)
 		}
 
+		reconciliationService := services.NewDTEReconciliationService(
+			database.DB,
+			haciendaClient,
+			haciendaService,
+		)
+		reconciliationHandler := handlers.NewDTEReconciliationHandler(reconciliationService)
+
+		v1.GET("/dte/reconciliation", reconciliationHandler.ReconcileDTEs)
+		v1.GET("/dte/reconciliation/:codigo_generacion", reconciliationHandler.ReconcileSingleDTE)
 	}
 
 	// Start server
