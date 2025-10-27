@@ -3,6 +3,7 @@ package handlers
 import (
 	"cuentas/internal/formats"
 	"cuentas/internal/models"
+	"cuentas/internal/services"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,10 +13,10 @@ import (
 )
 
 type DTEReconciliationHandler struct {
-	service *models.DTEReconciliationService
+	service *services.DTEReconciliationService
 }
 
-func NewDTEReconciliationHandler(service *models.DTEReconciliationService) *DTEReconciliationHandler {
+func NewDTEReconciliationHandler(service *services.DTEReconciliationService) *DTEReconciliationHandler {
 	return &DTEReconciliationHandler{
 		service: service,
 	}
