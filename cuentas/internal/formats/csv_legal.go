@@ -135,21 +135,22 @@ func WriteLegalInventoryRegisterCSV(
 		}
 
 		row := []string{
-			fmt.Sprintf("%d", i+1),                             // Correlativo
-			event.EventTimestamp.Format("2006-01-02 15:04:05"), // Fecha
-			docType,            // Tipo Doc
-			docNumber,          // No. Documento
-			supplierOrCustomer, // Proveedor/Cliente
-			nit,                // NIT
-			nationality,        // Nacionalidad
-			sourceRef,          // Fuente/Referencia
-			unitsIn,            // Unidades Entrada
-			unitsOut,           // Unidades Salida
-			fmt.Sprintf("%.2f", event.BalanceQuantityAfter), // Saldo Unidades
-			costIn,  // Costo Entrada
-			costOut, // Costo Salida
-			fmt.Sprintf("%.2f", event.BalanceTotalCostAfter.Float64()), // Saldo Costo
-			costoPromedio, // Costo Promedio (NEW)
+			fmt.Sprintf("%d", i+1),                             // 1. Correlativo
+			event.EventTimestamp.Format("2006-01-02 15:04:05"), // 2. Fecha
+			event.EventType,                                    // 3. Tipo Evento (PURCHASE/SALE) ← ADD THIS!
+			docType,                                            // 4. Tipo Doc (01/03)
+			docNumber,                                          // 5. No. Documento
+			supplierOrCustomer,                                 // 6. Proveedor/Cliente
+			nit,                                                // 7. NIT
+			nationality,                                        // 8. Nacionalidad
+			sourceRef,                                          // 9. Fuente/Referencia
+			unitsIn,                                            // 10. Unidades Entrada
+			unitsOut,                                           // 11. Unidades Salida
+			fmt.Sprintf("%.2f", event.BalanceQuantityAfter), // 12. Saldo Unidades
+			costIn,  // 13. Costo Entrada
+			costOut, // 14. Costo Salida
+			fmt.Sprintf("%.2f", event.BalanceTotalCostAfter.Float64()), // 15. Saldo Costo
+			costoPromedio, // 16. Costo Promedio
 		}
 
 		if err := writer.Write(row); err != nil {
