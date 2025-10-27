@@ -139,7 +139,7 @@ class InvoiceSalesSeeder:
 
         # Business clients (CCF) might use credit terms
         if doc_type == "03":
-            payment_terms = random.choice(["cash", "cash", "net_30", "cuenta"])
+            payment_terms = random.choice(["cash", "cash"])
 
         payload = {
             "client_id": client["id"],
