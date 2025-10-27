@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"cuentas/internal/formats"
-	"cuentas/internal/services"
 	"fmt"
 	"log"
 	"net/http"
@@ -12,10 +11,10 @@ import (
 )
 
 type DTEReconciliationHandler struct {
-	service *services.DTEReconciliationService
+	service *models.DTEReconciliationService
 }
 
-func NewDTEReconciliationHandler(service *services.DTEReconciliationService) *DTEReconciliationHandler {
+func NewDTEReconciliationHandler(service *models.DTEReconciliationService) *DTEReconciliationHandler {
 	return &DTEReconciliationHandler{
 		service: service,
 	}
@@ -188,7 +187,7 @@ func (h *DTEReconciliationHandler) ReconcileSingleDTE(c *gin.Context) {
 	format := formats.DetermineFormat(c.GetHeader("Accept"), c.Query("format"))
 
 	if format == "csv" {
-		csvData, err := formats.WriteDTEReconciliationCSV([]services.DTEReconciliationRecord{*result}, nil)
+		csvData, err := formats.WriteDTEReconciliationCSV([]models.DTEReconciliationRecord{*result}, nil)
 		if err != nil {
 			log.Printf("[ERROR] Failed to generate CSV: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{
