@@ -130,20 +130,47 @@ func (t *Translations) ValuationDetailHeaders() []string {
 }
 
 // InventoryRegisterHeaders returns CSV headers for legal inventory register (Article 142-A)
-func (t *Translations) InventoryRegisterHeaders() []string {
-	if t.lang == English {
+func (t *Translator) InventoryRegisterHeaders() []string {
+	if t.lang == "en" {
 		return []string{
-			"Correlativo", "Date", "Event Type", "Doc Type", "Doc Number", "Supplier/Customer", "NIT", "Nationality",
-			"Source/Ref", "Units In", "Units Out", "Balance Units",
-			"Cost In", "Cost Out", "Balance Cost", "Average Cost",
+			"Correlative",
+			"Date",
+			"Event Type",
+			"Doc Type",
+			"Document No.",
+			"Supplier/Customer",
+			"NIT",
+			"Nationality",
+			"Source/Reference",
+			"Units In",
+			"Units Out",
+			"Balance Units",
+			"Cost In",
+			"Cost Out",
+			"Balance Cost",
+			"Average Cost",
+			"Remarks", // NEW
 		}
 	}
-
-	// Spanish headers (Article 142-A compliance)
+	// Spanish (default)
 	return []string{
-		"Correlativo", "Fecha", "Tipo Evento", "Tipo Doc", "No. Documento", "Proveedor/Cliente", "NIT", "Nacionalidad",
-		"Fuente/Referencia", "Unidades Entrada", "Unidades Salida", "Saldo Unidades",
-		"Costo Entrada", "Costo Salida", "Saldo Costo", "Costo Promedio",
+		"Correlativo",
+		"Fecha",
+		"Tipo Evento",
+		"Tipo Doc",
+		"No. Documento",
+		"Proveedor/Cliente",
+		"NIT",
+		"Nacionalidad",
+		"Fuente/Referencia",
+		"Unidades Entrada",
+		"Unidades Salida",
+		"Saldo Unidades",
+		"Costo Entrada",
+		"Costo Salida",
+		"Saldo Costo",
+		"Costo Promedio",
+		"Observaciones", // NEW
 	}
 }
 
