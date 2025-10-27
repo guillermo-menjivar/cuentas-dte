@@ -1027,6 +1027,7 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 		return nil, fmt.Errorf("failed to generate numero control: %w", err)
 	}
 
+	log.Println("WE ARE TESTING THE INVOICE SAVINV>>>>>")
 	log.Printf("[DEBUG] FinalizeInvoice: Processing %d line items for invoice %s", len(invoice.LineItems), invoiceID)
 
 	for idx, lineItem := range invoice.LineItems {
