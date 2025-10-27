@@ -106,12 +106,14 @@ func WriteLegalInventoryRegisterCSV(
 		}
 
 		// Nationality
-		nationality := ""
-		if event.EventType == "PURCHASE" && event.SupplierNationality != nil {
-			nationality = *event.SupplierNationality
-		} else if event.EventType == "SALE" {
-			nationality = "Nacional"
-		}
+		nationality := "Nacional"
+		/*
+			if event.EventType == "PURCHASE" && event.SupplierNationality != nil {
+				nationality = *event.SupplierNationality
+			} else if event.EventType == "SALE" {
+				nationality = "Nacional"
+			}
+		*/
 
 		// Source reference
 		sourceRef := ""
