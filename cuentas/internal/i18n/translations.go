@@ -130,7 +130,7 @@ func (t *Translations) ValuationDetailHeaders() []string {
 }
 
 // InventoryRegisterHeaders returns CSV headers for legal inventory register (Article 142-A)
-func (t *Translator) InventoryRegisterHeaders() []string {
+func (t *Translations) InventoryRegisterHeaders() []string {
 	if t.lang == "en" {
 		return []string{
 			"Correlative",
