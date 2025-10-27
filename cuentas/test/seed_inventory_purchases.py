@@ -53,31 +53,31 @@ class InventoryPurchaseSeeder:
         return [
             {
                 "name": "Distribuidora Nacional S.A. de C.V.",
-                "nit": "0614123456001-2",  # Normalized (removed internal dashes)
+                "nit": "0614-123456-001-2",  # Normalized (removed internal dashes)
             },
             {
                 "name": "Comercial El Salvador Import Export",
-                "nit": "0614234567002-3",
+                "nit": "0614-234567-002-3",
             },
             {
                 "name": "Importadora Tech Central America",
-                "nit": "0614345678003-4",
+                "nit": "0614-345678-003-4",
             },
             {
                 "name": "Proveedor Mayorista San Salvador",
-                "nit": "0614456789004-5",
+                "nit": "06144-56789-004-5",
             },
             {
                 "name": "Suministros Industriales SV",
-                "nit": "0614567890005-6",
+                "nit": "0614-567890-005-6",
             },
             {
                 "name": "Global Trade El Salvador S.A.",
-                "nit": "0614678901006-7",
+                "nit": "0614-678901-006-7",
             },
             {
                 "name": "Distribuciones del Pacífico",
-                "nit": "0614789012007-8",
+                "nit": "0614-789012-007-8",
             },
         ]
 
