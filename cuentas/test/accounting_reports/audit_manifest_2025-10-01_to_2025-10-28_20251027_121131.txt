@@ -2,7 +2,7 @@ AUDIT PACKAGE MANIFEST
 ==================================================
 Company ID: 8c074d1b-be5f-4877-a3e3-79dd36bb0aed
 Audit Period: 2025-10-01 to 2025-10-28
-Generated: 2025-10-27 11:53:06.395593
+Generated: 2025-10-27 12:11:31.453453
 Output Directory: accounting_reports
 
 CONTENTS:
