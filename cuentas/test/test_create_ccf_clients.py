@@ -3,7 +3,6 @@
 Create test clients for Crédito Fiscal (CCF) testing
 Usage: python create_ccf_clients.py <company_id>
 """
-
 import sys
 import requests
 from typing import Dict, List
@@ -32,6 +31,26 @@ CCF_CLIENTS = [
 ]
 
 
+def get_existing_clients(company_id: str) -> List[Dict]:
+    """Get list of existing clients"""
+    headers = {"X-Company-ID": company_id}
+    try:
+        response = requests.get(f"{BASE_URL}/clients", headers=headers)
+        response.raise_for_status()
+        return response.json().get("clients", [])
+    except Exception as e:
+        print(f"⚠️  Warning: Could not fetch existing clients: {e}")
+        return []
+
+
+def client_exists(nit: str, existing_clients: List[Dict]) -> bool:
+    """Check if client with given NIT already exists"""
+    for client in existing_clients:
+        if client.get("nit") == nit:
+            return True
+    return False
+
+
 def create_ccf_clients(company_id: str):
     """Create CCF test clients"""
     headers = {"Content-Type": "application/json", "X-Company-ID": company_id}
@@ -42,11 +61,25 @@ def create_ccf_clients(company_id: str):
     print(f"Company ID: {company_id}")
     print(f"Total clients to create: {len(CCF_CLIENTS)}\n")
 
+    # Get existing clients to check for duplicates
+    print("🔍 Checking for existing clients...")
+    existing_clients = get_existing_clients(company_id)
+    print(f"✅ Found {len(existing_clients)} existing client(s)\n")
+
     created = 0
+    skipped = 0
     failed = 0
 
     for i, client_data in enumerate(CCF_CLIENTS, 1):
         print(f"[{i}/{len(CCF_CLIENTS)}] Creating: {client_data['business_name']}")
+
+        # Check if client already exists
+        if client_exists(client_data["nit"], existing_clients):
+            print(f"  ⚠️  Already exists (NIT: {client_data['nit']})")
+            print(f"  → Skipping...")
+            skipped += 1
+            print()
+            continue
 
         try:
             response = requests.post(
@@ -54,17 +87,25 @@ def create_ccf_clients(company_id: str):
             )
             response.raise_for_status()
             result = response.json()
-
             print(f"  ✅ Created: {result.get('id')}")
-            print(f"  NIT: {client_data['nit']}")
-            print(f"  NCR: {client_data['ncr']}")
-            print(f"  Email: {client_data['correo']}")
+            print(f"     NIT: {client_data['nit']}")
+            print(f"     NCR: {client_data['ncr']}")
+            print(f"     Email: {client_data['correo']}")
             created += 1
-
         except requests.exceptions.HTTPError as e:
-            print(f"  ❌ Failed: {e.response.status_code}")
-            print(f"  Error: {e.response.text}")
-            failed += 1
+            # Check if it's a duplicate error (in case race condition)
+            if e.response.status_code == 409:
+                print(f"  ⚠️  Already exists (detected during creation)")
+                print(f"  → Skipping...")
+                skipped += 1
+            else:
+                print(f"  ❌ Failed: {e.response.status_code}")
+                try:
+                    error_detail = e.response.json()
+                    print(f"     Error: {error_detail.get('error', e.response.text)}")
+                except:
+                    print(f"     Error: {e.response.text}")
+                failed += 1
         except Exception as e:
             print(f"  ❌ Failed: {e}")
             failed += 1
@@ -74,9 +115,16 @@ def create_ccf_clients(company_id: str):
     print("=" * 60)
     print("📊 SUMMARY")
     print("=" * 60)
-    print(f"Successfully created: {created}")
-    print(f"Failed: {failed}")
+    print(f"✅ Successfully created: {created}")
+    print(f"⚠️  Already existed (skipped): {skipped}")
+    print(f"❌ Failed: {failed}")
     print("=" * 60)
+
+    # Exit with success if no hard failures
+    if failed > 0:
+        sys.exit(1)
+    else:
+        sys.exit(0)
 
 
 def main():
