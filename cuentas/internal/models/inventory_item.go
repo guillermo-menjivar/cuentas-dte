@@ -27,9 +27,10 @@ type InventoryItem struct {
 
 	Color *string `json:"color,omitempty"`
 
-	Active    bool      `json:"active"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	Active        bool      `json:"active"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+	UnitOfMeasure string    `json:"unit_of_measure"`
 
 	// Relationships (loaded separately)
 	Taxes       []InventoryItemTax `json:"taxes,omitempty"`
