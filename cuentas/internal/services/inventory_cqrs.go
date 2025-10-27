@@ -650,16 +650,13 @@ func (s *InventoryService) GetCostHistory(
 	if err != nil {
 		return nil, fmt.Errorf("item not found: %w", err)
 	}
-
 	if limit <= 0 {
 		limit = 50 // Default limit
 	}
-
 	// Validate sort order
 	if sortOrder != "asc" && sortOrder != "desc" {
 		sortOrder = "desc"
 	}
-
 	// Build query with optional date filters
 	query := `
 	SELECT 
@@ -667,17 +664,19 @@ func (s *InventoryService) GetCostHistory(
 		aggregate_version, quantity, unit_cost, total_cost,
 		balance_quantity_after, balance_total_cost_after,
 		moving_avg_cost_before, moving_avg_cost_after,
-		document_type, document_number, supplier_name, supplier_nit,
-		supplier_nationality, cost_source_ref,
+		document_type, document_number, 
+		supplier_name, supplier_nit, supplier_nationality, cost_source_ref,
+		customer_name, customer_nit, customer_tax_exempt,
+		invoice_id, invoice_line_id,
+		sale_price, discount_amount, net_sale_price,
+		tax_exempt, tax_rate, tax_amount,
 		reference_type, reference_id, correlation_id,
 		event_data, notes, created_by_user_id, created_at
 	FROM inventory_events
 	WHERE company_id = $1 AND item_id = $2
 `
-
 	args := []interface{}{companyID, itemID}
 	argCount := 2
-
 	// Add date filters if provided
 	if startDate != "" {
 		// Validate date format
@@ -688,7 +687,6 @@ func (s *InventoryService) GetCostHistory(
 		query += fmt.Sprintf(" AND event_timestamp >= $%d", argCount)
 		args = append(args, startDate+"T00:00:00Z")
 	}
-
 	if endDate != "" {
 		// Validate date format
 		if _, err := time.Parse("2006-01-02", endDate); err != nil {
@@ -698,17 +696,14 @@ func (s *InventoryService) GetCostHistory(
 		query += fmt.Sprintf(" AND event_timestamp <= $%d", argCount)
 		args = append(args, endDate+"T23:59:59Z")
 	}
-
 	// Add ordering and limit
 	query += fmt.Sprintf(" ORDER BY event_timestamp %s, event_id %s LIMIT $%d", sortOrder, sortOrder, argCount+1)
 	args = append(args, limit)
-
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get cost history: %w", err)
 	}
 	defer rows.Close()
-
 	var events []models.InventoryEvent
 	for rows.Next() {
 		var event models.InventoryEvent
@@ -717,8 +712,12 @@ func (s *InventoryService) GetCostHistory(
 			&event.AggregateVersion, &event.Quantity, &event.UnitCost, &event.TotalCost,
 			&event.BalanceQuantityAfter, &event.BalanceTotalCostAfter,
 			&event.MovingAvgCostBefore, &event.MovingAvgCostAfter,
-			&event.DocumentType, &event.DocumentNumber, &event.SupplierName, &event.SupplierNIT,
-			&event.SupplierNationality, &event.CostSourceRef,
+			&event.DocumentType, &event.DocumentNumber,
+			&event.SupplierName, &event.SupplierNIT, &event.SupplierNationality, &event.CostSourceRef,
+			&event.CustomerName, &event.CustomerNIT, &event.CustomerTaxExempt,
+			&event.InvoiceID, &event.InvoiceLineID,
+			&event.SalePrice, &event.DiscountAmount, &event.NetSalePrice,
+			&event.TaxExempt, &event.TaxRate, &event.TaxAmount,
 			&event.ReferenceType, &event.ReferenceID, &event.CorrelationID,
 			&event.EventData, &event.Notes, &event.CreatedByUserID, &event.CreatedAt,
 		)
@@ -727,7 +726,6 @@ func (s *InventoryService) GetCostHistory(
 		}
 		events = append(events, event)
 	}
-
 	return events, nil
 }
 
