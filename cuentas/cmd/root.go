@@ -29,6 +29,11 @@ type Config struct {
 	FirmadorRetryMax     int           `mapstructure:"firmador_retry_max"`
 	FirmadorRetryWaitMin time.Duration `mapstructure:"firmador_retry_wait_min"`
 	FirmadorRetryWaitMax time.Duration `mapstructure:"firmador_retry_wait_max"`
+	// Hacienda
+	HaciendaTimeout      time.Duration `mapstructure:"hacienda_timeout"`        // NEW
+	HaciendaRetryMax     int           `mapstructure:"hacienda_retry_max"`      // NEW
+	HaciendaRetryWaitMin time.Duration `mapstructure:"hacienda_retry_wait_min"` // NEW
+	HaciendaRetryWaitMax time.Duration `mapstructure:"hacienda_retry_wait_max"`
 }
 
 var GlobalConfig Config
@@ -73,6 +78,14 @@ func init() {
 
 	// Set default values
 	viper.SetDefault("hacienda_url", "https://apitest.dtes.mh.gob.sv")
+
+	viper.SetDefault("hacienda_url", "https://apitest.dtes.mh.gob.sv/fesv/recepciondte")
+	viper.SetDefault("hacienda_consulta_url", "https://apitest.dtes.mh.gob.sv/fesv/recepcion/consultadte/")
+	viper.SetDefault("hacienda_timeout", 60*time.Second)
+	viper.SetDefault("hacienda_retry_max", 3)
+	viper.SetDefault("hacienda_retry_wait_min", 2*time.Second)
+	viper.SetDefault("hacienda_retry_wait_max", 10*time.Second)
+
 	viper.SetDefault("port", "8080")
 	viper.SetDefault("database_url", "postgres://cuentas_user:cuentas_password@localhost:5432/cuentas?sslmode=disable")
 	viper.SetDefault("redis_url", "redis://:redis_password@localhost:6379")
