@@ -1027,15 +1027,28 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 		return nil, fmt.Errorf("failed to generate numero control: %w", err)
 	}
 
-	for _, lineItem := range invoice.LineItems {
+	log.Printf("[DEBUG] FinalizeInvoice: Processing %d line items for invoice %s", len(invoice.LineItems), invoiceID)
+
+	for idx, lineItem := range invoice.LineItems {
+		log.Printf("[DEBUG] FinalizeInvoice: Processing line item %d/%d", idx+1, len(invoice.LineItems))
+		log.Printf("[DEBUG] FinalizeInvoice: LineItem.ItemID = %v", lineItem.ItemID)
+
 		if lineItem.ItemID != nil {
-			item, err := s.inventoryService.GetItemByID(ctx, *lineItem.ItemID, companyID)
+			log.Printf("[DEBUG] FinalizeInvoice: ItemID is not nil: %s", *lineItem.ItemID)
+
+			item, err := s.inventoryService.GetItemByID(ctx, companyID, *lineItem.ItemID)
 			if err != nil {
+				log.Printf("[ERROR] FinalizeInvoice: Failed to get item: %v", err)
 				return nil, fmt.Errorf("no se pudo obtener el artículo del inventario: %w", err)
 			}
 
+			log.Printf("[DEBUG] FinalizeInvoice: Item retrieved - ID: %s, Name: %s, TipoItem: %s",
+				item.ID, item.Name, item.TipoItem)
+
 			// Only deduct if item tracks inventory
 			if item.TipoItem == "1" {
+				log.Printf("[DEBUG] FinalizeInvoice: Item is type '1' (goods), will deduct inventory")
+
 				// Calculate tax info from line item
 				taxExempt := lineItem.TotalTaxes == 0
 				taxRate := 0.0
@@ -1052,6 +1065,16 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 				// Calculate net unit price (price after discount, before tax)
 				netUnitPrice := models.Money(lineItem.TaxableAmount / lineItem.Quantity)
 
+				log.Printf("[DEBUG] FinalizeInvoice: Preparing sale request:")
+				log.Printf("[DEBUG]   Quantity: %.2f", lineItem.Quantity)
+				log.Printf("[DEBUG]   UnitSalePrice: %.2f", lineItem.UnitPrice)
+				log.Printf("[DEBUG]   NetUnitPrice: %.2f", netUnitPrice)
+				log.Printf("[DEBUG]   TaxExempt: %v", taxExempt)
+				log.Printf("[DEBUG]   DocumentType: %s", tipoDte)
+				log.Printf("[DEBUG]   DocumentNumber: %s", numeroControl)
+				log.Printf("[DEBUG]   InvoiceID: %s", invoice.ID)
+				log.Printf("[DEBUG]   CustomerName: %s", invoice.ClientName)
+
 				// Prepare sale request
 				saleReq := &models.RecordSaleRequest{
 					Quantity:      lineItem.Quantity,
@@ -1066,28 +1089,36 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 					TaxExempt:         taxExempt,
 					TaxRate:           taxRate,
 					TaxAmount:         models.Money(lineItem.TotalTaxes),
-					DocumentType:      tipoDte,       // Use the determined DTE type
-					DocumentNumber:    numeroControl, // Use the generated numero control
+					DocumentType:      tipoDte,
+					DocumentNumber:    numeroControl,
 					InvoiceID:         invoice.ID,
 					InvoiceLineID:     lineItem.ID,
 					CustomerName:      invoice.ClientName,
 					CustomerNIT:       invoice.ClientNit,
-					CustomerTaxExempt: invoice.ClientTipoContribuyente != nil && *invoice.ClientTipoContribuyente == "02", // 02 = Consumidor Final
+					CustomerTaxExempt: invoice.ClientTipoContribuyente != nil && *invoice.ClientTipoContribuyente == "02",
 				}
 
+				log.Printf("[DEBUG] FinalizeInvoice: Calling RecordSale with companyID=%s, itemID=%s",
+					companyID, *lineItem.ItemID)
+
 				// Record sale (deducts inventory)
-				// Note: RecordSale has its own transaction, but we're passing the parent context
-				// The inventory deduction will be part of this transaction scope
-				_, err = s.inventoryService.RecordSale(ctx, companyID, *lineItem.ItemID, saleReq)
+				saleEvent, err := s.inventoryService.RecordSale(ctx, companyID, *lineItem.ItemID, saleReq)
 				if err != nil {
-					log.Printf("[ERROR] Failed to record sale for item %s: %v", *lineItem.ItemID, err)
+					log.Printf("[ERROR] FinalizeInvoice: RecordSale failed: %v", err)
 					return nil, fmt.Errorf("no se pudo registrar la venta del artículo %s: %w", item.Name, err)
 				}
 
-				log.Printf("[DEBUG] Inventory deducted for item %s: %.2f units", item.Name, lineItem.Quantity)
+				log.Printf("[DEBUG] FinalizeInvoice: RecordSale SUCCESS - EventID: %d", saleEvent.EventID)
+				log.Printf("[DEBUG] FinalizeInvoice: Inventory deducted for item %s: %.2f units", item.Name, lineItem.Quantity)
+			} else {
+				log.Printf("[DEBUG] FinalizeInvoice: Item is type '%s' (not goods), skipping inventory deduction", item.TipoItem)
 			}
+		} else {
+			log.Printf("[DEBUG] FinalizeInvoice: LineItem.ItemID is nil, skipping inventory processing")
 		}
 	}
+
+	log.Printf("[DEBUG] FinalizeInvoice: Finished processing all line items")
 
 	// 5. Calculate payment status based on amount paid
 	paymentStatus := s.calculatePaymentStatus(payment.Amount, invoice.Total)
