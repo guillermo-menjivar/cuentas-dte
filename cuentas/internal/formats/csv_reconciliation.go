@@ -2,15 +2,15 @@ package formats
 
 import (
 	"bytes"
-	"cuentas/internal/services"
+	"cuentas/internal/models"
 	"encoding/csv"
 	"fmt"
 )
 
 // WriteDTEReconciliationCSV generates a CSV report for DTE reconciliation results
 func WriteDTEReconciliationCSV(
-	results []services.DTEReconciliationRecord,
-	summary *services.DTEReconciliationSummary,
+	results []models.DTEReconciliationRecord,
+	summary *models.DTEReconciliationSummary,
 ) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	writer := csv.NewWriter(buf)
