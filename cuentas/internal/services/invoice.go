@@ -1274,10 +1274,10 @@ func (s *InvoiceService) getInvoiceForUpdate(ctx context.Context, tx *sql.Tx, co
 		SELECT 
 			id, invoice_id, item_id, quantity, unit_price,
 			discount_percentage, discount_amount, taxable_amount,
-			total_taxes, line_total, line_item_order
+			total_taxes, line_total
 		FROM invoice_line_items
 		WHERE invoice_id = $1
-		ORDER BY line_item_order
+		ORDER BY id
 	`
 
 	rows, err := tx.QueryContext(ctx, lineItemsQuery, invoiceID)
@@ -1300,7 +1300,6 @@ func (s *InvoiceService) getInvoiceForUpdate(ctx context.Context, tx *sql.Tx, co
 			&lineItem.TaxableAmount,
 			&lineItem.TotalTaxes,
 			&lineItem.LineTotal,
-			&lineItem.LineItemOrder,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan line item: %w", err)
