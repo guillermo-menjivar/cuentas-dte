@@ -133,7 +133,7 @@ func (t *Translations) ValuationDetailHeaders() []string {
 func (t *Translations) InventoryRegisterHeaders() []string {
 	if t.lang == English {
 		return []string{
-			"Correlativo", "Date", "Doc Type", "Doc Number", "Supplier/Customer", "NIT", "Nationality",
+			"Correlativo", "Date", "Event Type", "Doc Type", "Doc Number", "Supplier/Customer", "NIT", "Nationality",
 			"Source/Ref", "Units In", "Units Out", "Balance Units",
 			"Cost In", "Cost Out", "Balance Cost", "Average Cost",
 		}
@@ -141,7 +141,7 @@ func (t *Translations) InventoryRegisterHeaders() []string {
 
 	// Spanish headers (Article 142-A compliance)
 	return []string{
-		"Correlativo", "Fecha", "Tipo Doc", "No. Documento", "Proveedor/Cliente", "NIT", "Nacionalidad",
+		"Correlativo", "Fecha", "Tipo Evento", "Tipo Doc", "No. Documento", "Proveedor/Cliente", "NIT", "Nacionalidad",
 		"Fuente/Referencia", "Unidades Entrada", "Unidades Salida", "Saldo Unidades",
 		"Costo Entrada", "Costo Salida", "Saldo Costo", "Costo Promedio",
 	}
