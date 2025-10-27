@@ -16,13 +16,15 @@ import (
 
 // Client handles communication with the Ministerio de Hacienda API
 type Client struct {
-	baseURL    string
-	httpClient *retryablehttp.Client
+	baseURL     string
+	consultaURL string
+	httpClient  *retryablehttp.Client
 }
 
 // Config holds the hacienda client configuration
 type Config struct {
 	BaseURL      string
+	ConsultaURL  string
 	Timeout      time.Duration
 	RetryMax     int
 	RetryWaitMin time.Duration
@@ -68,6 +70,7 @@ func (e *HaciendaError) Error() string {
 }
 
 // NewClient creates a new Hacienda client
+/*
 func NewClient(cfg *Config) *Client {
 	if cfg == nil {
 		cfg = &Config{
@@ -109,6 +112,56 @@ func NewClient(cfg *Config) *Client {
 	return &Client{
 		baseURL:    cfg.BaseURL,
 		httpClient: retryClient,
+	}
+}
+*/
+
+func NewClient(cfg *Config) *Client {
+	if cfg == nil {
+		cfg = &Config{
+			// Test environment defaults
+			BaseURL:      "https://apitest.dtes.mh.gob.sv/fesv/recepciondte",
+			ConsultaURL:  "https://apitest.dtes.mh.gob.sv/fesv/recepcion/consultadte/",
+			Timeout:      60 * time.Second,
+			RetryMax:     3,
+			RetryWaitMin: 2 * time.Second,
+			RetryWaitMax: 10 * time.Second,
+		}
+	}
+
+	// Set defaults
+	if cfg.BaseURL == "" {
+		cfg.BaseURL = "https://apitest.dtes.mh.gob.sv/fesv/recepciondte"
+	}
+	if cfg.ConsultaURL == "" {
+		cfg.ConsultaURL = "https://apitest.dtes.mh.gob.sv/fesv/recepcion/consultadte/"
+	}
+	if cfg.Timeout == 0 {
+		cfg.Timeout = 60 * time.Second
+	}
+	if cfg.RetryMax == 0 {
+		cfg.RetryMax = 3
+	}
+	if cfg.RetryWaitMin == 0 {
+		cfg.RetryWaitMin = 2 * time.Second
+	}
+	if cfg.RetryWaitMax == 0 {
+		cfg.RetryWaitMax = 10 * time.Second
+	}
+
+	// Create retryable HTTP client
+	retryClient := retryablehttp.NewClient()
+	retryClient.RetryMax = cfg.RetryMax
+	retryClient.RetryWaitMin = cfg.RetryWaitMin
+	retryClient.RetryWaitMax = cfg.RetryWaitMax
+	retryClient.HTTPClient.Timeout = cfg.Timeout
+	retryClient.CheckRetry = customRetryPolicy
+	retryClient.Logger = nil // Disable default logging
+
+	return &Client{
+		baseURL:     cfg.BaseURL,
+		consultaURL: cfg.ConsultaURL,
+		httpClient:  retryClient,
 	}
 }
 
