@@ -1,0 +1,40 @@
+AUDIT PACKAGE MANIFEST
+==================================================
+Company ID: 8c074d1b-be5f-4877-a3e3-79dd36bb0aed
+Audit Period: 2025-10-01 to 2025-10-28
+Generated: 2025-10-27 10:20:48.125909
+Output Directory: accounting_reports
+
+CONTENTS:
+1. valuation_2025-09-30.csv
+2. all_events_2025-10-01_to_2025-10-28.csv
+3. purchase_events_2025-10-01_to_2025-10-28.csv
+4. adjustment_events_2025-10-01_to_2025-10-28.csv
+5. valuation_2025-10-28.csv
+6. registro_legal_PROD-20251027-2767_2025-10-01_to_2025-10-28.csv
+7. registro_legal_MOUSE-LOG-001_2025-10-01_to_2025-10-28.csv
+8. registro_legal_PROD-20251027-2718_2025-10-01_to_2025-10-28.csv
+
+PURPOSE:
+This audit package provides complete documentation of all
+inventory movements and valuations for the specified period.
+
+AUDIT TRAIL:
+All events are immutable and include:
+- Unique event ID
+- Timestamp
+- Item details (SKU, name)
+- Quantity changes
+- Cost tracking (moving average)
+- Balance after each transaction
+- Notes/documentation
+
+VALUATION METHOD:
+Moving Average Cost (weighted average)
+
+COMPLIANCE:
+Reports suitable for:
+- External audit
+- Tax reporting
+- Financial statement preparation
+- Regulatory compliance (El Salvador)
