@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"cuentas/internal/formats"
+	"cuentas/internal/models"
 	"fmt"
 	"log"
 	"net/http"
