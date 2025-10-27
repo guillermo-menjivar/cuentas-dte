@@ -47,7 +47,9 @@ init:
 	@SAVED_ID=$$(cat .company_id); \
 	./test_create_ccf_clients.py $$SAVED_ID
 	@echo "configuring establishments"
-	./test_establishments.sh $$SAVED_ID
+	@SAVED_ID=$$(cat .company_id);./test_establishments.sh $$SAVED_ID
+	@echo "configuring inventory"
+	@SAVED_ID=$$(cat .company_id); ./test_inventory.sh $$SAVED_ID
 
 
 # Show current company ID

@@ -37,14 +37,20 @@ def get_existing_clients(company_id: str) -> List[Dict]:
     try:
         response = requests.get(f"{BASE_URL}/clients", headers=headers)
         response.raise_for_status()
-        return response.json().get("clients", [])
+        clients = response.json().get("clients", [])
+        # Ensure we always return a list, never None
+        return clients if clients is not None else []
     except Exception as e:
         print(f"⚠️  Warning: Could not fetch existing clients: {e}")
-        return []
+        return []  # Always return empty list on error
 
 
 def client_exists(nit: str, existing_clients: List[Dict]) -> bool:
     """Check if client with given NIT already exists"""
+    # Safety check: ensure existing_clients is not None
+    if not existing_clients:
+        return False
+
     for client in existing_clients:
         if client.get("nit") == nit:
             return True
@@ -64,7 +70,11 @@ def create_ccf_clients(company_id: str):
     # Get existing clients to check for duplicates
     print("🔍 Checking for existing clients...")
     existing_clients = get_existing_clients(company_id)
-    print(f"✅ Found {len(existing_clients)} existing client(s)\n")
+
+    if existing_clients:
+        print(f"✅ Found {len(existing_clients)} existing client(s)\n")
+    else:
+        print(f"✅ No existing clients found\n")
 
     created = 0
     skipped = 0
