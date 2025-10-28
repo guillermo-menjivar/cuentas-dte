@@ -16,16 +16,18 @@ func WriteDTEReconciliationCSV(
 	buf := new(bytes.Buffer)
 	writer := csv.NewWriter(buf)
 
-	// Load El Salvador timezone
+	// Load El Salvador timezone once
 	elSalvadorTZ, err := time.LoadLocation("America/El_Salvador")
 	if err != nil {
-		elSalvadorTZ = time.FixedZone("CST", -6*60*60) // Fallback to UTC-6
+		// Fallback to fixed offset if timezone database not available
+		elSalvadorTZ = time.FixedZone("CST", -6*60*60)
 	}
 
 	// Write summary section (if provided)
 	if summary != nil {
 		summaryHeader := [][]string{
 			{"RESUMEN DE RECONCILIACIÓN DE DTEs"},
+			{"Zona Horaria: America/El_Salvador (CST, UTC-6)"},
 			{},
 			{"Total de Registros", fmt.Sprintf("%d", summary.TotalRecords)},
 			{"Registros Coincidentes", fmt.Sprintf("%d", summary.MatchedRecords)},
@@ -33,6 +35,8 @@ func WriteDTEReconciliationCSV(
 			{"Discrepancias de Fecha", fmt.Sprintf("%d", summary.DateMismatches)},
 			{"No Encontrados en Hacienda", fmt.Sprintf("%d", summary.NotFoundInHacienda)},
 			{"Errores de Consulta", fmt.Sprintf("%d", summary.QueryErrors)},
+			{},
+			{"Nota: Todas las fechas/horas están en Hora de El Salvador (CST)"},
 			{},
 		}
 
@@ -43,7 +47,7 @@ func WriteDTEReconciliationCSV(
 		}
 	}
 
-	// Write column headers
+	// Write column headers with clear timezone labels
 	headers := []string{
 		"Código Generación",
 		"No. Control",
@@ -55,8 +59,8 @@ func WriteDTEReconciliationCSV(
 		"Estado Hacienda",
 		"Sello Interno",
 		"Sello Hacienda",
-		"Fecha Proc. Interno (CST)",  // UPDATED
-		"Fecha Proc. Hacienda (CST)", // UPDATED
+		"Fecha Proc. Interno (CST)",  // Both in CST for easy comparison
+		"Fecha Proc. Hacienda (CST)", // Both in CST for easy comparison
 		"Coincide",
 		"Fecha Emisión Coincide",
 		"Estado Consulta",
@@ -83,11 +87,31 @@ func WriteDTEReconciliationCSV(
 			selloInterno = *record.InternalSello
 		}
 
-		// Format internal fecha procesamiento (convert to El Salvador time)
+		// Format internal fecha procesamiento (convert from UTC to CST)
 		fechaProcInterno := ""
 		if record.InternalFhProcesamiento != nil {
-			internalTimeLocal := record.InternalFhProcesamiento.In(elSalvadorTZ)
-			fechaProcInterno = internalTimeLocal.Format("02/01/2006 15:04:05")
+			// Database stores in UTC, convert to CST for display
+			fechaProcInterno = record.InternalFhProcesamiento.In(elSalvadorTZ).Format("02/01/2006 15:04:05")
+		}
+
+		// Format Hacienda fecha procesamiento (convert from UTC to CST)
+		fechaProcHacienda := ""
+		if record.HaciendaFhProcesamiento != "" {
+			// Hacienda returns UTC timestamps, parse and convert to CST
+			haciendaTime, err := time.Parse("02/01/2006 15:04:05", record.HaciendaFhProcesamiento)
+			if err == nil {
+				// Create as UTC timestamp
+				haciendaTimeUTC := time.Date(
+					haciendaTime.Year(), haciendaTime.Month(), haciendaTime.Day(),
+					haciendaTime.Hour(), haciendaTime.Minute(), haciendaTime.Second(),
+					0, time.UTC,
+				)
+				// Convert to CST for display
+				fechaProcHacienda = haciendaTimeUTC.In(elSalvadorTZ).Format("02/01/2006 15:04:05")
+			} else {
+				// If parse fails, show original
+				fechaProcHacienda = record.HaciendaFhProcesamiento
+			}
 		}
 
 		// Format matches
@@ -124,14 +148,14 @@ func WriteDTEReconciliationCSV(
 			record.HaciendaEstado,
 			selloInterno,
 			record.HaciendaSello,
-			fechaProcInterno,
-			record.HaciendaFhProcesamiento,
+			fechaProcInterno,  // CST
+			fechaProcHacienda, // CST
 			coincide,
 			fechaEmisionCoincide,
 			record.HaciendaQueryStatus,
 			discrepancias,
 			record.ErrorMessage,
-			record.QueriedAt,
+			record.QueriedAt, // This can stay UTC (system timestamp)
 		}
 
 		if err := writer.Write(row); err != nil {
