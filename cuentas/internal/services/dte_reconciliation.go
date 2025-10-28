@@ -94,7 +94,7 @@ func (s *DTEReconciliationService) ReconcileDTEs(
 	}
 	defer rows.Close()
 
-	var results []models.DTEReconciliationRecord
+	results := []models.DTEReconciliationRecord{}
 	summary := &models.DTEReconciliationSummary{}
 
 	// Get authentication token once for all queries
