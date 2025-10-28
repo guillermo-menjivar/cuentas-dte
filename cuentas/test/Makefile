@@ -182,5 +182,9 @@ seed-invoices:
 		--end-date $(END_DATE) \
 		--count 30
 	@echo ""
+
+test_dte_reconciliation:
+	@echo "Running reconciliation"
+	@./test_dte_reconciliation.py $(COMPANY_ID)
 # Generate reports only (no seeding/testing)
 reports-only: reports
