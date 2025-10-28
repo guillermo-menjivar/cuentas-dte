@@ -217,6 +217,7 @@ func (s *DTEReconciliationService) queryAndCompareHacienda(
 }
 
 // compareRecords compares internal and Hacienda records
+// compareRecords compares internal and Hacienda records
 func (s *DTEReconciliationService) compareRecords(record *models.DTEReconciliationRecord, haciendaFechaEmision string) {
 	record.Discrepancies = []string{}
 	record.FechaEmisionMatches = true // Default to true
@@ -275,16 +276,28 @@ func (s *DTEReconciliationService) compareRecords(record *models.DTEReconciliati
 	}
 
 	// Compare fecha procesamiento (if internal exists)
+	// UPDATED: Convert to El Salvador timezone for comparison
 	if record.InternalFhProcesamiento != nil && record.HaciendaFhProcesamiento != "" {
-		// Parse Hacienda's date format: "dd/MM/yyyy HH:mm:ss"
-		haciendaTime, err := time.Parse("02/01/2006 15:04:05", record.HaciendaFhProcesamiento)
+		// Load El Salvador timezone (CST = UTC-6)
+		elSalvadorTZ, err := time.LoadLocation("America/El_Salvador")
+		if err != nil {
+			// Fallback to UTC-6 offset
+			elSalvadorTZ = time.FixedZone("CST", -6*60*60)
+		}
+
+		// Parse Hacienda's timestamp (it's in El Salvador local time)
+		// Format: "dd/MM/yyyy HH:mm:ss"
+		haciendaTime, err := time.ParseInLocation("02/01/2006 15:04:05", record.HaciendaFhProcesamiento, elSalvadorTZ)
 		if err == nil {
+			// Convert internal timestamp to El Salvador timezone for comparison
+			internalTimeLocal := record.InternalFhProcesamiento.In(elSalvadorTZ)
+
 			// Compare timestamps (allow up to 1 minute difference due to clock skew)
-			diff := record.InternalFhProcesamiento.Sub(haciendaTime).Abs()
+			diff := internalTimeLocal.Sub(haciendaTime).Abs()
 			if diff > time.Minute {
 				record.Discrepancies = append(record.Discrepancies,
 					fmt.Sprintf("Fecha procesamiento mismatch: internal='%s' hacienda='%s' (diff: %v)",
-						record.InternalFhProcesamiento.Format("02/01/2006 15:04:05"),
+						internalTimeLocal.Format("02/01/2006 15:04:05"),
 						record.HaciendaFhProcesamiento,
 						diff))
 			}
