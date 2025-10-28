@@ -48,6 +48,7 @@ func (c *Client) GetConsultaURL() string {
 //   - codigoGeneracion: UUID from the DTE
 //
 // Returns the consultation response or an error
+// ConsultarDTE queries Hacienda for a specific DTE's status
 func (c *Client) ConsultarDTE(
 	ctx context.Context,
 	authToken string,
@@ -140,7 +141,8 @@ func (c *Client) ConsultarDTE(
 		}
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	// Accept both 200 (OK) and 202 (Accepted) as success
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
 		return nil, &HaciendaError{
 			Type:      "server",
 			Code:      fmt.Sprintf("HTTP_%d", resp.StatusCode),
