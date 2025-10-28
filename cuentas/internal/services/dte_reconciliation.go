@@ -250,13 +250,10 @@ func (s *DTEReconciliationService) compareRecords(record *models.DTEReconciliati
 
 	// Compare fecha de emisión
 	if haciendaFechaEmision != "" {
-		// Parse Hacienda's date format: "dd/MM/yyyy"
 		haciendaDate, err := time.Parse("02/01/2006", haciendaFechaEmision)
 		if err == nil {
-			// Parse internal date: "2006-01-02"
 			internalDate, err := time.Parse("2006-01-02", record.FechaEmision)
 			if err == nil {
-				// Compare dates (day precision)
 				if !haciendaDate.Equal(internalDate) {
 					record.FechaEmisionMatches = false
 					record.Discrepancies = append(record.Discrepancies,
@@ -275,43 +272,39 @@ func (s *DTEReconciliationService) compareRecords(record *models.DTEReconciliati
 		}
 	}
 
-	// Compare fecha procesamiento (if internal exists)
-	// UPDATED: Convert to El Salvador timezone for comparison
-	// Compare fecha procesamiento (if internal exists)
+	// Compare fecha procesamiento
+	// CRITICAL FIX: Both timestamps are in UTC, compare directly
 	if record.InternalFhProcesamiento != nil && record.HaciendaFhProcesamiento != "" {
-		// Parse Hacienda's timestamp: "dd/MM/yyyy HH:mm:ss"
-		// Note: Hacienda returns times in El Salvador local time (UTC-6, no DST)
-		haciendaLocalTime, err := time.Parse("02/01/2006 15:04:05", record.HaciendaFhProcesamiento)
+		// Parse Hacienda's timestamp - format is "dd/MM/yyyy HH:mm:ss" in UTC
+		haciendaTime, err := time.Parse("02/01/2006 15:04:05", record.HaciendaFhProcesamiento)
 		if err == nil {
-			// Convert Hacienda's local time to UTC
-			// El Salvador is UTC-6 (CST), no daylight saving time
-			const elSalvadorOffsetHours = 6
-			haciendaUTC := haciendaLocalTime.Add(elSalvadorOffsetHours * time.Hour)
+			// CRITICAL: Hacienda returns UTC timestamps, so treat as UTC
+			haciendaTimeUTC := time.Date(
+				haciendaTime.Year(),
+				haciendaTime.Month(),
+				haciendaTime.Day(),
+				haciendaTime.Hour(),
+				haciendaTime.Minute(),
+				haciendaTime.Second(),
+				0,
+				time.UTC,
+			)
 
-			// Our internal time is already in UTC
-			internalUTC := record.InternalFhProcesamiento
-
-			// Calculate difference
-			diff := internalUTC.Sub(haciendaUTC).Abs()
-
-			// Allow up to 2 minutes tolerance for:
-			// - Network latency between submission and Hacienda processing
-			// - Clock synchronization differences between systems
-			// - Rounding in timestamp storage
-			const toleranceMinutes = 2
-
-			if diff > toleranceMinutes*time.Minute {
+			// Both are now in UTC, compare directly
+			// Allow up to 1 minute difference due to clock skew
+			diff := record.InternalFhProcesamiento.Sub(haciendaTimeUTC).Abs()
+			if diff > time.Minute {
+				// They don't match - add discrepancy
 				record.Discrepancies = append(record.Discrepancies,
-					fmt.Sprintf("Fecha procesamiento mismatch: internal='%s UTC' hacienda='%s CST' (hacienda_utc='%s UTC', diff=%v)",
-						internalUTC.Format("02/01/2006 15:04:05"),
-						record.HaciendaFhProcesamiento,
-						haciendaUTC.Format("02/01/2006 15:04:05"),
+					fmt.Sprintf("Fecha procesamiento mismatch: internal='%s' hacienda='%s' (diff: %v)",
+						record.InternalFhProcesamiento.UTC().Format("02/01/2006 15:04:05"),
+						haciendaTimeUTC.UTC().Format("02/01/2006 15:04:05"),
 						diff))
 			}
-			// Note: Times within 2 minutes are considered matching due to normal system tolerances
 		}
 	}
-	// Set matches flag (all checks must pass)
+
+	// Set matches flag
 	record.Matches = len(record.Discrepancies) == 0 && record.FechaEmisionMatches
 }
 
