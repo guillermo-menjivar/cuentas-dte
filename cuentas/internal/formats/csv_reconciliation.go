@@ -5,6 +5,7 @@ import (
 	"cuentas/internal/models"
 	"encoding/csv"
 	"fmt"
+	"time"
 )
 
 // WriteDTEReconciliationCSV generates a CSV report for DTE reconciliation results
@@ -14,6 +15,12 @@ func WriteDTEReconciliationCSV(
 ) ([]byte, error) {
 	buf := new(bytes.Buffer)
 	writer := csv.NewWriter(buf)
+
+	// Load El Salvador timezone
+	elSalvadorTZ, err := time.LoadLocation("America/El_Salvador")
+	if err != nil {
+		elSalvadorTZ = time.FixedZone("CST", -6*60*60) // Fallback to UTC-6
+	}
 
 	// Write summary section (if provided)
 	if summary != nil {
@@ -48,8 +55,8 @@ func WriteDTEReconciliationCSV(
 		"Estado Hacienda",
 		"Sello Interno",
 		"Sello Hacienda",
-		"Fecha Proc. Interno",
-		"Fecha Proc. Hacienda",
+		"Fecha Proc. Interno (CST)",  // UPDATED
+		"Fecha Proc. Hacienda (CST)", // UPDATED
 		"Coincide",
 		"Fecha Emisión Coincide",
 		"Estado Consulta",
@@ -76,10 +83,11 @@ func WriteDTEReconciliationCSV(
 			selloInterno = *record.InternalSello
 		}
 
-		// Format internal fecha procesamiento
+		// Format internal fecha procesamiento (convert to El Salvador time)
 		fechaProcInterno := ""
 		if record.InternalFhProcesamiento != nil {
-			fechaProcInterno = record.InternalFhProcesamiento.Format("02/01/2006 15:04:05")
+			internalTimeLocal := record.InternalFhProcesamiento.In(elSalvadorTZ)
+			fechaProcInterno = internalTimeLocal.Format("02/01/2006 15:04:05")
 		}
 
 		// Format matches
