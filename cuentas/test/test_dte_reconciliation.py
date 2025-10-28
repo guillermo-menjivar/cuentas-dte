@@ -76,69 +76,118 @@ def test_reconciliation(company_id, test_type="all", **kwargs):
         # Print summary if present
         if "summary" in data:
             summary = data["summary"]
-            print("SUMMARY:")
-            print(f"  Total Records:          {summary['total_records']}")
-            print(f"  Matched:                {summary['matched_records']}")
-            print(f"  Mismatched:             {summary['mismatched_records']}")
-            print(f"  Date Mismatches:        {summary['date_mismatches']}")
-            print(f"  Not Found in Hacienda:  {summary['not_found_in_hacienda']}")
-            print(f"  Query Errors:           {summary['query_errors']}")
+            print("📊 SUMMARY:")
+            print(f"  Total Records:          {summary.get('total_records', 0)}")
+            print(f"  ✅ Matched:             {summary.get('matched_records', 0)}")
+            print(f"  ❌ Mismatched:          {summary.get('mismatched_records', 0)}")
+            print(f"  📅 Date Mismatches:     {summary.get('date_mismatches', 0)}")
+            print(
+                f"  🔍 Not Found (H):       {summary.get('not_found_in_hacienda', 0)}"
+            )
+            print(f"  ⚠️  Query Errors:        {summary.get('query_errors', 0)}")
             print()
 
         # Print results
         if "results" in data:
             results = data["results"]
-            print(f"RESULTS: {len(results)} DTEs")
+            print(f"📋 RESULTS: {len(results)} DTEs")
             print()
 
             for i, dte in enumerate(results[:5], 1):  # Show first 5
-                print(f"[{i}] {dte['codigo_generacion'][:8]}...")
-                print(f"    Número Control:      {dte['numero_control']}")
-                print(f"    Factura:             {dte['invoice_number']}")
-                print(f"    Fecha Emisión:       {dte['fecha_emision']}")
-                print(f"    Estado Interno:      {dte.get('internal_estado', 'N/A')}")
-                print(f"    Estado Hacienda:     {dte.get('hacienda_estado', 'N/A')}")
-                print(f"    Coincide:            {'✅' if dte['matches'] else '❌'}")
+                codigo = dte.get("codigo_generacion", "N/A")
+                print(f"[{i}] {codigo[:13] if len(codigo) > 13 else codigo}...")
+                print(f"    📄 Número Control:      {dte.get('numero_control', 'N/A')}")
+                print(f"    🧾 Factura:             {dte.get('invoice_number', 'N/A')}")
+                print(f"    📅 Fecha Emisión:       {dte.get('fecha_emision', 'N/A')}")
+                print(f"    💰 Monto:               ${dte.get('total_amount', 0):.2f}")
+
+                # Estado interno (nullable)
+                estado_interno = dte.get("internal_estado")
                 print(
-                    f"    Fecha Coincide:      {'✅' if dte['fecha_emision_matches'] else '❌'}"
+                    f"    📌 Estado Interno:      {estado_interno if estado_interno else 'N/A'}"
                 )
-                print(f"    Estado Consulta:     {dte['hacienda_query_status']}")
 
-                if dte["discrepancies"]:
-                    print(f"    Discrepancias:")
-                    for disc in dte["discrepancies"]:
-                        print(f"      - {disc}")
+                # Estado Hacienda (may be empty string)
+                estado_hacienda = dte.get("hacienda_estado", "")
+                print(
+                    f"    🏛️  Estado Hacienda:     {estado_hacienda if estado_hacienda else 'N/A'}"
+                )
 
-                if dte.get("error_message"):
-                    print(f"    Error: {dte['error_message']}")
+                # Match status
+                matches = dte.get("matches", False)
+                fecha_matches = dte.get("fecha_emision_matches", False)
+                print(f"    {'✅' if matches else '❌'} Coincide:            {matches}")
+                print(
+                    f"    {'✅' if fecha_matches else '❌'} Fecha Coincide:      {fecha_matches}"
+                )
+
+                # Query status
+                query_status = dte.get("hacienda_query_status", "unknown")
+                status_icon = {"success": "✅", "not_found": "🔍", "error": "⚠️"}.get(
+                    query_status, "❓"
+                )
+                print(f"    {status_icon} Estado Consulta:     {query_status}")
+
+                # Discrepancies (may not exist if omitempty and empty)
+                discrepancies = dte.get("discrepancies")
+                if discrepancies:  # Only show if exists and not empty
+                    print(f"    ⚠️  Discrepancias:")
+                    for disc in discrepancies:
+                        print(f"        • {disc}")
+
+                # Error message (may not exist if omitempty and empty)
+                error_msg = dte.get("error_message")
+                if error_msg:  # Only show if exists and not empty
+                    print(f"    🚨 Error: {error_msg}")
 
                 print()
 
             if len(results) > 5:
                 print(f"... and {len(results) - 5} more DTEs")
+                print()
 
         elif isinstance(data, dict) and "codigo_generacion" in data:
             # Single DTE result
-            print("SINGLE DTE RESULT:")
-            print(f"  Código Generación:   {data['codigo_generacion']}")
-            print(f"  Número Control:      {data['numero_control']}")
-            print(f"  Factura:             {data['invoice_number']}")
-            print(f"  Fecha Emisión:       {data['fecha_emision']}")
-            print(f"  Estado Interno:      {data.get('internal_estado', 'N/A')}")
-            print(f"  Estado Hacienda:     {data.get('hacienda_estado', 'N/A')}")
-            print(f"  Coincide:            {'✅' if data['matches'] else '❌'}")
+            codigo = data.get("codigo_generacion", "N/A")
+            print("📋 SINGLE DTE RESULT:")
+            print(f"  Código Generación:   {codigo}")
+            print(f"  📄 Número Control:      {data.get('numero_control', 'N/A')}")
+            print(f"  🧾 Factura:             {data.get('invoice_number', 'N/A')}")
+            print(f"  📅 Fecha Emisión:       {data.get('fecha_emision', 'N/A')}")
+            print(f"  💰 Monto:               ${data.get('total_amount', 0):.2f}")
+
+            estado_interno = data.get("internal_estado")
             print(
-                f"  Fecha Coincide:      {'✅' if data['fecha_emision_matches'] else '❌'}"
+                f"  📌 Estado Interno:      {estado_interno if estado_interno else 'N/A'}"
             )
-            print(f"  Estado Consulta:     {data['hacienda_query_status']}")
 
-            if data["discrepancies"]:
-                print(f"  Discrepancias:")
-                for disc in data["discrepancies"]:
-                    print(f"    - {disc}")
+            estado_hacienda = data.get("hacienda_estado", "")
+            print(
+                f"  🏛️  Estado Hacienda:     {estado_hacienda if estado_hacienda else 'N/A'}"
+            )
 
-            if data.get("error_message"):
-                print(f"  Error: {data['error_message']}")
+            matches = data.get("matches", False)
+            fecha_matches = data.get("fecha_emision_matches", False)
+            print(f"  {'✅' if matches else '❌'} Coincide:            {matches}")
+            print(
+                f"  {'✅' if fecha_matches else '❌'} Fecha Coincide:      {fecha_matches}"
+            )
+
+            query_status = data.get("hacienda_query_status", "unknown")
+            status_icon = {"success": "✅", "not_found": "🔍", "error": "⚠️"}.get(
+                query_status, "❓"
+            )
+            print(f"  {status_icon} Estado Consulta:     {query_status}")
+
+            discrepancies = data.get("discrepancies")
+            if discrepancies:
+                print(f"  ⚠️  Discrepancias:")
+                for disc in discrepancies:
+                    print(f"      • {disc}")
+
+            error_msg = data.get("error_message")
+            if error_msg:
+                print(f"  🚨 Error: {error_msg}")
     else:
         print(f"❌ ERROR: {response.text}")
 
