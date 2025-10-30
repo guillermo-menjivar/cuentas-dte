@@ -326,7 +326,7 @@ func startServer() {
 		notas := v1.Group("/notas")
 		{
 			// Nota de Débito
-			notas.POST("/debito", notasHandler.CreateNota)
+			notas.POST("/debito", notasHandler.CreateNotaDebito)
 
 			// Nota de Crédito
 			//notas.POST("/credito", notaHandler.CreateNotaCredito)
