@@ -14,7 +14,7 @@ type NotaHandler struct {
 	invoiceService *services.InvoiceService
 }
 
-// Update constructor
+// NewNotaHandler creates a new nota handler
 func NewNotaHandler(notaService *services.NotaService, invoiceService *services.InvoiceService) *NotaHandler {
 	return &NotaHandler{
 		notaService:    notaService,
@@ -22,11 +22,12 @@ func NewNotaHandler(notaService *services.NotaService, invoiceService *services.
 	}
 }
 
-func (h *NotaHandler) CreateNota(c *gin.Context) {
+// CreateNotaDebito creates a new Nota de Débito
+func (h *NotaHandler) CreateNotaDebito(c *gin.Context) {
 	companyID := c.GetString("company_id")
-
 	if companyID == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id not found in context"})
+		return
 	}
 
 	var request models.CreateNotaDebitoRequest
@@ -34,59 +35,63 @@ func (h *NotaHandler) CreateNota(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	fmt.Println("this is the request we received")
-	fmt.Println(request)
 
-	err := h.notaService.CreateNotaDebito(c.Request.Context(), companyID, &request, h.invoiceService)
+	fmt.Println("📥 Received Nota de Débito request:")
+	fmt.Printf("   CCFs: %v\n", request.CCFIds)
+	fmt.Printf("   Line Items: %d\n", len(request.LineItems))
+
+	// Create the nota
+	nota, err := h.notaService.CreateNotaDebito(
+		c.Request.Context(),
+		companyID,
+		&request,
+		h.invoiceService,
+	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// Determine appropriate status code based on error type
+		statusCode := http.StatusInternalServerError
+
+		// Check for validation errors
+		if isValidationError(err) {
+			statusCode = http.StatusBadRequest
+		}
+
+		c.JSON(statusCode, gin.H{"error": err.Error()})
 		return
 	}
-	nota := "hello "
 
-	c.JSON(http.StatusCreated, nota)
-
+	// Return the created nota
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "Nota de Débito created successfully",
+		"nota":    nota,
+	})
 }
 
-/*
- CCF exists
- CCF is type "031q2az
- CCF belongs to same client
- CCF is finalized (not draft/voided)
+// isValidationError checks if the error is a validation error
+func isValidationError(err error) bool {
+	errMsg := err.Error()
 
-Line Item Validations:
+	// List of validation error prefixes
+	validationPrefixes := []string{
+		"validation failed",
+		"at least one",
+		"maximum",
+		"duplicate",
+		"not found",
+		"is not a CCF",
+		"is not finalized",
+		"has been voided",
+		"must belong to the same client",
+		"references CCF",
+		"adjustment_amount must be",
+		"line item",
+	}
 
- If item SKU exists in original CCF:
+	for _, prefix := range validationPrefixes {
+		if len(errMsg) >= len(prefix) && errMsg[:len(prefix)] == prefix {
+			return true
+		}
+	}
 
- Quantity matches (or is sensible)
- Price adjustment is positive (débito only increases)
- Unit of measure matches
-
-
- If item SKU is NEW (not in CCF):
-
- Item exists in company's inventory
- Item is active
- Item details are valid
-
-
- related_document_ref matches a document in related_documents[]
- Item type is valid (1-4)
- Unit of measure is valid
-
-Business Rules:
-
- Total nota amount isn't absurdly large (>100% of original?)
- Not too many line items (max 2000)
- All prices are positive
- All quantities are positive
-    /*
-	// lets make sure the request sent to us is a CCF
-	// lets make sure the CCF exist and is finalized
-	// inspect if there are items in nota de debito exist in the CCF
-	// inspect same client and other attributes match with CCF
-	// if item is found and or new items amek sure the total aligns
-	// create the nota de debito
-	// submit to hacienda
-
-*/
+	return false
+}
