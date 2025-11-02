@@ -1,7 +1,3 @@
--- ============================================================================
--- Migration: Create Nota de Débito Tables
--- Description: Tables for managing Notas de Débito (price adjustment documents)
--- ============================================================================
 
 -- Main notas_debito table
 CREATE TABLE IF NOT EXISTS notas_debito (
