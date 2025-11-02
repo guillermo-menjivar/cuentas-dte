@@ -1,3 +1,7 @@
+-- ============================================================================
+-- Migration: Create Nota de Débito Tables
+-- Description: Tables for managing Notas de Débito (price adjustment documents)
+-- ============================================================================
 
 -- Main notas_debito table
 CREATE TABLE IF NOT EXISTS notas_debito (
@@ -42,13 +46,10 @@ CREATE TABLE IF NOT EXISTS notas_debito (
     -- DTE tracking
     dte_numero_control VARCHAR(50),
     dte_codigo_generacion VARCHAR(50),
-    dte_sello_recibido TEXT,
+    dte_sello_recibido VARCHAR(255),
     dte_status VARCHAR(20),
     dte_hacienda_response TEXT,
     dte_submitted_at TIMESTAMP,
-    
-    -- Additional DTE fields for consistency with invoices
-    dte_sello_recibido VARCHAR(255),
     dte_fecha_procesamiento TIMESTAMP,
     dte_observaciones TEXT[],
     
