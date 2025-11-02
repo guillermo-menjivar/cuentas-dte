@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS notas_debito (
     
     FOREIGN KEY (company_id) REFERENCES companies(id),
     FOREIGN KEY (establishment_id) REFERENCES establishments(id),
-    FOREIGN KEY (point_of_sale_id) REFERENCES points_of_sale(id),
+    FOREIGN KEY (point_of_sale_id) REFERENCES point_of_sale(id),
     FOREIGN KEY (client_id) REFERENCES clients(id),
     
     CONSTRAINT unique_nota_number UNIQUE (company_id, nota_number)
