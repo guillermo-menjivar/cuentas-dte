@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS nota_debito_line_items (
     line_number INT NOT NULL,
     
     -- Which CCF and line item this adjusts
-    related_ccf_id UUID NOT NULL,
+    related_ccf_id VARCHAR(36) NOT NULL,
     related_ccf_number VARCHAR(50) NOT NULL,
     ccf_line_item_id UUID NOT NULL,
     
@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS nota_debito_line_items (
 CREATE TABLE IF NOT EXISTS nota_debito_ccf_references (
     id UUID PRIMARY KEY,
     nota_debito_id UUID NOT NULL,
-    ccf_id UUID NOT NULL,
+    ccf_id VARCHAR(36) NOT NULL,
     ccf_number VARCHAR(50) NOT NULL,
     ccf_date DATE NOT NULL,
     
