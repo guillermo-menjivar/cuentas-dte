@@ -190,4 +190,5 @@ test_dte_reconciliation:
 reports-only: reports
 
 test_notas_debito:
+	@echo "Testing notas de debito"
 	@./test_notas_debito.sh $(COMPANY_ID)
