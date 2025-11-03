@@ -68,7 +68,7 @@ check-company:
 		exit 1; \
 	fi
 
-.PHONY: help clean seed test reports all seed-only reports-only init show-company check-company seed-invoices
+.PHONY: help clean seed test reports all seed-only reports-only init show-company check-company seed-invoices test_notas_debito
 
 # Default target
 help:
@@ -188,3 +188,6 @@ test_dte_reconciliation:
 	@./test_dte_reconciliation.py $(COMPANY_ID)
 # Generate reports only (no seeding/testing)
 reports-only: reports
+
+test_notas_debito:
+	@./test_notas_debito.sh $(COMPANY_ID)
