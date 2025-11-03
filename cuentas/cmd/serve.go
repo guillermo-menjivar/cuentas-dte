@@ -327,6 +327,7 @@ func startServer() {
 		{
 			// Nota de Débito
 			notas.POST("/debito", notasHandler.CreateNotaDebito)
+			notas.GET("/debito/:id", notasHandler.GetNotaDebito)
 
 			// Nota de Crédito
 			//notas.POST("/credito", notaHandler.CreateNotaCredito)
