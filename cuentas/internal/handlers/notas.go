@@ -97,3 +97,34 @@ func isValidationError(err error) bool {
 }
 
 // change this
+func (h *NotaHandler) GetNotaDebito(c *gin.Context) {
+	companyID := c.GetString("company_id")
+	if companyID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id not found in context"})
+		return
+	}
+
+	notaID := c.Param("id")
+	if notaID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "nota_id is required"})
+		return
+	}
+
+	// Get the nota
+	nota, err := h.notaService.GetNotaDebito(
+		c.Request.Context(),
+		notaID,
+		companyID,
+	)
+	if err != nil {
+		statusCode := http.StatusInternalServerError
+		if err.Error() == "nota not found" {
+			statusCode = http.StatusNotFound
+		}
+
+		c.JSON(statusCode, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, nota)
+}
