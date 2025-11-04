@@ -8,6 +8,7 @@ import (
 
 	"cuentas/internal/codigos"
 	"cuentas/internal/database"
+	"cuentas/internal/dte"
 	"cuentas/internal/hacienda"
 	"cuentas/internal/models"
 
@@ -20,10 +21,14 @@ const (
 	MaxAdjustmentFactor = 10.0 // Warn if adjustment is >10x original price
 )
 
-type NotaService struct{}
+type NotaService struct {
+	dteService *dte.DTEService
+}
 
-func NewNotaService() *NotaService {
-	return &NotaService{}
+func NewNotaService(dteService *dte.DTEService) *NotaService {
+	return &NotaService{
+		dteService: dteService,
+	}
 }
 
 // CreateNotaDebito creates a new Nota de Débito
@@ -74,6 +79,85 @@ func (s *NotaService) CreateNotaDebito(
 	}
 
 	fmt.Printf("\n✅ Nota de Débito created successfully: %s\n", nota.NotaNumber)
+
+	return nota, nil
+}
+
+// GetNotaDebito retrieves a nota by ID (public method for handler)
+func (s *NotaService) GetNotaDebito(ctx context.Context, notaID, companyID string) (*models.NotaDebito, error) {
+	return s.getNotaDebito(ctx, notaID, companyID)
+}
+
+// FinalizeNotaDebito finalizes a nota and submits it to Hacienda
+func (s *NotaService) FinalizeNotaDebito(
+	ctx context.Context,
+	notaID string,
+	companyID string,
+) (*models.NotaDebito, error) {
+
+	fmt.Printf("🔄 Finalizing Nota de Débito: %s\n", notaID)
+
+	// Step 1: Fetch the nota (must be in draft status)
+	nota, err := s.getNotaDebito(ctx, notaID, companyID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch nota: %w", err)
+	}
+
+	// Step 2: Validate nota is in draft status
+	if nota.Status != "draft" {
+		return nil, fmt.Errorf("nota is not in draft status (current status: %s)", nota.Status)
+	}
+
+	fmt.Printf("   Nota Number: %s\n", nota.NotaNumber)
+	fmt.Printf("   Client: %s\n", nota.ClientName)
+	fmt.Printf("   Total: $%.2f\n", nota.Total)
+
+	// Step 3: Generate numero de control if not present
+	if nota.DteNumeroControl == nil {
+		numeroControl, err := s.generateNumeroControl(ctx, companyID, nota)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate numero control: %w", err)
+		}
+		nota.DteNumeroControl = &numeroControl
+
+		// Save numero control to database
+		err = s.saveNumeroControl(ctx, notaID, numeroControl)
+		if err != nil {
+			return nil, fmt.Errorf("failed to save numero control: %w", err)
+		}
+
+		fmt.Printf("   Generated Numero Control: %s\n", numeroControl)
+	}
+
+	// Step 4: Process with DTE service (build, sign, submit)
+	fmt.Println("\n📤 Submitting to Hacienda...")
+	response, err := s.dteService.ProcessNotaDebito(ctx, nota)
+	if err != nil {
+		// Update status to 'rejected' if Hacienda rejected it
+		if response != nil && response.Estado != "PROCESADO" {
+			_ = s.updateNotaStatus(ctx, notaID, "rejected")
+		}
+		return nil, fmt.Errorf("failed to process nota with Hacienda: %w", err)
+	}
+
+	// Step 5: Update nota status to finalized
+	now := time.Now()
+	err = s.finalizeNotaInDB(ctx, notaID, now, response)
+	if err != nil {
+		return nil, fmt.Errorf("failed to finalize nota in database: %w", err)
+	}
+
+	// Step 6: Reload nota with updated data
+	nota, err = s.getNotaDebito(ctx, notaID, companyID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to reload nota: %w", err)
+	}
+
+	fmt.Printf("\n✅ Nota de Débito finalized successfully!\n")
+	fmt.Printf("   Status: %s\n", nota.Status)
+	if nota.DteSelloRecibido != nil {
+		fmt.Printf("   Sello Recibido: %s\n", *nota.DteSelloRecibido)
+	}
 
 	return nota, nil
 }
@@ -596,78 +680,6 @@ func (s *NotaService) generateNotaNumber(ctx context.Context, tx *sql.Tx, compan
 	return fmt.Sprintf("ND-%08d", seqNum), nil
 }
 
-// FinalizeNotaDebito finalizes a nota and submits it to Hacienda
-func (s *NotaService) FinalizeNotaDebito(
-	ctx context.Context,
-	notaID string,
-	companyID string,
-) (*models.NotaDebito, error) {
-
-	fmt.Printf("🔄 Finalizing Nota de Débito: %s\n", notaID)
-
-	// Step 1: Fetch the nota (must be in draft status)
-	nota, err := s.getNotaDebito(ctx, notaID, companyID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch nota: %w", err)
-	}
-
-	// Step 2: Validate nota is in draft status
-	if nota.Status != "draft" {
-		return nil, fmt.Errorf("nota is not in draft status (current status: %s)", nota.Status)
-	}
-
-	fmt.Printf("   Nota Number: %s\n", nota.NotaNumber)
-	fmt.Printf("   Client: %s\n", nota.ClientName)
-	fmt.Printf("   Total: $%.2f\n", nota.Total)
-
-	// Step 3: Generate numero de control if not present
-	if nota.DteNumeroControl == nil {
-		numeroControl, err := s.generateNumeroControl(ctx, companyID, nota)
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate numero control: %w", err)
-		}
-		nota.DteNumeroControl = &numeroControl
-
-		// Save numero control to database
-		err = s.saveNumeroControl(ctx, notaID, numeroControl)
-		if err != nil {
-			return nil, fmt.Errorf("failed to save numero control: %w", err)
-		}
-
-		fmt.Printf("   Generated Numero Control: %s\n", numeroControl)
-	}
-
-	// Step 4: Process with DTE service (build, sign, submit)
-	fmt.Println("\n📤 Submitting to Hacienda...")
-	response, err := dteService.ProcessNotaDebito(ctx, nota)
-	if err != nil {
-		// Update status to 'rejected' if Hacienda rejected it
-		if response != nil && response.Estado != "PROCESADO" {
-			_ = s.updateNotaStatus(ctx, notaID, "rejected")
-		}
-		return nil, fmt.Errorf("failed to process nota with Hacienda: %w", err)
-	}
-
-	// Step 5: Update nota status to finalized
-	now := time.Now()
-	err = s.finalizeNotaInDB(ctx, notaID, now, response)
-	if err != nil {
-		return nil, fmt.Errorf("failed to finalize nota in database: %w", err)
-	}
-
-	// Step 6: Reload nota with updated data
-	nota, err = s.getNotaDebito(ctx, notaID, companyID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to reload nota: %w", err)
-	}
-
-	fmt.Printf("\n✅ Nota de Débito finalized successfully!\n")
-	fmt.Printf("   Status: %s\n", nota.Status)
-	fmt.Printf("   Sello Recibido: %s\n", *nota.DteSelloRecibido)
-
-	return nota, nil
-}
-
 // getNotaDebito fetches a nota with all relationships
 func (s *NotaService) getNotaDebito(ctx context.Context, notaID, companyID string) (*models.NotaDebito, error) {
 	query := `
@@ -809,7 +821,7 @@ func (s *NotaService) generateNumeroControl(ctx context.Context, companyID strin
 	query := `
 		SELECT e.cod_establecimiento, p.cod_punto_venta
 		FROM establishments e
-		JOIN points_of_sale p ON p.establishment_id = e.id
+		JOIN point_of_sale p ON p.establishment_id = e.id
 		WHERE e.id = $1 AND p.id = $2
 	`
 
