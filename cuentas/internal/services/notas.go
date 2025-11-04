@@ -2,12 +2,14 @@ package services
 
 import (
 	"context"
-	"cuentas/internal/codigos"
-	"cuentas/internal/database"
-	"cuentas/internal/models"
 	"database/sql"
 	"fmt"
 	"time"
+
+	"cuentas/internal/codigos"
+	"cuentas/internal/database"
+	"cuentas/internal/hacienda"
+	"cuentas/internal/models"
 
 	"github.com/google/uuid"
 )
@@ -592,4 +594,287 @@ func (s *NotaService) generateNotaNumber(ctx context.Context, tx *sql.Tx, compan
 	}
 
 	return fmt.Sprintf("ND-%08d", seqNum), nil
+}
+
+// FinalizeNotaDebito finalizes a nota and submits it to Hacienda
+func (s *NotaService) FinalizeNotaDebito(
+	ctx context.Context,
+	notaID string,
+	companyID string,
+) (*models.NotaDebito, error) {
+
+	fmt.Printf("🔄 Finalizing Nota de Débito: %s\n", notaID)
+
+	// Step 1: Fetch the nota (must be in draft status)
+	nota, err := s.getNotaDebito(ctx, notaID, companyID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch nota: %w", err)
+	}
+
+	// Step 2: Validate nota is in draft status
+	if nota.Status != "draft" {
+		return nil, fmt.Errorf("nota is not in draft status (current status: %s)", nota.Status)
+	}
+
+	fmt.Printf("   Nota Number: %s\n", nota.NotaNumber)
+	fmt.Printf("   Client: %s\n", nota.ClientName)
+	fmt.Printf("   Total: $%.2f\n", nota.Total)
+
+	// Step 3: Generate numero de control if not present
+	if nota.DteNumeroControl == nil {
+		numeroControl, err := s.generateNumeroControl(ctx, companyID, nota)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate numero control: %w", err)
+		}
+		nota.DteNumeroControl = &numeroControl
+
+		// Save numero control to database
+		err = s.saveNumeroControl(ctx, notaID, numeroControl)
+		if err != nil {
+			return nil, fmt.Errorf("failed to save numero control: %w", err)
+		}
+
+		fmt.Printf("   Generated Numero Control: %s\n", numeroControl)
+	}
+
+	// Step 4: Process with DTE service (build, sign, submit)
+	fmt.Println("\n📤 Submitting to Hacienda...")
+	response, err := dteService.ProcessNotaDebito(ctx, nota)
+	if err != nil {
+		// Update status to 'rejected' if Hacienda rejected it
+		if response != nil && response.Estado != "PROCESADO" {
+			_ = s.updateNotaStatus(ctx, notaID, "rejected")
+		}
+		return nil, fmt.Errorf("failed to process nota with Hacienda: %w", err)
+	}
+
+	// Step 5: Update nota status to finalized
+	now := time.Now()
+	err = s.finalizeNotaInDB(ctx, notaID, now, response)
+	if err != nil {
+		return nil, fmt.Errorf("failed to finalize nota in database: %w", err)
+	}
+
+	// Step 6: Reload nota with updated data
+	nota, err = s.getNotaDebito(ctx, notaID, companyID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to reload nota: %w", err)
+	}
+
+	fmt.Printf("\n✅ Nota de Débito finalized successfully!\n")
+	fmt.Printf("   Status: %s\n", nota.Status)
+	fmt.Printf("   Sello Recibido: %s\n", *nota.DteSelloRecibido)
+
+	return nota, nil
+}
+
+// getNotaDebito fetches a nota with all relationships
+func (s *NotaService) getNotaDebito(ctx context.Context, notaID, companyID string) (*models.NotaDebito, error) {
+	query := `
+		SELECT 
+			id, company_id, establishment_id, point_of_sale_id,
+			nota_number, nota_type,
+			client_id, client_name, client_legal_name, client_nit, client_ncr, client_dui,
+			contact_email, contact_whatsapp, client_address,
+			client_tipo_contribuyente, client_tipo_persona,
+			subtotal, total_discount, total_taxes, total,
+			currency, payment_terms, payment_method, due_date,
+			status,
+			dte_numero_control, dte_codigo_generacion, dte_sello_recibido, 
+			dte_status, dte_hacienda_response, dte_submitted_at,
+			created_at, finalized_at, voided_at,
+			created_by, notes
+		FROM notas_debito
+		WHERE id = $1 AND company_id = $2
+	`
+
+	var nota models.NotaDebito
+	err := database.DB.QueryRowContext(ctx, query, notaID, companyID).Scan(
+		&nota.ID, &nota.CompanyID, &nota.EstablishmentID, &nota.PointOfSaleID,
+		&nota.NotaNumber, &nota.NotaType,
+		&nota.ClientID, &nota.ClientName, &nota.ClientLegalName, &nota.ClientNit, &nota.ClientNcr, &nota.ClientDui,
+		&nota.ContactEmail, &nota.ContactWhatsapp, &nota.ClientAddress,
+		&nota.ClientTipoContribuyente, &nota.ClientTipoPersona,
+		&nota.Subtotal, &nota.TotalDiscount, &nota.TotalTaxes, &nota.Total,
+		&nota.Currency, &nota.PaymentTerms, &nota.PaymentMethod, &nota.DueDate,
+		&nota.Status,
+		&nota.DteNumeroControl, &nota.DteCodigoGeneracion, &nota.DteSelloRecibido,
+		&nota.DteStatus, &nota.DteHaciendaResponse, &nota.DteSubmittedAt,
+		&nota.CreatedAt, &nota.FinalizedAt, &nota.VoidedAt,
+		&nota.CreatedBy, &nota.Notes,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("nota not found")
+	}
+	if err != nil {
+		return nil, fmt.Errorf("query nota: %w", err)
+	}
+
+	// Load line items
+	lineItems, err := s.getNotaLineItems(ctx, notaID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load line items: %w", err)
+	}
+	nota.LineItems = lineItems
+
+	// Load CCF references
+	ccfRefs, err := s.getNotaCCFReferences(ctx, notaID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load CCF references: %w", err)
+	}
+	nota.CCFReferences = ccfRefs
+
+	return &nota, nil
+}
+
+// getNotaLineItems loads line items for a nota
+func (s *NotaService) getNotaLineItems(ctx context.Context, notaID string) ([]models.NotaDebitoLineItem, error) {
+	query := `
+		SELECT 
+			id, nota_debito_id, line_number,
+			related_ccf_id, related_ccf_number, ccf_line_item_id,
+			original_item_sku, original_item_name, original_unit_price, original_quantity,
+			original_item_tipo_item, original_unit_of_measure,
+			adjustment_amount, adjustment_reason,
+			line_subtotal, discount_amount, taxable_amount, total_taxes, line_total,
+			created_at
+		FROM nota_debito_line_items
+		WHERE nota_debito_id = $1
+		ORDER BY line_number
+	`
+
+	rows, err := database.DB.QueryContext(ctx, query, notaID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var lineItems []models.NotaDebitoLineItem
+	for rows.Next() {
+		var item models.NotaDebitoLineItem
+		err := rows.Scan(
+			&item.ID, &item.NotaDebitoID, &item.LineNumber,
+			&item.RelatedCCFId, &item.RelatedCCFNumber, &item.CCFLineItemId,
+			&item.OriginalItemSku, &item.OriginalItemName, &item.OriginalUnitPrice, &item.OriginalQuantity,
+			&item.OriginalItemTipoItem, &item.OriginalUnitOfMeasure,
+			&item.AdjustmentAmount, &item.AdjustmentReason,
+			&item.LineSubtotal, &item.DiscountAmount, &item.TaxableAmount, &item.TotalTaxes, &item.LineTotal,
+			&item.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		lineItems = append(lineItems, item)
+	}
+
+	return lineItems, rows.Err()
+}
+
+// getNotaCCFReferences loads CCF references for a nota
+func (s *NotaService) getNotaCCFReferences(ctx context.Context, notaID string) ([]models.NotaDebitoCCFReference, error) {
+	query := `
+		SELECT 
+			id, nota_debito_id, ccf_id, ccf_number, ccf_date, created_at
+		FROM nota_debito_ccf_references
+		WHERE nota_debito_id = $1
+		ORDER BY created_at
+	`
+
+	rows, err := database.DB.QueryContext(ctx, query, notaID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var refs []models.NotaDebitoCCFReference
+	for rows.Next() {
+		var ref models.NotaDebitoCCFReference
+		err := rows.Scan(
+			&ref.ID, &ref.NotaDebitoID, &ref.CCFId, &ref.CCFNumber, &ref.CCFDate, &ref.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		refs = append(refs, ref)
+	}
+
+	return refs, rows.Err()
+}
+
+// generateNumeroControl generates a numero de control for the nota
+func (s *NotaService) generateNumeroControl(ctx context.Context, companyID string, nota *models.NotaDebito) (string, error) {
+	// Get establishment and POS codes
+	var codEstablecimiento, codPuntoVenta string
+	query := `
+		SELECT e.cod_establecimiento, p.cod_punto_venta
+		FROM establishments e
+		JOIN points_of_sale p ON p.establishment_id = e.id
+		WHERE e.id = $1 AND p.id = $2
+	`
+
+	err := database.DB.QueryRowContext(ctx, query, nota.EstablishmentID, nota.PointOfSaleID).Scan(
+		&codEstablecimiento, &codPuntoVenta,
+	)
+	if err != nil {
+		return "", fmt.Errorf("failed to get establishment codes: %w", err)
+	}
+
+	// Get next sequence number
+	var sequence int64
+	seqQuery := `
+		SELECT COALESCE(MAX(CAST(SUBSTRING(dte_numero_control FROM 'DTE-06-.*-(\d{15})') AS BIGINT)), 0) + 1
+		FROM notas_debito
+		WHERE company_id = $1
+	`
+
+	err = database.DB.QueryRowContext(ctx, seqQuery, companyID).Scan(&sequence)
+	if err != nil {
+		return "", fmt.Errorf("failed to get sequence: %w", err)
+	}
+
+	// Generate numero control
+	// Format: DTE-06-{codEstable}{codPuntoVenta}-{15-digit sequence}
+	numeroControl := fmt.Sprintf("DTE-06-%s%s-%015d", codEstablecimiento, codPuntoVenta, sequence)
+
+	return numeroControl, nil
+}
+
+// saveNumeroControl saves the numero control to the nota
+func (s *NotaService) saveNumeroControl(ctx context.Context, notaID, numeroControl string) error {
+	query := `
+		UPDATE notas_debito
+		SET dte_numero_control = $1
+		WHERE id = $2
+	`
+
+	_, err := database.DB.ExecContext(ctx, query, numeroControl, notaID)
+	return err
+}
+
+// updateNotaStatus updates the nota status
+func (s *NotaService) updateNotaStatus(ctx context.Context, notaID, status string) error {
+	query := `
+		UPDATE notas_debito
+		SET status = $1
+		WHERE id = $2
+	`
+
+	_, err := database.DB.ExecContext(ctx, query, status, notaID)
+	return err
+}
+
+// finalizeNotaInDB updates the nota to finalized status with DTE info
+func (s *NotaService) finalizeNotaInDB(ctx context.Context, notaID string, finalizedAt time.Time, response *hacienda.ReceptionResponse) error {
+	query := `
+		UPDATE notas_debito
+		SET 
+			status = 'finalized',
+			finalized_at = $1,
+			dte_submitted_at = $2
+		WHERE id = $3
+	`
+
+	_, err := database.DB.ExecContext(ctx, query, finalizedAt, finalizedAt, notaID)
+	return err
 }
