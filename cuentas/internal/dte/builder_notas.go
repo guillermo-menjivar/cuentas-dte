@@ -138,8 +138,8 @@ func (b *Builder) buildDocumentosRelacionados(nota *models.NotaDebito) *[]Docume
 
 	for i, ref := range nota.CCFReferences {
 		docs[i] = DocumentoRelacionado{
-			TipoDocumento:   "03", // CCF
-			TipoGeneracion:  1,    // Proceso normal
+			TipoDocumento:   codigos.DocTypeComprobanteCredito, // CCF
+			TipoGeneracion:  1,                                 // Proceso normal
 			NumeroDocumento: ref.CCFNumber,
 			FechaEmision:    ref.CCFDate.Format("2006-01-02"),
 		}

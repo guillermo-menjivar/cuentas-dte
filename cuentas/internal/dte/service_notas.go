@@ -4,6 +4,7 @@ package dte
 
 import (
 	"context"
+	"cuentas/internal/codigos"
 	"cuentas/internal/hacienda"
 	"cuentas/internal/models"
 	"encoding/json"
@@ -72,8 +73,8 @@ func (s *DTEService) ProcessNotaDebito(ctx context.Context, nota *models.NotaDeb
 	response, err := s.hacienda.SubmitDTE(
 		ctx,
 		authResponse.Body.Token,
-		"00", // ambiente - get from company
-		"06", // tipo DTE - Nota de Débito
+		codigos.MODE_PRUEBA, // ambiente - get from company
+		codigos.DocTypeNotaDebito,
 		strings.ToUpper(nota.ID),
 		signedDTE,
 	)
