@@ -180,7 +180,7 @@ func (b *Builder) buildNotaDebitoIdentificacion(nota *models.NotaDebito, company
 		Ambiente:         company.DTEAmbiente,
 		TipoDte:          codigos.DocTypeNotaDebito,
 		NumeroControl:    strings.ToUpper(*nota.DteNumeroControl),
-		CodigoGeneracion: nota.ID,
+		CodigoGeneracion: strings.ToUpper(nota.ID),
 		TipoModelo:       1,
 		TipoOperacion:    1,
 		TipoContingencia: nil,
