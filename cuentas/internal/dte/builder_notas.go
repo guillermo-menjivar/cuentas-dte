@@ -71,9 +71,9 @@ func (b *Builder) buildNotaDebitoIdentificacion(nota *models.NotaDebito, company
 
 	// Nota de Débito uses version 2 for tipo DTE "06"
 	return Identificacion{
-		Version:          2,
+		Version:          3,
 		Ambiente:         company.DTEAmbiente,
-		TipoDte:          "06", // Nota de Débito
+		TipoDte:          codigos.DocTypeNotaDebito,
 		NumeroControl:    strings.ToUpper(*nota.DteNumeroControl),
 		CodigoGeneracion: nota.ID,
 		TipoModelo:       1,
