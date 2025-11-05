@@ -120,7 +120,15 @@ func (s *DTEService) ProcessNotaDebito(ctx context.Context, nota *models.NotaDeb
 	}
 
 	// Step 8: Log to commit log
-	err = s.logNotaToCommitLog(ctx, nota, dteJSON, codigos.DocTypeNotaDebito, codigos.MODE_PRUEBA, signedDTE, response)
+	err = s.logNotaToCommitLog(
+		ctx,
+		nota,
+		codigos.DocTypeNotaDebito, // tipoDte string
+		codigos.MODE_PRUEBA,       // ambiente string
+		dteJSON,                   // dteUnsigned []byte
+		signedDTE,                 // dteSigned string
+		response,
+	)
 	if err != nil {
 		fmt.Printf("⚠️  Warning: failed to log to commit log: %v\n", err)
 	} else {
