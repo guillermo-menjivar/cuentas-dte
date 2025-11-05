@@ -177,6 +177,8 @@ func (s *DTEService) saveNotaHaciendaResponse(ctx context.Context, notaID string
 	return err
 }
 
+////
+
 func (s *DTEService) logNotaToCommitLog(
 	ctx context.Context,
 	nota *models.NotaDebito,
@@ -210,7 +212,7 @@ func (s *DTEService) logNotaToCommitLog(
 	dteURL := fmt.Sprintf(
 		"https://admin.factura.gob.sv/consultaPublica?ambiente=%s&codGen=%s&fechaEmi=%s",
 		ambiente,
-		nota.ID,
+		strings.ToUpper(nota.ID), // ← UPPERCASE
 		fechaEmision.Format("2006-01-02"),
 	)
 
@@ -220,6 +222,7 @@ func (s *DTEService) logNotaToCommitLog(
 		return fmt.Errorf("failed to marshal Hacienda response: %w", err)
 	}
 
+	// ← ADDED: invoice_number, client_id, references_invoice_id, submitted_at
 	query := `
 		INSERT INTO dte_commit_log (
 			codigo_generacion, invoice_id, invoice_number, company_id, client_id,
@@ -258,43 +261,50 @@ func (s *DTEService) logNotaToCommitLog(
 
 	now := time.Now()
 
-	_, err = s.db.ExecContext(ctx, query,
-		nota.ID,                 // $1 - codigo_generacion
-		nota.ID,                 // $2 - invoice_id
-		nota.NotaNumber,         // $3 - invoice_number
-		nota.CompanyID,          // $4 - company_id
-		nota.ClientID,           // $5 - client_id
-		nota.EstablishmentID,    // $6 - establishment_id
-		nota.PointOfSaleID,      // $7 - point_of_sale_id
-		nota.Subtotal,           // $8 - subtotal
-		nota.TotalDiscount,      // $9 - total_discount
-		nota.TotalTaxes,         // $10 - total_taxes
-		nota.TotalTaxes,         // $11 - iva_amount
-		nota.Total,              // $12 - total_amount
-		nota.Currency,           // $13 - currency
-		nota.PaymentMethod,      // $14 - payment_method
-		nota.PaymentTerms,       // $15 - payment_terms
-		nil,                     // $16 - references_invoice_id (NULL for nota de débito)
-		nota.DteNumeroControl,   // $17 - numero_control
-		tipoDte,                 // $18 - tipo_dte
-		ambiente,                // $19 - ambiente
-		fechaEmision,            // $20 - fecha_emision
-		fiscalYear,              // $21 - fiscal_year
-		fiscalMonth,             // $22 - fiscal_month
-		dteURL,                  // $23 - dte_url
-		dteUnsigned,             // $24 - dte_unsigned
-		dteSigned,               // $25 - dte_signed
-		estado,                  // $26 - hacienda_estado
-		selloRecibido,           // $27 - hacienda_sello_recibido
-		fechaProcesamiento,      // $28 - hacienda_fh_procesamiento
-		codigoMsg,               // $29 - hacienda_codigo_msg
-		descripcionMsg,          // $30 - hacienda_descripcion_msg
-		pq.Array(observaciones), // $31 - hacienda_observaciones
-		haciendaResponseFull,    // $32 - hacienda_response_full
-		nota.CreatedBy,          // $33 - created_by
-		now,                     // $34 - submitted_at
-		now,                     // $35 - created_at
-	)
+	// ← CHANGED: Loop through each CCF and create separate entry
+	for _, ccfRef := range nota.CCFReferences {
+		_, err = s.db.ExecContext(ctx, query,
+			strings.ToUpper(nota.ID), // $1 - codigo_generacion (UPPERCASE)
+			ccfRef.CCFId,             // $2 - invoice_id (the CCF being referenced)
+			nota.NotaNumber,          // $3 - invoice_number
+			nota.CompanyID,           // $4 - company_id
+			nota.ClientID,            // $5 - client_id
+			nota.EstablishmentID,     // $6 - establishment_id
+			nota.PointOfSaleID,       // $7 - point_of_sale_id
+			nota.Subtotal,            // $8 - subtotal
+			nota.TotalDiscount,       // $9 - total_discount
+			nota.TotalTaxes,          // $10 - total_taxes
+			nota.TotalTaxes,          // $11 - iva_amount
+			nota.Total,               // $12 - total_amount
+			nota.Currency,            // $13 - currency
+			nota.PaymentMethod,       // $14 - payment_method
+			nota.PaymentTerms,        // $15 - payment_terms
+			ccfRef.CCFId,             // $16 - references_invoice_id (the CCF)
+			nota.DteNumeroControl,    // $17 - numero_control
+			tipoDte,                  // $18 - tipo_dte
+			ambiente,                 // $19 - ambiente
+			fechaEmision,             // $20 - fecha_emision
+			fiscalYear,               // $21 - fiscal_year
+			fiscalMonth,              // $22 - fiscal_month
+			dteURL,                   // $23 - dte_url
+			dteUnsigned,              // $24 - dte_unsigned
+			dteSigned,                // $25 - dte_signed
+			estado,                   // $26 - hacienda_estado
+			selloRecibido,            // $27 - hacienda_sello_recibido
+			fechaProcesamiento,       // $28 - hacienda_fh_procesamiento
+			codigoMsg,                // $29 - hacienda_codigo_msg
+			descripcionMsg,           // $30 - hacienda_descripcion_msg
+			pq.Array(observaciones),  // $31 - hacienda_observaciones
+			haciendaResponseFull,     // $32 - hacienda_response_full
+			nota.CreatedBy,           // $33 - created_by
+			now,                      // $34 - submitted_at
+			now,                      // $35 - created_at
+		)
 
-	return err
+		if err != nil {
+			return fmt.Errorf("failed to log CCF %s: %w", ccfRef.CCFId, err)
+		}
+	}
+
+	return nil
 }
