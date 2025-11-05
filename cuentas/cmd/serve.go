@@ -23,7 +23,7 @@ import (
 
 var (
 	vaultService    *services.VaultService
-	haciendaService *services.HaciendaService // ⭐ Add this!
+	haciendaService *services.HaciendaService
 	firmadorClient  *firmador.Client
 	haciendaClient  *hacienda.Client
 	dteService      *dte.DTEService
@@ -328,6 +328,7 @@ func startServer() {
 			// Nota de Débito
 			notas.POST("/debito", notasHandler.CreateNotaDebito)
 			notas.GET("/debito/:id", notasHandler.GetNotaDebito)
+			notas.POST("/debito/:id/finalize", notasHandler.FinalizeNotaDebito)
 
 			// Nota de Crédito
 			//notas.POST("/credito", notaHandler.CreateNotaCredito)
