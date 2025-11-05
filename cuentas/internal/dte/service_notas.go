@@ -222,7 +222,7 @@ func (s *DTEService) logNotaToCommitLog(
 
 	query := `
 		INSERT INTO dte_commit_log (
-			codigo_generacion, invoice_id, company_id, 
+			codigo_generacion, invoice_id, invoice_number, company_id, 
 			establishment_id, point_of_sale_id,
 			subtotal, total_discount, total_taxes, iva_amount, total_amount, currency,
 			payment_method, payment_terms,
@@ -256,8 +256,9 @@ func (s *DTEService) logNotaToCommitLog(
 	}
 
 	_, err = s.db.ExecContext(ctx, query,
-		nota.ID,                 // $1 - codigo_generacion
-		nota.ID,                 // $2 - invoice_id
+		nota.ID, // $1 - codigo_generacion
+		nota.ID, // $2 - invoice_id
+		nota.NotaNumber,
 		nota.CompanyID,          // $3 - company_id
 		nota.EstablishmentID,    // $4 - establishment_id
 		nota.PointOfSaleID,      // $5 - point_of_sale_id
