@@ -222,19 +222,20 @@ func (s *DTEService) logNotaToCommitLog(
 
 	query := `
 		INSERT INTO dte_commit_log (
-			codigo_generacion, invoice_id, invoice_number, company_id, 
+			codigo_generacion, invoice_id, invoice_number, company_id, client_id,
 			establishment_id, point_of_sale_id,
 			subtotal, total_discount, total_taxes, iva_amount, total_amount, currency,
-			payment_method, payment_terms,
+			payment_method, payment_terms, references_invoice_id,
 			numero_control, tipo_dte, ambiente, fecha_emision,
 			fiscal_year, fiscal_month, dte_url,
 			dte_unsigned, dte_signed,
 			hacienda_estado, hacienda_sello_recibido, hacienda_fh_procesamiento,
 			hacienda_codigo_msg, hacienda_descripcion_msg, hacienda_observaciones,
-			hacienda_response_full, created_by, created_at
+			hacienda_response_full, created_by, submitted_at, created_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
-			$20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
+			$17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
+			$31, $32, $33, $34, $35
 		)
 	`
 
@@ -255,39 +256,44 @@ func (s *DTEService) logNotaToCommitLog(
 		observaciones = response.Observaciones
 	}
 
+	now := time.Now()
+
 	_, err = s.db.ExecContext(ctx, query,
-		nota.ID, // $1 - codigo_generacion
-		nota.ID, // $2 - invoice_id
-		nota.NotaNumber,
-		nota.CompanyID,          // $3 - company_id
-		nota.EstablishmentID,    // $4 - establishment_id
-		nota.PointOfSaleID,      // $5 - point_of_sale_id
-		nota.Subtotal,           // $6 - subtotal
-		nota.TotalDiscount,      // $7 - total_discount
-		nota.TotalTaxes,         // $8 - total_taxes
-		nota.TotalTaxes,         // $9 - iva_amount
-		nota.Total,              // $10 - total_amount
-		nota.Currency,           // $11 - currency
-		nota.PaymentMethod,      // $12 - payment_method
-		nota.PaymentTerms,       // $13 - payment_terms
-		nota.DteNumeroControl,   // $14 - numero_control
-		tipoDte,                 // $15 - tipo_dte
-		ambiente,                // $16 - ambiente
-		fechaEmision,            // $17 - fecha_emision
-		fiscalYear,              // $18 - fiscal_year
-		fiscalMonth,             // $19 - fiscal_month
-		dteURL,                  // $20 - dte_url
-		dteUnsigned,             // $21 - dte_unsigned
-		dteSigned,               // $22 - dte_signed
-		estado,                  // $23 - hacienda_estado
-		selloRecibido,           // $24 - hacienda_sello_recibido
-		fechaProcesamiento,      // $25 - hacienda_fh_procesamiento
-		codigoMsg,               // $26 - hacienda_codigo_msg
-		descripcionMsg,          // $27 - hacienda_descripcion_msg
-		pq.Array(observaciones), // $28 - hacienda_observaciones
-		haciendaResponseFull,    // $29 - hacienda_response_full
-		nota.CreatedBy,          // $30 - created_by
-		time.Now(),              // $31 - created_at
+		nota.ID,                 // $1 - codigo_generacion
+		nota.ID,                 // $2 - invoice_id
+		nota.NotaNumber,         // $3 - invoice_number
+		nota.CompanyID,          // $4 - company_id
+		nota.ClientID,           // $5 - client_id
+		nota.EstablishmentID,    // $6 - establishment_id
+		nota.PointOfSaleID,      // $7 - point_of_sale_id
+		nota.Subtotal,           // $8 - subtotal
+		nota.TotalDiscount,      // $9 - total_discount
+		nota.TotalTaxes,         // $10 - total_taxes
+		nota.TotalTaxes,         // $11 - iva_amount
+		nota.Total,              // $12 - total_amount
+		nota.Currency,           // $13 - currency
+		nota.PaymentMethod,      // $14 - payment_method
+		nota.PaymentTerms,       // $15 - payment_terms
+		nil,                     // $16 - references_invoice_id (NULL for nota de débito)
+		nota.DteNumeroControl,   // $17 - numero_control
+		tipoDte,                 // $18 - tipo_dte
+		ambiente,                // $19 - ambiente
+		fechaEmision,            // $20 - fecha_emision
+		fiscalYear,              // $21 - fiscal_year
+		fiscalMonth,             // $22 - fiscal_month
+		dteURL,                  // $23 - dte_url
+		dteUnsigned,             // $24 - dte_unsigned
+		dteSigned,               // $25 - dte_signed
+		estado,                  // $26 - hacienda_estado
+		selloRecibido,           // $27 - hacienda_sello_recibido
+		fechaProcesamiento,      // $28 - hacienda_fh_procesamiento
+		codigoMsg,               // $29 - hacienda_codigo_msg
+		descripcionMsg,          // $30 - hacienda_descripcion_msg
+		pq.Array(observaciones), // $31 - hacienda_observaciones
+		haciendaResponseFull,    // $32 - hacienda_response_full
+		nota.CreatedBy,          // $33 - created_by
+		now,                     // $34 - submitted_at
+		now,                     // $35 - created_at
 	)
 
 	return err
