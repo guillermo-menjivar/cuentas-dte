@@ -11,7 +11,6 @@ import (
 	"cuentas/internal/models"
 )
 
-// BuildNotaDebito converts a Nota de Débito into a DTE document
 func (b *Builder) BuildNotaDebito(ctx context.Context, nota *models.NotaDebito) ([]byte, error) {
 	// Load required data
 	company, err := b.loadCompany(ctx, nota.CompanyID)
@@ -31,28 +30,134 @@ func (b *Builder) BuildNotaDebito(ctx context.Context, nota *models.NotaDebito) 
 
 	// Build DTE sections
 	identificacion := b.buildNotaDebitoIdentificacion(nota, company)
-	emisor := b.buildEmisor(company, establishment)
+	emisor := b.buildNotaDebitoEmisor(company, establishment)
 	receptor := b.buildNotaDebitoReceptor(client)
 	documentosRelacionados := b.buildDocumentosRelacionados(nota)
 	cuerpoDocumento, itemAmounts := b.buildNotaDebitoCuerpoDocumento(nota)
 	resumen := b.buildNotaDebitoResumen(nota, itemAmounts)
+	extension := b.buildNotaDebitoExtension(nota)
 
-	// Assemble the DTE
-	dte := &DTE{
+	// Assemble the NotaDebitoDTE (not regular DTE!)
+	dte := &NotaDebitoDTE{
 		Identificacion:       identificacion,
 		DocumentoRelacionado: documentosRelacionados,
 		Emisor:               emisor,
 		Receptor:             receptor,
-		OtrosDocumentos:      nil,
 		VentaTercero:         nil,
 		CuerpoDocumento:      cuerpoDocumento,
 		Resumen:              resumen,
-		Extension:            b.buildNotaDebitoExtension(nota),
+		Extension:            extension,
 		Apendice:             nil,
 	}
 
 	// Marshal to JSON
 	return json.Marshal(dte)
+}
+
+// buildNotaDebitoEmisor - without establishment codes
+func (b *Builder) buildNotaDebitoEmisor(company *CompanyData, establishment *EstablishmentData) NotaDebitoEmisor {
+	return NotaDebitoEmisor{
+		NIT:                 company.NIT,
+		NRC:                 fmt.Sprintf("%d", company.NCR),
+		Nombre:              company.Name,
+		CodActividad:        company.CodActividad,
+		DescActividad:       company.DescActividad,
+		NombreComercial:     &company.NombreComercial,
+		TipoEstablecimiento: establishment.TipoEstablecimiento,
+		Direccion:           b.buildEmisorDireccion(establishment),
+		Telefono:            &establishment.Telefono,
+		Correo:              company.Email,
+	}
+}
+
+// buildNotaDebitoCuerpoDocumento - without noGravado, psv
+func (b *Builder) buildNotaDebitoCuerpoDocumento(nota *models.NotaDebito) ([]NotaDebitoCuerpoDocumentoItem, []ItemAmounts) {
+	items := make([]NotaDebitoCuerpoDocumentoItem, len(nota.LineItems))
+	amounts := make([]ItemAmounts, len(nota.LineItems))
+
+	for i, lineItem := range nota.LineItems {
+		// Calculate amounts for this adjustment
+		itemAmount := b.calculator.CalculateCreditoFiscal(
+			lineItem.AdjustmentAmount,
+			lineItem.OriginalQuantity,
+			0, // No discount on notas typically
+		)
+
+		amounts[i] = itemAmount
+
+		var tributos []string
+		if itemAmount.VentaGravada > 0 {
+			tributos = []string{"20"} // IVA 13%
+		}
+
+		items[i] = NotaDebitoCuerpoDocumentoItem{
+			NumItem:         lineItem.LineNumber,
+			TipoItem:        b.parseTipoItem(lineItem.OriginalItemTipoItem),
+			NumeroDocumento: lineItem.RelatedCCFNumber, // Required!
+			Cantidad:        lineItem.OriginalQuantity,
+			Codigo:          &lineItem.OriginalItemSku,
+			UniMedida:       b.parseUniMedida(lineItem.OriginalUnitOfMeasure),
+			Descripcion:     lineItem.OriginalItemName,
+			PrecioUni:       itemAmount.PrecioUni,
+			MontoDescu:      0,
+			VentaNoSuj:      0,
+			VentaExenta:     0,
+			VentaGravada:    itemAmount.VentaGravada,
+			Tributos:        tributos,
+		}
+	}
+
+	return items, amounts
+}
+
+// buildNotaDebitoResumen - without forbidden fields
+func (b *Builder) buildNotaDebitoResumen(nota *models.NotaDebito, itemAmounts []ItemAmounts) NotaDebitoResumen {
+	// Use CCF calculator for resumen
+	resumenAmounts := b.calculator.CalculateResumenCCF(itemAmounts)
+
+	resumen := NotaDebitoResumen{
+		TotalNoSuj:          0,
+		TotalExenta:         0,
+		TotalGravada:        resumenAmounts.TotalGravada,
+		SubTotalVentas:      resumenAmounts.SubTotalVentas,
+		DescuNoSuj:          0,
+		DescuExenta:         0,
+		DescuGravada:        resumenAmounts.DescuGravada,
+		TotalDescu:          resumenAmounts.TotalDescu,
+		SubTotal:            resumenAmounts.SubTotal,
+		IvaPerci1:           0,
+		IvaRete1:            0,
+		ReteRenta:           0,
+		MontoTotalOperacion: resumenAmounts.MontoTotalOperacion,
+		TotalLetras:         b.numberToWords(resumenAmounts.MontoTotalOperacion),
+		CondicionOperacion:  b.parseCondicionOperacion(nota.PaymentTerms),
+		NumPagoElectronico:  nil,
+	}
+
+	// Add tributos for IVA
+	if resumenAmounts.TotalIva > 0 {
+		tributos := []Tributo{
+			{
+				Codigo:      "20",
+				Descripcion: "Impuesto al Valor Agregado 13",
+				Valor:       resumenAmounts.TotalIva,
+			},
+		}
+		resumen.Tributos = &tributos
+	}
+
+	return resumen
+}
+
+// buildNotaDebitoExtension - without placaVehiculo
+func (b *Builder) buildNotaDebitoExtension(nota *models.NotaDebito) *NotaDebitoExtension {
+	return &NotaDebitoExtension{
+		NombEntrega:   nil,
+		DocuEntrega:   nil,
+		NombRecibe:    nil,
+		DocuRecibe:    nil,
+		Observaciones: nota.Notes,
+	}
 }
 
 // buildNotaDebitoIdentificacion builds the Identificacion section for Nota de Débito
