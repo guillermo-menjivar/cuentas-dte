@@ -169,18 +169,19 @@ func (b *Builder) buildNotaDebitoCuerpoDocumento(nota *models.NotaDebito) ([]Cue
 		}
 
 		items[i] = CuerpoDocumentoItem{
-			NumItem:      lineItem.LineNumber,
-			TipoItem:     b.parseTipoItem(lineItem.OriginalItemTipoItem),
-			Cantidad:     lineItem.OriginalQuantity,
-			Codigo:       &lineItem.OriginalItemSku,
-			UniMedida:    b.parseUniMedida(lineItem.OriginalUnitOfMeasure),
-			Descripcion:  lineItem.OriginalItemName,
-			PrecioUni:    itemAmount.PrecioUni,
-			MontoDescu:   0,
-			VentaNoSuj:   0,
-			VentaExenta:  0,
-			VentaGravada: itemAmount.VentaGravada,
-			Tributos:     tributos,
+			NumItem:         lineItem.LineNumber,
+			TipoItem:        b.parseTipoItem(lineItem.OriginalItemTipoItem),
+			NumeroDocumento: &lineItem.RelatedCCFNumber,
+			Cantidad:        lineItem.OriginalQuantity,
+			Codigo:          &lineItem.OriginalItemSku,
+			UniMedida:       b.parseUniMedida(lineItem.OriginalUnitOfMeasure),
+			Descripcion:     lineItem.OriginalItemName,
+			PrecioUni:       itemAmount.PrecioUni,
+			MontoDescu:      0,
+			VentaNoSuj:      0,
+			VentaExenta:     0,
+			VentaGravada:    itemAmount.VentaGravada,
+			Tributos:        tributos,
 		}
 	}
 
