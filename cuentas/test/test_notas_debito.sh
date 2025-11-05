@@ -217,59 +217,42 @@ else
     echo "$NOTA_DETAILS" | jq '.'
 fi
 
-# Step 5: Ask about finalization
+echo ""
 echo "=========================================================="
-echo -e "${YELLOW}Next Steps${NC}"
+echo "Finalizing Nota de Débito..."
 echo "=========================================================="
 echo ""
-echo "The nota is currently in 'draft' status."
-echo ""
-echo "To finalize and submit to Hacienda, run:"
-echo -e "${GREEN}./test_finalize_nota_debito.sh $COMPANY_ID $NOTA_ID${NC}"
-echo ""
-echo "Or use curl:"
-echo "curl -X POST \"$API_URL/notas/debito/$NOTA_ID/finalize\" \\"
-echo "  -H \"X-Company-ID: $COMPANY_ID\" | jq '.'"
-echo ""
-echo "To view the nota again:"
-echo -e "${GREEN}./test_get_nota_debito.sh $COMPANY_ID $NOTA_ID${NC}"
+echo "⏳ This may take a few seconds..."
 echo ""
 
-# Optional: Auto-finalize
-read -p "Do you want to finalize this nota now? (y/N): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    echo ""
-    echo -e "${BLUE}Step 5: Finalizing nota...${NC}"
-    echo "⏳ This may take a few seconds..."
-    echo ""
+FINALIZE_RESPONSE=$(curl -s -X POST "$API_URL/notas/debito/$NOTA_ID/finalize" \
+    -H "X-Company-ID: $COMPANY_ID" \
+    -H "Content-Type: application/json")
+
+if echo "$FINALIZE_RESPONSE" | jq -e '.nota.status' > /dev/null 2>&1; then
+    FINAL_STATUS=$(echo "$FINALIZE_RESPONSE" | jq -r '.nota.status')
+    DTE_STATUS=$(echo "$FINALIZE_RESPONSE" | jq -r '.nota.dte_status')
+    DTE_NUMERO=$(echo "$FINALIZE_RESPONSE" | jq -r '.nota.dte_numero_control')
     
-    FINALIZE_RESPONSE=$(curl -s -X POST "$API_URL/notas/debito/$NOTA_ID/finalize" \
-        -H "X-Company-ID: $COMPANY_ID" \
-        -H "Content-Type: application/json")
-    
-    if echo "$FINALIZE_RESPONSE" | jq -e '.nota.status' > /dev/null 2>&1; then
-        FINAL_STATUS=$(echo "$FINALIZE_RESPONSE" | jq -r '.nota.status')
-        DTE_STATUS=$(echo "$FINALIZE_RESPONSE" | jq -r '.nota.dte_status')
-        DTE_NUMERO=$(echo "$FINALIZE_RESPONSE" | jq -r '.nota.dte_numero_control')
+    if [ "$FINAL_STATUS" == "finalized" ]; then
+        echo -e "${GREEN}✅ Nota finalized successfully!${NC}"
+        echo ""
+        echo "Status: $FINAL_STATUS"
+        echo "DTE Status: $DTE_STATUS"
+        echo "Numero Control: $DTE_NUMERO"
         
-        if [ "$FINAL_STATUS" == "finalized" ]; then
-            echo -e "${GREEN}✅ Nota finalized successfully!${NC}"
-            echo ""
-            echo "Status: $FINAL_STATUS"
-            echo "DTE Status: $DTE_STATUS"
-            echo "Numero Control: $DTE_NUMERO"
-        else
-            echo -e "${YELLOW}⚠️  Status: $FINAL_STATUS${NC}"
-            echo "$FINALIZE_RESPONSE" | jq '.'
+        # Check for sello recibido
+        SELLO=$(echo "$FINALIZE_RESPONSE" | jq -r '.nota.dte_sello_recibido // empty')
+        if [ -n "$SELLO" ] && [ "$SELLO" != "null" ]; then
+            echo "Sello Recibido: ${SELLO:0:50}..."
         fi
     else
-        echo -e "${RED}❌ Finalization failed${NC}"
+        echo -e "${YELLOW}⚠️  Status: $FINAL_STATUS${NC}"
         echo "$FINALIZE_RESPONSE" | jq '.'
     fi
 else
-    echo ""
-    echo "Nota remains in draft status."
+    echo -e "${RED}❌ Finalization failed${NC}"
+    echo "$FINALIZE_RESPONSE" | jq '.'
 fi
 
 echo ""
