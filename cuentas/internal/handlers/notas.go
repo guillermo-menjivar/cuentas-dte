@@ -1,10 +1,12 @@
 package handlers
 
 import (
-	"cuentas/internal/models"
-	"cuentas/internal/services"
 	"fmt"
 	"net/http"
+
+	"cuentas/internal/dte"
+	"cuentas/internal/models"
+	"cuentas/internal/services"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,7 +17,10 @@ type NotaHandler struct {
 }
 
 // NewNotaHandler creates a new nota handler
-func NewNotaHandler(notaService *services.NotaService, invoiceService *services.InvoiceService) *NotaHandler {
+func NewNotaHandler(
+	notaService *services.NotaService,
+	invoiceService *services.InvoiceService,
+) *NotaHandler {
 	return &NotaHandler{
 		notaService:    notaService,
 		invoiceService: invoiceService,
@@ -36,11 +41,6 @@ func (h *NotaHandler) CreateNotaDebito(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("📥 Received Nota de Débito request:")
-	fmt.Printf("   CCFs: %v\n", request.CCFIds)
-	fmt.Printf("   Line Items: %d\n", len(request.LineItems))
-
-	// Create the nota
 	nota, err := h.notaService.CreateNotaDebito(
 		c.Request.Context(),
 		companyID,
@@ -48,55 +48,16 @@ func (h *NotaHandler) CreateNotaDebito(c *gin.Context) {
 		h.invoiceService,
 	)
 	if err != nil {
-		// Determine appropriate status code based on error type
-		statusCode := http.StatusInternalServerError
-
-		// Check for validation errors
-		if isValidationError(err) {
-			statusCode = http.StatusBadRequest
-		}
-
-		c.JSON(statusCode, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Return the created nota
 	c.JSON(http.StatusCreated, gin.H{
-		"message": "Nota de Débito created successfully",
-		"nota":    nota,
+		"nota": nota,
 	})
 }
 
-// isValidationError checks if the error is a validation error
-func isValidationError(err error) bool {
-	errMsg := err.Error()
-
-	// List of validation error prefixes
-	validationPrefixes := []string{
-		"validation failed",
-		"at least one",
-		"maximum",
-		"duplicate",
-		"not found",
-		"is not a CCF",
-		"is not finalized",
-		"has been voided",
-		"must belong to the same client",
-		"references CCF",
-		"adjustment_amount must be",
-		"line item",
-	}
-
-	for _, prefix := range validationPrefixes {
-		if len(errMsg) >= len(prefix) && errMsg[:len(prefix)] == prefix {
-			return true
-		}
-	}
-
-	return false
-}
-
-// change this
+// GetNotaDebito retrieves a single nota by ID
 func (h *NotaHandler) GetNotaDebito(c *gin.Context) {
 	companyID := c.GetString("company_id")
 	if companyID == "" {
@@ -127,4 +88,67 @@ func (h *NotaHandler) GetNotaDebito(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, nota)
+}
+
+// FinalizeNotaDebito handles POST /v1/notas/debito/:id/finalize
+func (h *NotaHandler) FinalizeNotaDebito(c *gin.Context) {
+	companyID := c.GetString("company_id")
+	if companyID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id not found in context"})
+		return
+	}
+
+	notaID := c.Param("id")
+	if notaID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "nota_id is required"})
+		return
+	}
+
+	// Finalize the nota (generates numero control, updates status)
+	nota, err := h.notaService.FinalizeNotaDebito(
+		c.Request.Context(),
+		notaID,
+		companyID,
+	)
+	if err != nil {
+		if err.Error() == "nota not found" {
+			c.JSON(http.StatusNotFound, gin.H{"error": "nota not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Process DTE (build, sign, and submit to Hacienda) - same pattern as invoice
+	dteServiceInterface, exists := c.Get("dteService")
+	if exists {
+		dteService := dteServiceInterface.(*dte.DTEService)
+
+		fmt.Println("\n=== Starting DTE Processing for Nota de Débito ===")
+		response, err := dteService.ProcessNotaDebito(c.Request.Context(), nota)
+		if err != nil {
+			// Log the error but don't fail the finalization
+			fmt.Printf("❌ DTE processing failed: %v\n", err)
+			dteStatus := "failed_signing"
+			nota.DteStatus = &dteStatus
+		} else {
+			// Successfully signed and submitted
+			fmt.Printf("✅ DTE processed successfully for nota %s\n", nota.ID)
+			fmt.Printf("Estado: %s\n", response.Estado)
+			fmt.Printf("Código de Generación: %s\n", response.CodigoGeneracion)
+			if response.SelloRecibido != "" {
+				fmt.Printf("Sello Recibido: %s\n", response.SelloRecibido)
+			}
+
+			dteStatus := "submitted"
+			nota.DteStatus = &dteStatus
+			nota.DteSelloRecibido = &response.SelloRecibido
+		}
+	} else {
+		fmt.Println("⚠️  Warning: DTE service not available in context")
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"nota": nota,
+	})
 }

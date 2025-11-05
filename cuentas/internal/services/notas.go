@@ -8,8 +8,6 @@ import (
 
 	"cuentas/internal/codigos"
 	"cuentas/internal/database"
-	"cuentas/internal/dte"
-	"cuentas/internal/hacienda"
 	"cuentas/internal/models"
 
 	"github.com/google/uuid"
@@ -22,13 +20,10 @@ const (
 )
 
 type NotaService struct {
-	dteService *dte.DTEService
 }
 
-func NewNotaService(dteService *dte.DTEService) *NotaService {
-	return &NotaService{
-		dteService: dteService,
-	}
+func NewNotaService() *NotaService {
+	return &NotaService{}
 }
 
 // CreateNotaDebito creates a new Nota de Débito
@@ -129,35 +124,21 @@ func (s *NotaService) FinalizeNotaDebito(
 		fmt.Printf("   Generated Numero Control: %s\n", numeroControl)
 	}
 
-	// Step 4: Process with DTE service (build, sign, submit)
-	fmt.Println("\n📤 Submitting to Hacienda...")
-	response, err := s.dteService.ProcessNotaDebito(ctx, nota)
-	if err != nil {
-		// Update status to 'rejected' if Hacienda rejected it
-		if response != nil && response.Estado != "PROCESADO" {
-			_ = s.updateNotaStatus(ctx, notaID, "rejected")
-		}
-		return nil, fmt.Errorf("failed to process nota with Hacienda: %w", err)
-	}
-
-	// Step 5: Update nota status to finalized
+	// Step 4: Update nota status to finalized
 	now := time.Now()
-	err = s.finalizeNotaInDB(ctx, notaID, now, response)
+	err = s.updateNotaStatusToFinalized(ctx, notaID, now)
 	if err != nil {
 		return nil, fmt.Errorf("failed to finalize nota in database: %w", err)
 	}
 
-	// Step 6: Reload nota with updated data
+	// Step 5: Reload nota with updated data
 	nota, err = s.getNotaDebito(ctx, notaID, companyID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to reload nota: %w", err)
 	}
 
-	fmt.Printf("\n✅ Nota de Débito finalized successfully!\n")
+	fmt.Printf("\n✅ Nota de Débito finalized (ready for DTE submission)!\n")
 	fmt.Printf("   Status: %s\n", nota.Status)
-	if nota.DteSelloRecibido != nil {
-		fmt.Printf("   Sello Recibido: %s\n", *nota.DteSelloRecibido)
-	}
 
 	return nota, nil
 }
@@ -876,17 +857,16 @@ func (s *NotaService) updateNotaStatus(ctx context.Context, notaID, status strin
 	return err
 }
 
-// finalizeNotaInDB updates the nota to finalized status with DTE info
-func (s *NotaService) finalizeNotaInDB(ctx context.Context, notaID string, finalizedAt time.Time, response *hacienda.ReceptionResponse) error {
+// updateNotaStatusToFinalized updates the nota to finalized status
+func (s *NotaService) updateNotaStatusToFinalized(ctx context.Context, notaID string, finalizedAt time.Time) error {
 	query := `
 		UPDATE notas_debito
 		SET 
 			status = 'finalized',
-			finalized_at = $1,
-			dte_submitted_at = $2
-		WHERE id = $3
+			finalized_at = $1
+		WHERE id = $2
 	`
 
-	_, err := database.DB.ExecContext(ctx, query, finalizedAt, finalizedAt, notaID)
+	_, err := database.DB.ExecContext(ctx, query, finalizedAt, notaID)
 	return err
 }
