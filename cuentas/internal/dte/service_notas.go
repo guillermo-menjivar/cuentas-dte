@@ -4,7 +4,6 @@ package dte
 
 import (
 	"context"
-	"cuentas/internal/codigos"
 	"cuentas/internal/hacienda"
 	"cuentas/internal/models"
 	"encoding/json"
@@ -73,8 +72,8 @@ func (s *DTEService) ProcessNotaDebito(ctx context.Context, nota *models.NotaDeb
 	response, err := s.hacienda.SubmitDTE(
 		ctx,
 		authResponse.Body.Token,
-		codigos.MODE_PRUEBA, // ambiente - get from company
-		codigos.DocTypeNotaDebito,
+		"00", // ambiente - get from company
+		"06", // tipo DTE - Nota de Débito
 		strings.ToUpper(nota.ID),
 		signedDTE,
 	)
@@ -206,7 +205,7 @@ func (s *DTEService) logNotaToCommitLog(ctx context.Context, nota *models.NotaDe
 
 	query := `
 		INSERT INTO dte_commit_log (
-			codigo_generacion, document_id, document_type, company_id, 
+			codigo_generacion, invoice_id, company_id, 
 			establishment_id, point_of_sale_id,
 			subtotal, total_discount, total_taxes, iva_amount, total_amount, currency,
 			payment_method, payment_terms,
@@ -217,8 +216,8 @@ func (s *DTEService) logNotaToCommitLog(ctx context.Context, nota *models.NotaDe
 			hacienda_codigo_msg, hacienda_descripcion_msg, hacienda_observaciones,
 			hacienda_response_full, created_by, created_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-			$21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31
+			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
+			$20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30
 		)
 	`
 
