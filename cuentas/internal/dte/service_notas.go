@@ -4,6 +4,7 @@ package dte
 
 import (
 	"context"
+	"cuentas/internal/codigos"
 	"cuentas/internal/hacienda"
 	"cuentas/internal/models"
 	"encoding/json"
@@ -119,7 +120,7 @@ func (s *DTEService) ProcessNotaDebito(ctx context.Context, nota *models.NotaDeb
 	}
 
 	// Step 8: Log to commit log
-	err = s.logNotaToCommitLog(ctx, nota, dteJSON, signedDTE, response)
+	err = s.logNotaToCommitLog(ctx, nota, dteJSON, codigos.DocTypeNotaDebito, codigos.MODE_PRUEBA, signedDTE, response)
 	if err != nil {
 		fmt.Printf("⚠️  Warning: failed to log to commit log: %v\n", err)
 	} else {
@@ -168,8 +169,15 @@ func (s *DTEService) saveNotaHaciendaResponse(ctx context.Context, notaID string
 	return err
 }
 
-// logNotaToCommitLog creates an immutable audit record of the nota DTE submission
-func (s *DTEService) logNotaToCommitLog(ctx context.Context, nota *models.NotaDebito, dteUnsigned []byte, dteSigned string, response *hacienda.ReceptionResponse) error {
+func (s *DTEService) logNotaToCommitLog(
+	ctx context.Context,
+	nota *models.NotaDebito,
+	tipoDte string,
+	ambiente string,
+	dteUnsigned []byte,
+	dteSigned string,
+	response *hacienda.ReceptionResponse,
+) error {
 	// Parse processing date
 	var fechaProcesamiento *time.Time
 	if response != nil && response.FhProcesamiento != "" {
@@ -192,7 +200,8 @@ func (s *DTEService) logNotaToCommitLog(ctx context.Context, nota *models.NotaDe
 
 	// Build DTE URL
 	dteURL := fmt.Sprintf(
-		"https://admin.factura.gob.sv/consultaPublica?ambiente=00&codGen=%s&fechaEmi=%s",
+		"https://admin.factura.gob.sv/consultaPublica?ambiente=%s&codGen=%s&fechaEmi=%s",
+		ambiente,
 		nota.ID,
 		fechaEmision.Format("2006-01-02"),
 	)
@@ -217,7 +226,7 @@ func (s *DTEService) logNotaToCommitLog(ctx context.Context, nota *models.NotaDe
 			hacienda_response_full, created_by, created_at
 		) VALUES (
 			$1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19,
-			$20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30
+			$20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31
 		)
 	`
 
@@ -239,38 +248,37 @@ func (s *DTEService) logNotaToCommitLog(ctx context.Context, nota *models.NotaDe
 	}
 
 	_, err = s.db.ExecContext(ctx, query,
-		nota.ID,                 // codigo_generacion
-		nota.ID,                 // document_id
-		"nota_debito",           // document_type
-		nota.CompanyID,          // company_id
-		nota.EstablishmentID,    // establishment_id
-		nota.PointOfSaleID,      // point_of_sale_id
-		nota.Subtotal,           // subtotal
-		nota.TotalDiscount,      // total_discount
-		nota.TotalTaxes,         // total_taxes
-		nota.TotalTaxes,         // iva_amount (same as total_taxes for now)
-		nota.Total,              // total_amount
-		nota.Currency,           // currency
-		nota.PaymentMethod,      // payment_method
-		nota.PaymentTerms,       // payment_terms
-		nota.DteNumeroControl,   // numero_control
-		"06",                    // tipo_dte
-		"00",                    // ambiente (get from company in production)
-		fechaEmision,            // fecha_emision
-		fiscalYear,              // fiscal_year
-		fiscalMonth,             // fiscal_month
-		dteURL,                  // dte_url
-		dteUnsigned,             // dte_unsigned
-		dteSigned,               // dte_signed
-		estado,                  // hacienda_estado
-		selloRecibido,           // hacienda_sello_recibido
-		fechaProcesamiento,      // hacienda_fh_procesamiento
-		codigoMsg,               // hacienda_codigo_msg
-		descripcionMsg,          // hacienda_descripcion_msg
-		pq.Array(observaciones), // hacienda_observaciones
-		haciendaResponseFull,    // hacienda_response_full
-		nota.CreatedBy,          // created_by
-		time.Now(),              // created_at
+		nota.ID,                 // $1 - codigo_generacion
+		nota.ID,                 // $2 - invoice_id
+		nota.CompanyID,          // $3 - company_id
+		nota.EstablishmentID,    // $4 - establishment_id
+		nota.PointOfSaleID,      // $5 - point_of_sale_id
+		nota.Subtotal,           // $6 - subtotal
+		nota.TotalDiscount,      // $7 - total_discount
+		nota.TotalTaxes,         // $8 - total_taxes
+		nota.TotalTaxes,         // $9 - iva_amount
+		nota.Total,              // $10 - total_amount
+		nota.Currency,           // $11 - currency
+		nota.PaymentMethod,      // $12 - payment_method
+		nota.PaymentTerms,       // $13 - payment_terms
+		nota.DteNumeroControl,   // $14 - numero_control
+		tipoDte,                 // $15 - tipo_dte
+		ambiente,                // $16 - ambiente
+		fechaEmision,            // $17 - fecha_emision
+		fiscalYear,              // $18 - fiscal_year
+		fiscalMonth,             // $19 - fiscal_month
+		dteURL,                  // $20 - dte_url
+		dteUnsigned,             // $21 - dte_unsigned
+		dteSigned,               // $22 - dte_signed
+		estado,                  // $23 - hacienda_estado
+		selloRecibido,           // $24 - hacienda_sello_recibido
+		fechaProcesamiento,      // $25 - hacienda_fh_procesamiento
+		codigoMsg,               // $26 - hacienda_codigo_msg
+		descripcionMsg,          // $27 - hacienda_descripcion_msg
+		pq.Array(observaciones), // $28 - hacienda_observaciones
+		haciendaResponseFull,    // $29 - hacienda_response_full
+		nota.CreatedBy,          // $30 - created_by
+		time.Now(),              // $31 - created_at
 	)
 
 	return err
