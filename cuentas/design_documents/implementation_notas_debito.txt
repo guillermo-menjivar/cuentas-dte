@@ -1,0 +1,286 @@
+Nota de Débito - Complete System Documentation
+Overview
+The Nota de Débito system allows businesses to increase the price of previously issued CCF (Comprobante de Crédito Fiscal) invoices. This is an official DTE (Documento Tributario Electrónico) recognized by El Salvador's Ministerio de Hacienda.
+
+System Architecture
+1. Database Layer
+Main Tables
+notas_debito - Core nota de débito records
+sql- id (UUID, PK)
+- company_id, establishment_id, point_of_sale_id
+- nota_number (e.g., "ND-00000001")
+- nota_type ("06" - always for nota de débito)
+- client_id, client_name, client_legal_name
+- Financial: subtotal, total_discount, total_taxes, total
+- DTE tracking: dte_numero_control, dte_codigo_generacion, dte_sello_recibido
+- Status: draft → finalized → voided
+- Timestamps: created_at, finalized_at, voided_at
+notas_debito_line_items - Line item adjustments
+sql- id (UUID, PK)
+- nota_debito_id (FK)
+- line_number
+- related_ccf_id (FK to invoices) - which CCF this adjusts
+- ccf_line_item_id (FK to invoice_line_items) - specific line being adjusted
+- Original item snapshot: sku, name, unit_price, quantity
+- adjustment_amount (per-unit price increase)
+- Calculated: line_subtotal, taxable_amount, total_taxes, line_total
+notas_debito_ccf_references - CCF linkage
+sql- id (UUID, PK)
+- nota_debito_id (FK)
+- ccf_id (FK to invoices)
+- ccf_number, ccf_date
+dte_commit_log - Immutable audit trail
+sql- id (UUID, PK) - Internal primary key
+- codigo_generacion (not unique) - One nota can reference multiple CCFs
+- invoice_id (FK) - Specific CCF being adjusted
+- Complete financial snapshot + Hacienda response
+- ONE ENTRY PER CCF (critical for accounting)
+
+2. API Endpoints
+POST /v1/notas/debito - Create Draft
+Request:
+json{
+  "ccf_ids": ["uuid-1", "uuid-2"],
+  "line_items": [
+    {
+      "related_ccf_id": "uuid-1",
+      "ccf_line_item_id": "line-uuid",
+      "adjustment_amount": 2.50,
+      "adjustment_reason": "Price correction"
+    }
+  ],
+  "payment_terms": "net_30",
+  "notes": "Optional notes"
+}
+Validation Process:
+
+Verify all CCFs exist and are finalized
+Verify all CCFs belong to same client
+Verify each line item exists in referenced CCF
+Validate adjustment_amount > 0
+Calculate totals using CCF calculator
+
+Response:
+json{
+  "nota": {
+    "id": "uuid",
+    "nota_number": "ND-00000005",
+    "status": "draft",
+    "total": 14.13,
+    "line_items": [...],
+    "ccf_references": [...]
+  }
+}
+GET /v1/notas/debito/:id - Retrieve Nota
+Returns complete nota with line items and CCF references.
+POST /v1/notas/debito/:id/finalize - Finalize & Submit to Hacienda
+Process:
+
+Validate nota is in draft status
+Generate DTE numero_control (format: DTE-06-M009P019-000000000000001)
+Build DTE using NotaDebitoDTE structs
+Sign DTE via Firmador service
+Authenticate with Hacienda
+Submit signed DTE to Hacienda
+Save Hacienda response
+Create commit log entries (one per CCF)
+Update nota status to finalized
+
+
+3. DTE Builder (internal/dte)
+Special Nota de Débito Structs
+Different from regular invoice DTEs due to Hacienda schema restrictions:
+NotaDebitoDTE - Root structure
+
+No otrosDocumentos
+
+NotaDebitoEmisor - Emisor without establishment codes
+
+Excludes: codEstable, codPuntoVenta, codEstableMH, codPuntoVentaMH
+
+NotaDebitoCuerpoDocumentoItem - Line items
+
+Excludes: noGravado, psv
+Requires: numeroDocumento (CCF invoice number)
+
+NotaDebitoResumen - Financial summary
+
+Excludes: pagos, porcentajeDescuento, saldoFavor, totalNoGravado, totalPagar
+Includes: tributos array with IVA breakdown
+
+NotaDebitoExtension - Extension
+
+Excludes: placaVehiculo
+
+Builder Methods
+BuildNotaDebito() - Main builder
+gofunc (b *Builder) BuildNotaDebito(ctx, nota) ([]byte, error)
+
+Loads company, establishment, client data
+Builds all DTE sections
+Assembles NotaDebitoDTE
+Marshals to JSON
+
+buildNotaDebitoIdentificacion()
+
+Version: 3 (not 1 or 2!)
+TipoDte: "06"
+CodigoGeneracion: UPPERCASE UUID
+
+buildNotaDebitoEmisor()
+
+Uses establishment data for address
+No establishment codes
+
+buildNotaDebitoCuerpoDocumento()
+
+Uses CalculateCreditoFiscal() calculator
+Sets numeroDocumento to CCF invoice number
+Includes tributos: ["20"] for IVA
+
+buildNotaDebitoResumen()
+
+Uses CalculateResumenCCF() calculator
+Builds tributos array with IVA details
+Omits forbidden fields
+
+buildDocumentosRelacionados()
+
+Lists all referenced CCFs
+TipoDocumento: "03" (CCF)
+TipoGeneracion: 1 (normal process)
+
+
+4. DTE Service (internal/dte/service.go)
+ProcessNotaDebito() - Complete DTE Flow
+gofunc (s *DTEService) ProcessNotaDebito(ctx, nota) (*ReceptionResponse, error)
+Steps:
+
+Build DTE → BuildNotaDebito()
+Sign → Firmador service with company credentials
+Authenticate → Get Hacienda token
+Submit → hacienda.SubmitDTE() with:
+
+Version: 3 (in submission wrapper)
+TipoDte: "06"
+Ambiente: "00" (test) or "01" (production)
+
+
+Save Response → saveNotaHaciendaResponse()
+Log to Commit → logNotaToCommitLog()
+
+saveNotaHaciendaResponse()
+Updates notas_debito table with:
+
+dte_codigo_generacion
+dte_sello_recibido
+dte_status
+dte_hacienda_response
+dte_submitted_at
+
+logNotaToCommitLog() - Critical Accounting Trail
+Creates ONE entry PER CCF (not one entry total!)
+gofor _, ccfRef := range nota.CCFReferences {
+    // Insert to dte_commit_log
+    // codigo_generacion: SAME for all (nota.ID)
+    // invoice_id: DIFFERENT for each (ccfRef.CCFId)
+}
+Why per-CCF entries?
+
+Accounting system requirement
+Each CCF adjustment must be individually tracked
+Enables proper financial reporting
+Maintains referential integrity
+
+
+5. Hacienda Client (internal/hacienda)
+Version Mapping in Submission Wrapper
+goswitch tipoDte {
+case "03": // CCF
+    version = 3
+case "06": // Nota de Débito
+    version = 3
+case "05": // Nota de Crédito
+    version = 3
+default: // Factura, etc.
+    version = 1
+}
+Critical: The DTE document has its own version (in identificacion), but the submission wrapper also has a version that must match the document type!
+
+6. Request Handlers (internal/handlers/notas.go)
+CreateNotaDebito
+
+Parse request
+Validate request structure
+Load and validate CCFs
+Validate line item references
+Calculate totals
+Create nota record
+Insert line items
+Insert CCF references
+Commit transaction
+
+FinalizeNotaDebito
+
+Load nota
+Verify status = "draft"
+Generate numero_control
+Update status to "finalized"
+Call DTEService.ProcessNotaDebito()
+Handle success/failure
+
+
+Key Design Decisions
+1. Why separate DTE structs for Nota de Débito?
+Hacienda has different JSON schemas for each document type. Nota de Débito (tipo "06") excludes many fields that are present in Factura or CCF.
+2. Why loop through CCFs in commit log?
+This is an accounting system, not just a passive log. Each CCF adjustment must be individually tracked for:
+
+Financial reporting
+Audit trails
+Tax compliance
+Client statements
+
+3. Why uppercase codigo_generacion?
+Hacienda's schema requires: ^[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}$
+Only uppercase A-F allowed.
+4. Why version 3 for nota de débito?
+
+DTE document version: 3
+Submission wrapper version: 3
+Both must match for tipo "06" or Hacienda rejects with "Version/Tipo DTE no es valido"
+
+
+Test Flow
+Automated Test Script: test_nota_debito_comprehensive.sh
+
+List finalized invoices
+Filter for CCF (tipo_dte = "03")
+Select first CCF
+Get line items from CCF
+Create nota de débito (draft)
+Automatically finalize (submits to Hacienda)
+Verify success (checks for sello_recibido)
+FAILS if DTE submission fails (exit code 1)
+
+
+Success Criteria
+✅ Nota created in draft status
+✅ DTE generated with correct schema (version 3, tipo "06")
+✅ DTE signed by Firmador
+✅ Submitted to Hacienda with correct wrapper version
+✅ Response: PROCESADO with sello_recibido
+✅ Commit log entries created (one per CCF)
+✅ Nota status updated to finalized
+
+Common Errors & Solutions
+ErrorCauseSolution"Version/Tipo DTE no es valido"Wrong version in wrapper or DTEUse version 3 for both"DOCUMENTO NO CUMPLE ESQUEMA JSON"Invalid fields in DTEUse NotaDebitoDTE structs"Campo X no esta permitido"Field not allowed in tipo "06"Remove from nota structs"codigo_generacion no cumple formato"Lowercase UUIDUse strings.ToUpper()Foreign key constraint violationWrong invoice_idUse CCF ID from references
+
+Future Enhancements
+
+Void nota de débito (issue nota de crédito to reverse)
+Bulk operations (multiple notas at once)
+Partial adjustments (adjust quantity, not just price)
+Email notifications to clients
+PDF generation with Hacienda QR code
+Reporting dashboard (notas by period, client, etc.)
