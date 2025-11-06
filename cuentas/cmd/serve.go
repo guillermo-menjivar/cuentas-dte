@@ -332,8 +332,9 @@ func startServer() {
 			notas.POST("/debito/:id/finalize", notasHandler.FinalizeNotaDebito)
 
 			// Nota de Crédito
-			//notas.POST("/credito", notaHandler.CreateNotaCredito)
-			//notas.POST("/credito/:id/finalize", notaHandler.FinalizeNotaCredito)
+			notas.POST("/credito", notasHandler.CreateNotaCredito)
+			notas.GET("/credito/:id", notasHandler.GetNotaCredito)
+			notas.POST("/credito/:id/finalize", notasHandler.FinalizeNotaCredito)
 
 			// Common operations
 			//notas.GET("/:id", notaHandler.GetNota)
