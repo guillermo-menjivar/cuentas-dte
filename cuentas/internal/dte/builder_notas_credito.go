@@ -2,169 +2,249 @@ package dte
 
 import (
 	"context"
-	"cuentas/internal/codigos"
-	"cuentas/internal/models"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
+
+	"cuentas/internal/codigos"
+	"cuentas/internal/models"
 )
 
-// BuildNotaCredito builds DTE for nota de crédito (tipo 05)
-// ⭐ REUSES NotaDebitoDTE structs - only changes tipoDte!
 func (b *Builder) BuildNotaCredito(ctx context.Context, nota *models.NotaCredito) ([]byte, error) {
-	// Load company, establishment, client (SAME as débito)
-	company, err := b.getCompany(ctx, nota.CompanyID)
+	// Load required data
+	company, err := b.loadCompany(ctx, nota.CompanyID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("load company: %w", err)
 	}
 
-	establishment, err := b.getEstablishment(ctx, nota.EstablishmentID)
+	establishment, err := b.loadEstablishmentAndPOS(ctx, nota.EstablishmentID, nota.PointOfSaleID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("load establishment: %w", err)
 	}
 
-	client, err := b.getClient(ctx, nota.ClientID)
+	client, err := b.loadClient(ctx, nota.ClientID)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("load client: %w", err)
 	}
 
 	// Build DTE sections
-	identificacion := b.buildNotaCreditoIdentificacion(nota)
+	identificacion := b.buildNotaCreditoIdentificacion(nota, company)
 	emisor := b.buildNotaCreditoEmisor(company, establishment)
 	receptor := b.buildNotaCreditoReceptor(client)
-	cuerpoDocumento := b.buildNotaCreditoCuerpoDocumento(nota)
-	resumen := b.buildNotaCreditoResumen(nota)
-	extension := b.buildNotaCreditoExtension(nota)
 	documentosRelacionados := b.buildNotaCreditoDocumentosRelacionados(nota)
+	cuerpoDocumento, itemAmounts := b.buildNotaCreditoCuerpoDocumento(nota)
+	resumen := b.buildNotaCreditoResumen(nota, itemAmounts)
+	extension := b.buildNotaCreditoExtension(nota)
 
-	// Assemble DTE using NotaDebitoDTE struct
-	dte := NotaDebitoDTE{
+	// Assemble the NotaDebitoDTE (SAME STRUCT as Nota de Débito!)
+	// Tipo "05" uses the EXACT SAME structure as tipo "06"
+	dte := &NotaDebitoDTE{
 		Identificacion:       identificacion,
+		DocumentoRelacionado: documentosRelacionados,
 		Emisor:               emisor,
 		Receptor:             receptor,
+		VentaTercero:         nil,
 		CuerpoDocumento:      cuerpoDocumento,
 		Resumen:              resumen,
 		Extension:            extension,
-		DocumentoRelacionado: documentosRelacionados,
 		Apendice:             nil,
 	}
 
 	// Marshal to JSON
-	dteJSON, err := json.Marshal(dte)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal DTE: %w", err)
-	}
-
-	return dteJSON, nil
+	return json.Marshal(dte)
 }
 
-func (b *Builder) buildNotaCreditoIdentificacion(nota *models.NotaCredito) NotaDebitoIdentificacion {
-	var fechaEmision string
-	if nota.FinalizedAt != nil {
-		fechaEmision = nota.FinalizedAt.Format("2006-01-02")
-	} else {
-		fechaEmision = time.Now().Format("2006-01-02")
+// buildNotaCreditoIdentificacion builds the Identificacion section for Nota de Crédito
+func (b *Builder) buildNotaCreditoIdentificacion(nota *models.NotaCredito, company *CompanyData) Identificacion {
+	loc, err := time.LoadLocation("America/El_Salvador")
+	if err != nil {
+		loc = time.FixedZone("CST", -6*3600)
 	}
 
-	return NotaDebitoIdentificacion{
-		Version:          3,                   // Version 3 for tipo 05
-		Ambiente:         codigos.MODE_PRUEBA, // "00" or "01"
-		TipoDte:          "05",                // ⭐ NOTA DE CRÉDITO
-		NumeroControl:    nota.DteNumeroControl,
-		CodigoGeneracion: strings.ToUpper(nota.ID), // UPPERCASE UUID
+	var emissionTime time.Time
+	if nota.FinalizedAt != nil {
+		emissionTime = nota.FinalizedAt.In(loc)
+	} else {
+		emissionTime = time.Now().In(loc)
+	}
+
+	return Identificacion{
+		Version:          3,
+		Ambiente:         company.DTEAmbiente,
+		TipoDte:          codigos.DocTypeNotaCredito, // "05"
+		NumeroControl:    strings.ToUpper(*nota.DteNumeroControl),
+		CodigoGeneracion: strings.ToUpper(nota.ID),
 		TipoModelo:       1,
 		TipoOperacion:    1,
 		TipoContingencia: nil,
 		MotivoContin:     nil,
-		FechaEmision:     fechaEmision,
-		HoraEmision:      time.Now().Format("15:04:05"),
+		FecEmi:           emissionTime.Format("2006-01-02"),
+		HorEmi:           emissionTime.Format("15:04:05"),
 		TipoMoneda:       "USD",
 	}
 }
 
-func (b *Builder) buildNotaCreditoEmisor(company, establishment) NotaDebitoEmisor {
-	// SAME as nota débito - NO establishment codes
+// buildNotaCreditoEmisor - without establishment codes (same as débito)
+func (b *Builder) buildNotaCreditoEmisor(company *CompanyData, establishment *EstablishmentData) NotaDebitoEmisor {
 	return NotaDebitoEmisor{
-		Nit:    company.Nit,
-		Nrc:    company.Nrc,
-		Nombre: company.LegalName,
-		// ... rest of fields
+		NIT:                 company.NIT,
+		NRC:                 fmt.Sprintf("%d", company.NCR),
+		Nombre:              company.Name,
+		CodActividad:        company.CodActividad,
+		DescActividad:       company.DescActividad,
+		NombreComercial:     &company.NombreComercial,
+		TipoEstablecimiento: establishment.TipoEstablecimiento,
+		Direccion:           b.buildEmisorDireccion(establishment),
+		Telefono:            &establishment.Telefono,
+		Correo:              company.Email,
 	}
 }
 
-func (b *Builder) buildNotaCreditoReceptor(client) NotaDebitoReceptor {
-	// SAME as nota débito
-	return NotaDebitoReceptor{
-		TipoDocumento: client.TipoDocumento,
-		NumDocumento:  client.NumDocumento,
-		Nombre:        client.Name,
-		// ... rest of fields
+// buildNotaCreditoReceptor builds receptor based on client tipo persona (same as débito)
+func (b *Builder) buildNotaCreditoReceptor(client *ClientData) *Receptor {
+	if client.TipoPersona == codigos.PersonTypeJuridica {
+		return b.buildCCFReceptor(client)
+	}
+
+	// For natural persons
+	var tipoDocumento *string
+	var numDocumento *string
+	var nrc *string
+
+	if client.NIT != nil {
+		td := DocTypeNIT
+		tipoDocumento = &td
+		nitStr := fmt.Sprintf("%014d", *client.NIT)
+		numDocumento = &nitStr
+		if client.NCR != nil {
+			ncrStr := fmt.Sprintf("%d", *client.NCR)
+			nrc = &ncrStr
+		}
+	} else if client.DUI != nil {
+		td := DocTypeDUI
+		tipoDocumento = &td
+		duiStr := fmt.Sprintf("%08d-%d", *client.DUI/10, *client.DUI%10)
+		numDocumento = &duiStr
+	}
+
+	var direccion *Direccion
+	if client.DepartmentCode != "" && client.MunicipalityCode != "" {
+		dir := b.buildReceptorDireccion(client)
+		direccion = &dir
+	}
+
+	return &Receptor{
+		TipoDocumento: tipoDocumento,
+		NumDocumento:  numDocumento,
+		NRC:           nrc,
+		Nombre:        client.BusinessName,
+		Direccion:     direccion,
 	}
 }
 
-func (b *Builder) buildNotaCreditoCuerpoDocumento(nota *models.NotaCredito) []NotaDebitoCuerpoDocumentoItem {
-	items := make([]NotaDebitoCuerpoDocumentoItem, 0, len(nota.LineItems))
+// buildNotaCreditoDocumentosRelacionados builds array of referenced CCF documents
+func (b *Builder) buildNotaCreditoDocumentosRelacionados(nota *models.NotaCredito) *[]DocumentoRelacionado {
+	if len(nota.CCFReferences) == 0 {
+		return nil
+	}
 
-	for _, lineItem := range nota.LineItems {
-		// Use CalculateCreditoFiscal calculator (SAME as débito!)
-		calc := CalculateCreditoFiscal(
-			lineItem.QuantityCredited,
+	docs := make([]DocumentoRelacionado, len(nota.CCFReferences))
+
+	for i, ref := range nota.CCFReferences {
+		docs[i] = DocumentoRelacionado{
+			TipoDocumento:   codigos.DocTypeComprobanteCredito, // CCF
+			TipoGeneracion:  1,                                 // Proceso normal
+			NumeroDocumento: ref.CCFNumber,
+			FechaEmision:    ref.CCFDate.Format("2006-01-02"),
+		}
+	}
+
+	return &docs
+}
+
+// buildNotaCreditoCuerpoDocumento - builds line items for credit note
+func (b *Builder) buildNotaCreditoCuerpoDocumento(nota *models.NotaCredito) ([]NotaDebitoCuerpoDocumentoItem, []ItemAmounts) {
+	items := make([]NotaDebitoCuerpoDocumentoItem, len(nota.LineItems))
+	amounts := make([]ItemAmounts, len(nota.LineItems))
+
+	for i, lineItem := range nota.LineItems {
+		// Calculate amounts for this credit
+		// Uses SAME calculator as débito - ensures consistency!
+		itemAmount := b.calculator.CalculateCreditoFiscal(
 			lineItem.CreditAmount,
-			0, // no discount
+			lineItem.QuantityCredited,
+			0, // No discount on notas typically
 		)
 
-		item := NotaDebitoCuerpoDocumentoItem{
-			NumItem:         lineItem.LineNumber,
-			TipoItem:        1,                          // Producto
-			NumeroDocumento: &lineItem.RelatedCCFNumber, // ⭐ REQUIRED
-			Cantidad:        lineItem.QuantityCredited,
-			Codigo:          &lineItem.OriginalItemSku,
-			Unimedida:       99, // Unidad
-			Descripcion:     lineItem.OriginalItemName,
-			PrecioUni:       lineItem.CreditAmount,
-			MontoDescu:      0,
-			VentaGravada:    calc.VentaGravada,
-			Tributos:        []string{"20"}, // IVA
-			IvaItem:         calc.IvaItem,
+		amounts[i] = itemAmount
+
+		var tributos []string
+		if itemAmount.VentaGravada > 0 {
+			tributos = []string{"20"} // IVA 13%
 		}
 
-		items = append(items, item)
+		items[i] = NotaDebitoCuerpoDocumentoItem{
+			NumItem:         lineItem.LineNumber,
+			TipoItem:        b.parseTipoItem(lineItem.OriginalItemTipoItem),
+			NumeroDocumento: lineItem.RelatedCCFNumber, // Required!
+			Cantidad:        lineItem.QuantityCredited,
+			Codigo:          &lineItem.OriginalItemSku,
+			UniMedida:       b.parseUniMedida(lineItem.OriginalUnitOfMeasure),
+			Descripcion:     lineItem.OriginalItemName,
+			PrecioUni:       itemAmount.PrecioUni,
+			MontoDescu:      0,
+			VentaNoSuj:      0,
+			VentaExenta:     0,
+			VentaGravada:    itemAmount.VentaGravada,
+			Tributos:        tributos,
+		}
 	}
 
-	return items
+	return items, amounts
 }
 
-func (b *Builder) buildNotaCreditoResumen(nota *models.NotaCredito) NotaDebitoResumen {
-	// Use CalculateResumenCCF calculator (SAME as débito!)
-	calc := CalculateResumenCCF(nota.Subtotal, nota.TotalDiscount)
+// buildNotaCreditoResumen - without forbidden fields (same as débito)
+func (b *Builder) buildNotaCreditoResumen(nota *models.NotaCredito, itemAmounts []ItemAmounts) NotaDebitoResumen {
+	// Use CCF calculator for resumen
+	resumenAmounts := b.calculator.CalculateResumenCCF(itemAmounts)
 
-	tributos := []NotaDebitoTributo{
-		{
-			Codigo:      "20",
-			Descripcion: "Impuesto al Valor Agregado 13%",
-			Valor:       nota.TotalTaxes,
-		},
-	}
-
-	return NotaDebitoResumen{
-		TotalGravada:        calc.TotalGravada,
-		TotalDescu:          nota.TotalDiscount,
-		SubTotal:            calc.SubTotal,
-		IvaRete1:            0,
-		ReteRenta:           0,
-		MontoTotalOperacion: nota.Total,
+	resumen := NotaDebitoResumen{
 		TotalNoSuj:          0,
 		TotalExenta:         0,
-		TotalLetras:         numeroALetras(nota.Total),
-		CondicionOperacion:  getCondicionOperacion(nota.PaymentTerms),
+		TotalGravada:        resumenAmounts.TotalGravada,
+		SubTotalVentas:      resumenAmounts.SubTotalVentas,
+		DescuNoSuj:          0,
+		DescuExenta:         0,
+		DescuGravada:        resumenAmounts.DescuGravada,
+		TotalDescu:          resumenAmounts.TotalDescu,
+		SubTotal:            resumenAmounts.SubTotal,
+		IvaPerci1:           0,
+		IvaRete1:            0,
+		ReteRenta:           0,
+		MontoTotalOperacion: resumenAmounts.MontoTotalOperacion,
+		TotalLetras:         b.numberToWords(resumenAmounts.MontoTotalOperacion),
+		CondicionOperacion:  b.parseCondicionOperacion(nota.PaymentTerms),
 		NumPagoElectronico:  nil,
-		Tributos:            tributos,
 	}
+
+	// Add tributos for IVA
+	if resumenAmounts.TotalIva > 0 {
+		tributos := []Tributo{
+			{
+				Codigo:      "20",
+				Descripcion: "Impuesto al Valor Agregado 13",
+				Valor:       resumenAmounts.TotalIva,
+			},
+		}
+		resumen.Tributos = &tributos
+	}
+
+	return resumen
 }
 
+// buildNotaCreditoExtension - without placaVehiculo (same as débito)
 func (b *Builder) buildNotaCreditoExtension(nota *models.NotaCredito) *NotaDebitoExtension {
-	// SAME as nota débito
 	return &NotaDebitoExtension{
 		NombEntrega:   nil,
 		DocuEntrega:   nil,
@@ -172,20 +252,4 @@ func (b *Builder) buildNotaCreditoExtension(nota *models.NotaCredito) *NotaDebit
 		DocuRecibe:    nil,
 		Observaciones: nota.Notes,
 	}
-}
-
-func (b *Builder) buildNotaCreditoDocumentosRelacionados(nota *models.NotaCredito) []NotaDebitoDocumentoRelacionado {
-	docs := make([]NotaDebitoDocumentoRelacionado, 0, len(nota.CCFReferences))
-
-	for _, ref := range nota.CCFReferences {
-		doc := NotaDebitoDocumentoRelacionado{
-			TipoDocumento:   "03", // CCF
-			TipoGeneracion:  1,    // Normal process
-			NumeroDocumento: ref.CCFNumber,
-			FechaEmision:    ref.CCFDate.Format("2006-01-02"),
-		}
-		docs = append(docs, doc)
-	}
-
-	return docs
 }
