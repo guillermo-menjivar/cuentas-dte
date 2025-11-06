@@ -321,7 +321,8 @@ func startServer() {
 		// notas
 
 		notaService := services.NewNotaService()
-		notasHandler := handlers.NewNotaHandler(notaService, invoiceService)
+		notaCreditoService := services.NewNotaCreditoService()
+		notasHandler := handlers.NewNotaHandler(notaService, notaCreditoService, invoiceService)
 
 		notas := v1.Group("/notas")
 		{
