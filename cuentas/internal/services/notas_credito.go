@@ -205,14 +205,6 @@ func (s *NotaCreditoService) validateAndFetchCCFs(
 			)
 		}
 
-		// Validate CCF has been accepted by Hacienda
-		if invoice.DteSelloRecibido == nil || *invoice.DteSelloRecibido == "" {
-			return nil, fmt.Errorf(
-				"CCF %s has not been accepted by Hacienda (no sello recibido)",
-				ccfID,
-			)
-		}
-
 		// Validate CCF is not voided
 		if invoice.VoidedAt != nil {
 			return nil, fmt.Errorf(
