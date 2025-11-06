@@ -4,6 +4,18 @@ import (
 	"time"
 )
 
+const (
+	CreditReasonVoid         = "void"         // Full cancellation
+	CreditReasonReturn       = "return"       // Goods returned
+	CreditReasonDiscount     = "discount"     // Price reduction
+	CreditReasonDefect       = "defect"       // Defective product
+	CreditReasonOverbilling  = "overbilling"  // Billed too much
+	CreditReasonCorrection   = "correction"   // General correction
+	CreditReasonQuality      = "quality"      // Quality issue
+	CreditReasonCancellation = "cancellation" // Order cancelled
+	CreditReasonOther        = "other"        // Other reason
+)
+
 // NotaCredito represents a credit note (tipo DTE 05)
 type NotaCredito struct {
 	ID              string `json:"id" db:"id"`
