@@ -12,18 +12,21 @@ import (
 )
 
 type NotaHandler struct {
-	notaService    *services.NotaService
-	invoiceService *services.InvoiceService
+	notaService        *services.NotaService
+	notaCreditoService *services.NotaCreditoService
+	invoiceService     *services.InvoiceService
 }
 
 // NewNotaHandler creates a new nota handler
 func NewNotaHandler(
 	notaService *services.NotaService,
+	notaCreditoService *services.NotaCreditoService,
 	invoiceService *services.InvoiceService,
 ) *NotaHandler {
 	return &NotaHandler{
-		notaService:    notaService,
-		invoiceService: invoiceService,
+		notaService:        notaService,
+		notaCreditoService: notaCreditoService,
+		invoiceService:     invoiceService,
 	}
 }
 
