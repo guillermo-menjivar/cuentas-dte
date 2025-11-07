@@ -183,6 +183,14 @@ seed-invoices:
 		--count 30
 	@echo ""
 
+.PHONY: test_export_invoices
+test_export_invoices:
+	@echo "Test export invoices"
+	@./test_export_invoices.py $(COMPANY_ID) \
+	--start-date $(START_DATE) \
+	--end-date $(END_DATE) \
+	--count 5
+
 test_dte_reconciliation:
 	@echo "Running reconciliation"
 	@./test_dte_reconciliation.py $(COMPANY_ID)
