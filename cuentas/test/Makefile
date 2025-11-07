@@ -68,7 +68,7 @@ check-company:
 		exit 1; \
 	fi
 
-.PHONY: help clean seed test reports all seed-only reports-only init show-company check-company seed-invoices test_notas_debito
+.PHONY: help clean seed test reports all seed-only reports-only init show-company check-company seed-invoices test_notas_debito test_notas_credito
 
 # Default target
 help:
@@ -192,3 +192,7 @@ reports-only: reports
 test_notas_debito:
 	@echo "Testing notas de debito"
 	./test_notas_debito.sh $(COMPANY_ID)
+
+test_notas_credito:
+	@echo "Testing notas de credito"
+	./test_notas_credito.sh $(COMPANY_ID)
