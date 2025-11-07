@@ -17,7 +17,7 @@ class ExportInvoiceSeeder:
     def __init__(self, base_url: str, company_id: str):
         self.base_url = base_url.rstrip("/")
         self.company_id = company_id
-        self.headers = {"X-Company-ID": company_id, "Content-Type": application/json"}
+        self.headers = {"X-Company-ID": company_id, "Content-Type": "application/json"}
         self.invoices_created = 0
         self.invoices_finalized = 0
         self.errors = 0
@@ -150,24 +150,30 @@ class ExportInvoiceSeeder:
 
         # Generate company name based on country
         if "Estados Unidos" in nombre_pais:
-            company_name = random.choice([
-                "ABC International Trading Corp",
-                "Global Imports LLC",
-                "Pacific Trade Company",
-                "American Export Partners",
-            ])
+            company_name = random.choice(
+                [
+                    "ABC International Trading Corp",
+                    "Global Imports LLC",
+                    "Pacific Trade Company",
+                    "American Export Partners",
+                ]
+            )
         elif "China" in nombre_pais:
-            company_name = random.choice([
-                "Shanghai Trading Co Ltd",
-                "Guangzhou Import Export",
-                "Beijing Commercial Group",
-            ])
+            company_name = random.choice(
+                [
+                    "Shanghai Trading Co Ltd",
+                    "Guangzhou Import Export",
+                    "Beijing Commercial Group",
+                ]
+            )
         elif nombre_pais in ["Guatemala", "Honduras", "Nicaragua", "Costa Rica"]:
-            company_name = random.choice([
-                f"Distribuidora {nombre_pais} SA",
-                f"Importaciones {nombre_pais} Ltda",
-                f"Comercial {nombre_pais} Corp",
-            ])
+            company_name = random.choice(
+                [
+                    f"Distribuidora {nombre_pais} SA",
+                    f"Importaciones {nombre_pais} Ltda",
+                    f"Comercial {nombre_pais} Corp",
+                ]
+            )
         else:
             company_name = f"International Trading #{invoice_num}"
 
@@ -199,12 +205,16 @@ class ExportInvoiceSeeder:
             if doc_template["cod_doc_asociado"] == 4:
                 doc["placa_trans"] = f"P-{random.randint(100000, 999999)}"
                 doc["modo_transp"] = random.choice([1, 2, 3, 4, 5, 6, 7])
-                doc["num_conductor"] = f"DUI-{random.randint(10000000, 99999999)}-{random.randint(0, 9)}"
-                doc["nombre_conductor"] = random.choice([
-                    "Juan Carlos Pérez Martínez",
-                    "María Elena González López",
-                    "Roberto Antonio Hernández",
-                ])
+                doc["num_conductor"] = (
+                    f"DUI-{random.randint(10000000, 99999999)}-{random.randint(0, 9)}"
+                )
+                doc["nombre_conductor"] = random.choice(
+                    [
+                        "Juan Carlos Pérez Martínez",
+                        "María Elena González López",
+                        "Roberto Antonio Hernández",
+                    ]
+                )
 
             documents.append(doc)
 
@@ -240,7 +250,8 @@ class ExportInvoiceSeeder:
 
         # Calculate approximate totals for seguro/flete
         estimated_total = sum(
-            item.get("unit_price", 0) * li["quantity"] for item, li in zip(items, line_items)
+            item.get("unit_price", 0) * li["quantity"]
+            for item, li in zip(items, line_items)
         )
         seguro = round(estimated_total * 0.01, 2)  # 1% insurance
         flete = round(estimated_total * 0.02, 2)  # 2% freight
@@ -354,10 +365,12 @@ class ExportInvoiceSeeder:
         for est in establishments:
             pos_list = self.get_points_of_sale(est["id"])
             if pos_list:
-                establishments_with_pos.append({
-                    "establishment": est,
-                    "points_of_sale": pos_list,
-                })
+                establishments_with_pos.append(
+                    {
+                        "establishment": est,
+                        "points_of_sale": pos_list,
+                    }
+                )
 
         if not establishments_with_pos:
             print("❌ No points of sale found.")
