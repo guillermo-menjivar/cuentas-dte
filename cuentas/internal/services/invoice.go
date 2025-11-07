@@ -1047,7 +1047,9 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 
 	// 3. Determine DTE type based on client tipo_persona
 	var tipoDte string
-	if invoice.ClientTipoPersona != nil {
+	if invoice.IsExportInvoice() {
+		tipoDte = "11" // Export invoice
+	} else if invoice.ClientTipoPersona != nil {
 		tipoDte = s.determineDTEType(*invoice.ClientTipoPersona)
 	} else {
 		tipoDte = "01" // Default to factura

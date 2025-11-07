@@ -302,7 +302,10 @@ func (b *Builder) buildExportacionCuerpoDocumento(invoice *models.Invoice) ([]Fa
 		amounts[i] = itemAmount
 
 		// Tributos must be C3 (0% export)
-		tributos := []string{codigos.TributoIVAExportaciones} // "C3"
+
+		tributoFull := codigos.TributoIVAExportaciones                     // "S1.C3"
+		tributoCode := tributoFull[strings.LastIndex(tributoFull, ".")+1:] // Extract "C3"
+		tributos := []string{tributoCode}
 
 		items[i] = FacturaExportacionCuerpoItem{
 			NumItem:      lineItem.LineNumber,
