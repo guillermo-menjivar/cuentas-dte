@@ -231,7 +231,7 @@ func (r *RecordSaleRequest) Validate() error {
 	}
 
 	// Validate document type
-	if r.DocumentType != codigos.DocTypeFactura && r.DocumentType != codigos.DocTypeComprobanteCredito {
+	if r.DocumentType != codigos.DocTypeFactura && r.DocumentType != codigos.DocTypeComprobanteCredito && r.DocumentType != codigos.DocTypeFacturasExportacion {
 		return fmt.Errorf("document_type debe ser %s (Factura) o %s (CCF)",
 			codigos.DocTypeFactura, codigos.DocTypeComprobanteCredito)
 	}
