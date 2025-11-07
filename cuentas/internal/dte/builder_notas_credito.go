@@ -26,10 +26,24 @@ type NotaCreditoIdentificacion struct {
 	TipoMoneda       string  `json:"tipoMoneda"`
 }
 
+type NotaCreditoEmisor struct {
+	NIT                 string    `json:"nit"`
+	NRC                 string    `json:"nrc"`
+	Nombre              string    `json:"nombre"`
+	CodActividad        string    `json:"codActividad"`
+	DescActividad       string    `json:"descActividad"`
+	NombreComercial     *string   `json:"nombreComercial"`
+	TipoEstablecimiento string    `json:"tipoEstablecimiento"`
+	Direccion           Direccion `json:"direccion"`
+	Telefono            string    `json:"telefono"`
+	Correo              string    `json:"correo"`
+	// NOTE: No codEstable, codPuntoVenta, codEstableMH, codPuntoVentaMH
+}
+
 type NotaCreditoDTE struct {
 	Identificacion       Identificacion          `json:"identificacion"`
 	DocumentoRelacionado []DocumentoRelacionado  `json:"documentoRelacionado"`
-	Emisor               Emisor                  `json:"emisor"`
+	Emisor               NotaCreditoEmisor       `json:"emisor"`
 	Receptor             Receptor                `json:"receptor"`
 	VentaTercero         *VentaTercero           `json:"ventaTercero"`
 	CuerpoDocumento      []NotaCreditoCuerpoItem `json:"cuerpoDocumento"`
@@ -157,8 +171,8 @@ func (b *Builder) buildNotaCreditoIdentificacion(nota *models.NotaCredito, compa
 }
 
 // buildNotaCreditoEmisor - without establishment codes (same as débito)
-func (b *Builder) buildNotaCreditoEmisor(company *CompanyData, establishment *EstablishmentData) Emisor {
-	return Emisor{
+func (b *Builder) buildNotaCreditoEmisor(company *CompanyData, establishment *EstablishmentData) NotaCreditoEmisor {
+	return NotaCreditoEmisor{
 		NIT:                 company.NIT,
 		NRC:                 fmt.Sprintf("%d", company.NCR),
 		Nombre:              company.Name,
