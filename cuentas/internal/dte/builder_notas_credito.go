@@ -11,6 +11,62 @@ import (
 	"cuentas/internal/models"
 )
 
+type NotaCreditoDTE struct {
+	Identificacion       NotaCreditoIdentificacion `json:"identificacion"`
+	DocumentoRelacionado []DocumentoRelacionado    `json:"documentoRelacionado"`
+	Emisor               Emisor                    `json:"emisor"`
+	Receptor             Receptor                  `json:"receptor"`
+	VentaTercero         *VentaTercero             `json:"ventaTercero"`
+	CuerpoDocumento      []NotaCreditoCuerpoItem   `json:"cuerpoDocumento"`
+	Resumen              NotaCreditoResumen        `json:"resumen"`
+	Extension            *NotaCreditoExtension     `json:"extension"`
+	Apendice             *[]Apendice               `json:"apendice,omitempty"`
+}
+
+type NotaCreditoResumen struct {
+	TotalNoSuj          float64    `json:"totalNoSuj"`
+	TotalExenta         float64    `json:"totalExenta"`
+	TotalGravada        float64    `json:"totalGravada"`
+	SubTotalVentas      float64    `json:"subTotalVentas"`
+	DescuNoSuj          float64    `json:"descuNoSuj"`
+	DescuExenta         float64    `json:"descuExenta"`
+	DescuGravada        float64    `json:"descuGravada"`
+	TotalDescu          float64    `json:"totalDescu"`
+	SubTotal            float64    `json:"subTotal"`
+	IvaPerci1           float64    `json:"ivaPerci1"`
+	IvaRete1            float64    `json:"ivaRete1"`
+	ReteRenta           float64    `json:"reteRenta"`
+	MontoTotalOperacion float64    `json:"montoTotalOperacion"`
+	TotalLetras         string     `json:"totalLetras"`
+	CondicionOperacion  int        `json:"condicionOperacion"`
+	Tributos            *[]Tributo `json:"tributos,omitempty"`
+}
+
+type NotaCreditoExtension struct {
+	NombEntrega   *string `json:"nombEntrega"`
+	DocuEntrega   *string `json:"docuEntrega"`
+	NombRecibe    *string `json:"nombRecibe"`
+	DocuRecibe    *string `json:"docuRecibe"`
+	Observaciones *string `json:"observaciones"`
+}
+
+type NotaCreditoCuerpoItem struct {
+	NumItem         int      `json:"numItem"`
+	TipoItem        int      `json:"tipoItem"`
+	NumeroDocumento string   `json:"numeroDocumento"` // Required: CCF number being credited
+	Cantidad        float64  `json:"cantidad"`
+	Codigo          *string  `json:"codigo"`
+	CodTributo      *string  `json:"codTributo"`
+	UniMedida       int      `json:"uniMedida"`
+	Descripcion     *string  `json:"descripcion"`
+	PrecioUni       float64  `json:"precioUni"`
+	MontoDescu      float64  `json:"montoDescu"`
+	VentaNoSuj      float64  `json:"ventaNoSuj"`
+	VentaExenta     float64  `json:"ventaExenta"`
+	VentaGravada    float64  `json:"ventaGravada"`
+	Tributos        []string `json:"tributos"`
+}
+
 func (b *Builder) BuildNotaCredito(ctx context.Context, nota *models.NotaCredito) ([]byte, error) {
 	// Load required data
 	company, err := b.loadCompany(ctx, nota.CompanyID)
@@ -37,9 +93,9 @@ func (b *Builder) BuildNotaCredito(ctx context.Context, nota *models.NotaCredito
 	resumen := b.buildNotaCreditoResumen(nota, itemAmounts)
 	extension := b.buildNotaCreditoExtension(nota)
 
-	// Assemble the NotaDebitoDTE (SAME STRUCT as Nota de Débito!)
 	// Tipo "05" uses the EXACT SAME structure as tipo "06"
-	dte := &NotaDebitoDTE{
+
+	dte := &NotaCreditoDTE{
 		Identificacion:       identificacion,
 		DocumentoRelacionado: documentosRelacionados,
 		Emisor:               emisor,
@@ -86,8 +142,8 @@ func (b *Builder) buildNotaCreditoIdentificacion(nota *models.NotaCredito, compa
 }
 
 // buildNotaCreditoEmisor - without establishment codes (same as débito)
-func (b *Builder) buildNotaCreditoEmisor(company *CompanyData, establishment *EstablishmentData) NotaDebitoEmisor {
-	return NotaDebitoEmisor{
+func (b *Builder) buildNotaCreditoEmisor(company *CompanyData, establishment *EstablishmentData) Emisor {
+	return Emisor{
 		NIT:                 company.NIT,
 		NRC:                 fmt.Sprintf("%d", company.NCR),
 		Nombre:              company.Name,
@@ -164,13 +220,12 @@ func (b *Builder) buildNotaCreditoDocumentosRelacionados(nota *models.NotaCredit
 }
 
 // buildNotaCreditoCuerpoDocumento - builds line items for credit note
-func (b *Builder) buildNotaCreditoCuerpoDocumento(nota *models.NotaCredito) ([]NotaDebitoCuerpoDocumentoItem, []ItemAmounts) {
-	items := make([]NotaDebitoCuerpoDocumentoItem, len(nota.LineItems))
+func (b *Builder) buildNotaCreditoCuerpoDocumento(nota *models.NotaCredito) ([]NotaCreditoCuerpoItem, []ItemAmounts) {
+	items := make([]NotaCreditoCuerpoItem, len(nota.LineItems))
 	amounts := make([]ItemAmounts, len(nota.LineItems))
 
 	for i, lineItem := range nota.LineItems {
 		// Calculate amounts for this credit
-		// Uses SAME calculator as débito - ensures consistency!
 		itemAmount := b.calculator.CalculateCreditoFiscal(
 			lineItem.CreditAmount,
 			lineItem.QuantityCredited,
@@ -184,14 +239,15 @@ func (b *Builder) buildNotaCreditoCuerpoDocumento(nota *models.NotaCredito) ([]N
 			tributos = []string{"20"} // IVA 13%
 		}
 
-		items[i] = NotaDebitoCuerpoDocumentoItem{
+		items[i] = NotaCreditoCuerpoItem{
 			NumItem:         lineItem.LineNumber,
 			TipoItem:        b.parseTipoItem(lineItem.OriginalItemTipoItem),
-			NumeroDocumento: lineItem.RelatedCCFNumber, // Required!
+			NumeroDocumento: lineItem.RelatedCCFNumber, // Required: CCF being credited
 			Cantidad:        lineItem.QuantityCredited,
 			Codigo:          &lineItem.OriginalItemSku,
+			CodTributo:      nil, // Usually nil for standard items
 			UniMedida:       b.parseUniMedida(lineItem.OriginalUnitOfMeasure),
-			Descripcion:     lineItem.OriginalItemName,
+			Descripcion:     &lineItem.OriginalItemName,
 			PrecioUni:       itemAmount.PrecioUni,
 			MontoDescu:      0,
 			VentaNoSuj:      0,
@@ -205,11 +261,11 @@ func (b *Builder) buildNotaCreditoCuerpoDocumento(nota *models.NotaCredito) ([]N
 }
 
 // buildNotaCreditoResumen - without forbidden fields (same as débito)
-func (b *Builder) buildNotaCreditoResumen(nota *models.NotaCredito, itemAmounts []ItemAmounts) NotaDebitoResumen {
+func (b *Builder) buildNotaCreditoResumen(nota *models.NotaCredito, itemAmounts []ItemAmounts) NotaCreditoResumen {
 	// Use CCF calculator for resumen
 	resumenAmounts := b.calculator.CalculateResumenCCF(itemAmounts)
 
-	resumen := NotaDebitoResumen{
+	resumen := NotaCreditoResumen{
 		TotalNoSuj:          0,
 		TotalExenta:         0,
 		TotalGravada:        resumenAmounts.TotalGravada,
@@ -244,8 +300,8 @@ func (b *Builder) buildNotaCreditoResumen(nota *models.NotaCredito, itemAmounts 
 }
 
 // buildNotaCreditoExtension - without placaVehiculo (same as débito)
-func (b *Builder) buildNotaCreditoExtension(nota *models.NotaCredito) *NotaDebitoExtension {
-	return &NotaDebitoExtension{
+func (b *Builder) buildNotaCreditoExtension(nota *models.NotaCredito) *NotaCreditoExtension {
+	return &NotaCreditoExtension{
 		NombEntrega:   nil,
 		DocuEntrega:   nil,
 		NombRecibe:    nil,
