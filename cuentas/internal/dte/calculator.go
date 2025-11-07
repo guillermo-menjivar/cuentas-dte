@@ -446,3 +446,44 @@ func (c *Calculator) CalculateResumenExportacion(
 		TotalNoGravado:      RoundToResumenPrecision(seguro + flete), // Insurance + Freight
 	}
 }
+
+// ============================================
+// EXPORT CALCULATIONS (Type 11 - 0% IVA)
+// ============================================
+
+// CalculateExportacion calculates amounts for export invoices (Factura de Exportación)
+// where items are subject to 0% IVA (not exempt, but zero-rated).
+//
+// Formula:
+//   - precioUni = priceWithoutIVA (base price)
+//   - ventaGravada = (precioUni × cantidad) - descuento
+//   - ivaItem = 0 (always 0% for exports)
+//
+// Example:
+//
+//	Export invoice for $100.00:
+//	- precioUni: 100.00 (without IVA)
+//	- ventaGravada: 100.00
+//	- ivaItem: 0.00 (0% export rate)
+//	- Total customer pays: 100.00
+func (c *Calculator) CalculateExportacion(
+	priceWithoutIVA float64,
+	quantity float64,
+	discount float64,
+) ItemAmounts {
+	// For exports, precioUni excludes IVA
+	precioUni := priceWithoutIVA
+
+	// ventaGravada = (price × qty) - discount
+	ventaGravada := precioUni*quantity - discount
+
+	// IVA is always 0% for exports (tributo C3)
+	ivaItem := 0.0
+
+	return ItemAmounts{
+		PrecioUni:    RoundToItemPrecision(precioUni),
+		VentaGravada: RoundToItemPrecision(ventaGravada),
+		IvaItem:      0.0, // Always 0 for Type 11
+		MontoDescu:   RoundToItemPrecision(discount),
+	}
+}
