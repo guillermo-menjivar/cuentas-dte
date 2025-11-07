@@ -396,3 +396,53 @@ func CalculateBaseFromTotal(totalWithIVA float64) float64 {
 func CalculateTotalFromBase(baseAmount float64) float64 {
 	return baseAmount * IVADivisor
 }
+
+// CalculateResumenExportacion calculates summary totals for export invoices.
+// Key difference: IVA is always 0%, but we still track ventaGravada.
+//
+// Export Invoice (Type 11):
+//   - totalGravada = sum(ventaGravada) [0% IVA applied]
+//   - totalIva = 0 (always 0% for exports)
+//   - subTotal = totalGravada
+//   - montoTotalOperacion = totalGravada + seguro + flete
+func (c *Calculator) CalculateResumenExportacion(
+	items []ItemAmounts,
+	seguro float64, // Insurance
+	flete float64, // Freight
+) ResumenAmounts {
+	// Sum all item amounts
+	var totalGravada, totalDescu float64
+
+	for _, item := range items {
+		totalGravada += item.VentaGravada
+		totalDescu += item.MontoDescu
+	}
+
+	// Round totals to resumen precision (2 decimals)
+	totalGravada = RoundToResumenPrecision(totalGravada)
+	totalDescu = RoundToResumenPrecision(totalDescu)
+	seguro = RoundToResumenPrecision(seguro)
+	flete = RoundToResumenPrecision(flete)
+
+	// For exports: IVA is always 0%
+	totalIva := 0.0
+
+	// subTotal = totalGravada (no IVA to add)
+	subTotal := totalGravada
+
+	// montoTotalOperacion includes insurance and freight
+	montoTotalOperacion := RoundToResumenPrecision(totalGravada + seguro + flete)
+
+	return ResumenAmounts{
+		TotalNoSuj:          0,
+		TotalExenta:         0,
+		TotalGravada:        totalGravada,
+		SubTotalVentas:      totalGravada,
+		TotalDescu:          totalDescu,
+		TotalIva:            totalIva, // Always 0 for Type 11
+		SubTotal:            subTotal,
+		MontoTotalOperacion: montoTotalOperacion,
+		TotalPagar:          montoTotalOperacion,
+		TotalNoGravado:      RoundToResumenPrecision(seguro + flete), // Insurance + Freight
+	}
+}
