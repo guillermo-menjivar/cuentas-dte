@@ -22,7 +22,7 @@ class ExportInvoiceSeeder:
         self.invoices_finalized = 0
         self.errors = 0
 
-    # Country codes for common export destinations
+    # Country codes for common export destinations (ONLY VALID CODES FROM SCHEMA)
     EXPORT_COUNTRIES = [
         ("9905", "Estados Unidos", "36", "123 Main Street, Miami, FL 33101"),
         ("9905", "Estados Unidos", "36", "456 Broadway, New York, NY 10013"),
@@ -32,8 +32,8 @@ class ExportInvoiceSeeder:
         ("9209", "Nicaragua", "36", "Barrio Martha Quezada, Managua, Nicaragua"),
         ("9212", "Costa Rica", "36", "San José Centro, Costa Rica"),
         ("9902", "México", "36", "Colonia Roma, Ciudad de México, México"),
-        ("9917", "España", "36", "Calle Gran Vía 123, Madrid, España"),
-        ("9923", "China", "36", "Guangzhou District, China"),
+        ("9901", "España", "36", "Calle Gran Vía 123, Madrid, España"),
+        ("9303", "Panamá", "36", "Ciudad de Panamá, Panamá"),
     ]
 
     # Recinto fiscal options
@@ -51,22 +51,12 @@ class ExportInvoiceSeeder:
         ("CPT", "Carriage Paid To"),
     ]
 
-    # Export document types
+    # Export document types (ONLY TYPE 2 - CUSTOMS)
     EXPORT_DOCUMENTS = [
-        {
-            "cod_doc_asociado": 1,
-            "desc_documento": "AUT-EXP-2025-{num:04d}",
-            "detalle_documento": "Autorización de exportación del Ministerio de Economía",
-        },
         {
             "cod_doc_asociado": 2,
             "desc_documento": "DUA-2025-{num:06d}",
             "detalle_documento": "Declaración Única Aduanera - Aduana La Hachadura",
-        },
-        {
-            "cod_doc_asociado": 3,
-            "desc_documento": "CERT-ORG-{num:05d}",
-            "detalle_documento": "Certificado de origen emitido por BCR",
         },
     ]
 
@@ -163,8 +153,8 @@ class ExportInvoiceSeeder:
         country = random.choice(self.EXPORT_COUNTRIES)
         cod_pais, nombre_pais, tipo_doc, address = country
 
-        # Generate random document number
-        doc_number = f"EXP{random.randint(100000000, 999999999)}"
+        # Generate random document number (9 or 14 digits only for tipo 36)
+        doc_number = f"{random.randint(100000000, 999999999)}"  # 9 digits
 
         # Generate company name based on country
         if "Estados Unidos" in nombre_pais:
@@ -205,36 +195,16 @@ class ExportInvoiceSeeder:
         }
 
     def generate_export_documents(self, invoice_num: int) -> List[Dict]:
-        """Generate random export documents (1-3 documents)"""
-        num_docs = random.randint(1, 3)
-        selected_docs = random.sample(self.EXPORT_DOCUMENTS, num_docs)
-
+        """Generate export documents - always returns 1 customs document (type 2)"""
         documents = []
-        for doc_template in selected_docs:
-            doc = {
-                "cod_doc_asociado": doc_template["cod_doc_asociado"],
-                "desc_documento": doc_template["desc_documento"].format(
-                    num=invoice_num
-                ),
-                "detalle_documento": doc_template["detalle_documento"],
-            }
 
-            # If transport document (cod 4), add transport info
-            if doc_template["cod_doc_asociado"] == 4:
-                doc["placa_trans"] = f"P-{random.randint(100000, 999999)}"
-                doc["modo_transp"] = random.choice([1, 2, 3, 4, 5, 6, 7])
-                doc["num_conductor"] = (
-                    f"DUI-{random.randint(10000000, 99999999)}-{random.randint(0, 9)}"
-                )
-                doc["nombre_conductor"] = random.choice(
-                    [
-                        "Juan Carlos Pérez Martínez",
-                        "María Elena González López",
-                        "Roberto Antonio Hernández",
-                    ]
-                )
-
-            documents.append(doc)
+        # Always use customs document (type 2)
+        doc = {
+            "cod_doc_asociado": 2,
+            "desc_documento": f"DUA-2025-{invoice_num:06d}",
+            "detalle_documento": "Declaración Única Aduanera - Aduana La Hachadura",
+        }
+        documents.append(doc)
 
         return documents
 
