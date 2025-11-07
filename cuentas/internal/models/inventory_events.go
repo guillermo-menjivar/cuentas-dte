@@ -165,6 +165,7 @@ func (r *RecordPurchaseRequest) Validate() error {
 		}
 		// Optional: Validate NIT format
 		if !tools.ValidateNIT(*r.SupplierNIT) {
+			fmt.Println("invalid NIT provided", *r.SupplierNIT)
 			return fmt.Errorf("invalid supplier_nit format, must be XXXX-XXXXXX-XXX-X")
 		}
 	}
