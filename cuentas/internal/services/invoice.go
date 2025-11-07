@@ -137,12 +137,43 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 	}
 
 	// 7. Insert invoice
-	invoiceID, err := s.insertInvoice(ctx, tx, invoice)
-	if err != nil {
-		return nil, fmt.Errorf("failed to insert invoice: %w", err)
+	var invoiceID string
+	if req.ExportFields != nil {
+		// Populate export fields on invoice
+		invoice.ExportTipoItemExpor = req.ExportFields.TipoItemExpor
+		invoice.ExportRecintoFiscal = req.ExportFields.RecintoFiscal
+		invoice.ExportRegimen = req.ExportFields.Regimen
+		invoice.ExportIncotermsCode = req.ExportFields.IncotermsCode
+		invoice.ExportIncotermsDesc = req.ExportFields.IncotermsDesc
+		invoice.ExportSeguro = req.ExportFields.Seguro
+		invoice.ExportFlete = req.ExportFields.Flete
+		invoice.ExportObservaciones = req.ExportFields.Observaciones
+		invoice.ExportReceptorCodPais = req.ExportFields.ReceptorCodPais
+		invoice.ExportReceptorNombrePais = req.ExportFields.ReceptorNombrePais
+		invoice.ExportReceptorTipoDocumento = req.ExportFields.ReceptorTipoDocumento
+		invoice.ExportReceptorNumDocumento = req.ExportFields.ReceptorNumDocumento
+		invoice.ExportReceptorComplemento = req.ExportFields.ReceptorComplemento
+
+		// Use export insert method
+		invoiceID, err = s.insertInvoiceExport(ctx, tx, invoice)
+		if err != nil {
+			return nil, fmt.Errorf("failed to insert export invoice: %w", err)
+		}
+
+		// Insert export documents
+		if len(req.ExportDocuments) > 0 {
+			if err := s.insertExportDocuments(ctx, tx, invoiceID, req.ExportDocuments); err != nil {
+				return nil, fmt.Errorf("failed to insert export documents: %w", err)
+			}
+		}
+	} else {
+		// Regular invoice
+		invoiceID, err = s.insertInvoice(ctx, tx, invoice)
+		if err != nil {
+			return nil, fmt.Errorf("failed to insert invoice: %w", err)
+		}
 	}
 	invoice.ID = invoiceID
-
 	// 8. Insert line items and taxes
 
 	for i := range lineItems {
