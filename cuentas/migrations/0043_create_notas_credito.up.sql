@@ -1,5 +1,4 @@
 -- migrations/0033_create_notas_credito.up.sql
-
 -- ============================================================================
 -- NOTAS DE CRÉDITO (Credit Notes) - Type 05
 -- Used to DECREASE invoice amounts (returns, discounts, voids, corrections)
@@ -8,15 +7,15 @@
 -- Main notas_credito table
 CREATE TABLE notas_credito (
     -- Identity
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id VARCHAR(36) PRIMARY KEY,
     company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     establishment_id UUID NOT NULL REFERENCES establishments(id),
     point_of_sale_id UUID NOT NULL REFERENCES point_of_sale(id),
-    
+
     -- Document identification
     nota_number VARCHAR(50) NOT NULL,
     nota_type VARCHAR(2) NOT NULL DEFAULT '05',
-    
+
     -- Client information (snapshot from CCFs)
     client_id UUID NOT NULL REFERENCES clients(id),
     client_name VARCHAR(200) NOT NULL,
@@ -29,27 +28,27 @@ CREATE TABLE notas_credito (
     client_address TEXT,
     client_tipo_contribuyente VARCHAR(2),
     client_tipo_persona VARCHAR(1),
-    
+
     -- Credit reason and details
     credit_reason VARCHAR(20) NOT NULL,
     credit_description TEXT,
     is_full_annulment BOOLEAN DEFAULT FALSE,
-    
+
     -- Financial totals (POSITIVE numbers - amount being credited)
     subtotal DECIMAL(15,2) NOT NULL DEFAULT 0,
     total_discount DECIMAL(15,2) NOT NULL DEFAULT 0,
     total_taxes DECIMAL(15,2) NOT NULL DEFAULT 0,
     total DECIMAL(15,2) NOT NULL DEFAULT 0,
     currency VARCHAR(3) NOT NULL DEFAULT 'USD',
-    
+
     -- Payment information
     payment_terms VARCHAR(50) NOT NULL DEFAULT 'net_30',
     payment_method VARCHAR(2) NOT NULL DEFAULT '01',
     due_date DATE,
-    
+
     -- Status workflow: draft → finalized → voided
     status VARCHAR(20) NOT NULL DEFAULT 'draft',
-    
+
     -- DTE tracking (Hacienda integration)
     dte_numero_control VARCHAR(50),
     dte_codigo_generacion VARCHAR(36),
@@ -57,42 +56,42 @@ CREATE TABLE notas_credito (
     dte_status VARCHAR(20),
     dte_hacienda_response JSONB,
     dte_submitted_at TIMESTAMP WITH TIME ZONE,
-    
+
     -- Timestamps
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     finalized_at TIMESTAMP WITH TIME ZONE,
     voided_at TIMESTAMP WITH TIME ZONE,
-    
+
     -- Audit
     created_by UUID,
     notes TEXT,
-    
+
     -- Constraints
     CONSTRAINT valid_nota_type CHECK (nota_type = '05'),
     CONSTRAINT valid_status CHECK (status IN ('draft', 'finalized', 'voided')),
     CONSTRAINT valid_credit_reason CHECK (credit_reason IN (
-        'void', 'return', 'discount', 'defect', 'overbilling', 
+        'void', 'return', 'discount', 'defect', 'overbilling',
         'correction', 'quality', 'cancellation', 'other'
     )),
     CONSTRAINT positive_totals CHECK (
-        subtotal >= 0 AND 
-        total_discount >= 0 AND 
-        total_taxes >= 0 AND 
+        subtotal >= 0 AND
+        total_discount >= 0 AND
+        total_taxes >= 0 AND
         total >= 0
     )
 );
 
 -- Line items for notas_credito
 CREATE TABLE notas_credito_line_items (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    nota_credito_id UUID NOT NULL REFERENCES notas_credito(id) ON DELETE CASCADE,
+    id VARCHAR(36) PRIMARY KEY,
+    nota_credito_id VARCHAR(36) NOT NULL REFERENCES notas_credito(id) ON DELETE CASCADE,
     line_number INTEGER NOT NULL,
-    
+
     -- Which CCF and line item this credits
-    related_ccf_id UUID NOT NULL REFERENCES invoices(id),
+    related_ccf_id VARCHAR(36) NOT NULL REFERENCES invoices(id),
     related_ccf_number VARCHAR(50) NOT NULL,
-    ccf_line_item_id UUID NOT NULL REFERENCES invoice_line_items(id),
-    
+    ccf_line_item_id VARCHAR(36) NOT NULL REFERENCES invoice_line_items(id),
+
     -- Original item details (snapshot from CCF)
     original_item_sku VARCHAR(100) NOT NULL,
     original_item_name VARCHAR(500) NOT NULL,
@@ -100,24 +99,24 @@ CREATE TABLE notas_credito_line_items (
     original_quantity DECIMAL(15,8) NOT NULL,
     original_item_tipo_item VARCHAR(1) NOT NULL,
     original_unit_of_measure VARCHAR(50) NOT NULL,
-    
+
     -- Credit details
     quantity_credited DECIMAL(15,8) NOT NULL,
     credit_amount DECIMAL(15,2) NOT NULL,
     credit_reason VARCHAR(200),
-    
+
     -- Calculated totals for THIS credit
     line_subtotal DECIMAL(15,2) NOT NULL,
     discount_amount DECIMAL(15,2) NOT NULL DEFAULT 0,
     taxable_amount DECIMAL(15,2) NOT NULL,
     total_taxes DECIMAL(15,2) NOT NULL,
     line_total DECIMAL(15,2) NOT NULL,
-    
+
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
+
     -- Constraints
     CONSTRAINT positive_quantities CHECK (
-        quantity_credited > 0 AND 
+        quantity_credited > 0 AND
         quantity_credited <= original_quantity
     ),
     CONSTRAINT positive_amounts CHECK (
@@ -130,13 +129,13 @@ CREATE TABLE notas_credito_line_items (
 
 -- CCF references for notas_credito
 CREATE TABLE notas_credito_ccf_references (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    nota_credito_id UUID NOT NULL REFERENCES notas_credito(id) ON DELETE CASCADE,
-    ccf_id UUID NOT NULL REFERENCES invoices(id),
+    id VARCHAR(36) PRIMARY KEY,
+    nota_credito_id VARCHAR(36) NOT NULL REFERENCES notas_credito(id) ON DELETE CASCADE,
+    ccf_id VARCHAR(36) NOT NULL REFERENCES invoices(id),
     ccf_number VARCHAR(50) NOT NULL,
     ccf_date DATE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    
+
     -- Prevent duplicate references
     UNIQUE(nota_credito_id, ccf_id)
 );
