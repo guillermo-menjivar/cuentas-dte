@@ -2,6 +2,7 @@ package dte
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -169,7 +170,7 @@ func (b *Builder) BuildFacturaExportacion(ctx context.Context, invoice *models.I
 	}
 
 	// Marshal to JSON
-	return MarshalDTE(factura)
+	return MarshalFacturaExportacion(factura)
 }
 
 // ============================================
@@ -402,4 +403,12 @@ func (b *Builder) loadExportDocuments(ctx context.Context, invoiceID string) ([]
 
 func getDefaultActivity() string {
 	return "Exportación de bienes y servicios"
+}
+
+func MarshalFacturaExportacion(dte *FacturaExportacionDTE) ([]byte, error) {
+	jsonBytes, err := json.MarshalIndent(dte, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal export DTE to JSON: %w", err)
+	}
+	return jsonBytes, nil
 }
