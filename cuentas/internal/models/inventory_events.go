@@ -2,6 +2,7 @@ package models
 
 import (
 	"cuentas/internal/codigos"
+	"cuentas/internal/tools"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -162,9 +163,11 @@ func (r *RecordPurchaseRequest) Validate() error {
 			return fmt.Errorf("supplier_nit is required for document type %s (CCF)",
 				codigos.DocTypeComprobanteCredito)
 		}
-		// Optional: Validate NIT format		if !tools.ValidateNIT(*r.SupplierNIT) {
-		fmt.Println("invalid NIT provided", *r.SupplierNIT)
-		return fmt.Errorf("invalid supplier_nit format, must be XXXX-XXXXXX-XXX-X")
+
+		// Validate NIT format
+		if !tools.ValidateNIT(*r.SupplierNIT) {
+			return fmt.Errorf("invalid supplier_nit format, must be XXXX-XXXXXX-XXX-X")
+		}
 	}
 
 	if !validateNumeroControl(r.DocumentNumber) {
