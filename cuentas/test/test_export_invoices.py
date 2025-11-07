@@ -70,6 +70,24 @@ class ExportInvoiceSeeder:
         },
     ]
 
+    def get_clients(self) -> List[Dict]:
+        """Get all clients"""
+        print("🔍 Fetching clients...")
+        url = f"{self.base_url}/v1/clients"
+
+        try:
+            response = requests.get(url, headers=self.headers)
+            response.raise_for_status()
+            data = response.json()
+            clients = data.get("clients", []) if data else []
+            if clients is None:
+                clients = []
+            print(f"✅ Found {len(clients)} clients\n")
+            return clients
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Failed to get clients: {e}")
+            return []
+
     def get_establishments(self) -> List[Dict]:
         """Get all establishments"""
         print("🔍 Fetching establishments...")
@@ -222,6 +240,7 @@ class ExportInvoiceSeeder:
 
     def create_export_invoice(
         self,
+        client: Dict,
         client_data: Dict,
         establishment: Dict,
         pos: Dict,
@@ -263,7 +282,7 @@ class ExportInvoiceSeeder:
         export_documents = self.generate_export_documents(invoice_num)
 
         payload = {
-            "client_id": "EXPORT-TEMP",  # You'll need to handle this
+            "client_id": client["id"],  # ✅ Use real client ID
             "establishment_id": establishment["id"],
             "point_of_sale_id": pos["id"],
             "payment_terms": "cash",
@@ -348,10 +367,15 @@ class ExportInvoiceSeeder:
         print(f"Export Invoices to Create: {num_invoices}\n")
 
         # Load data
+        clients = self.get_clients()
         establishments = self.get_establishments()
         inventory_items = self.get_inventory_items()
 
         # Validate
+        if not clients:
+            print("❌ No clients found. Please create clients first.")
+            sys.exit(1)
+
         if not establishments:
             print("❌ No establishments found.")
             sys.exit(1)
@@ -377,6 +401,7 @@ class ExportInvoiceSeeder:
             sys.exit(1)
 
         print(f"📊 Data Summary:")
+        print(f"   Clients: {len(clients)}")
         print(f"   Establishments: {len(establishments_with_pos)}")
         print(f"   Inventory Items: {len(inventory_items)}")
         print(f"   Export Destinations: {len(self.EXPORT_COUNTRIES)} countries")
@@ -391,7 +416,10 @@ class ExportInvoiceSeeder:
         for i in range(num_invoices):
             print(f"[{i+1}/{num_invoices}] Creating export invoice...")
 
-            # Generate international client
+            # Pick a random real client
+            client = random.choice(clients)
+
+            # Generate international client data (for export fields)
             client_data = self.create_export_client(i + 1)
 
             # Select establishment and POS
@@ -414,9 +442,9 @@ class ExportInvoiceSeeder:
             num_items = random.randint(2, min(5, len(items_with_stock)))
             selected_items = random.sample(items_with_stock, num_items)
 
-            # Create export invoice
+            # Create export invoice (pass both real client and export data)
             invoice = self.create_export_invoice(
-                client_data, establishment, pos, selected_items, i + 1
+                client, client_data, establishment, pos, selected_items, i + 1
             )
 
             if not invoice:
