@@ -191,7 +191,7 @@ func (r *FinalizeInvoiceRequest) Validate(invoiceTotal float64) error {
 }
 
 func (i *Invoice) IsExportInvoice() bool {
-	return i.DteType != nil && *i.DteType == "11"
+	return i.ExportReceptorCodPais != nil && *i.ExportReceptorCodPais != ""
 }
 
 // HasExportFields checks if export-specific fields are populated
