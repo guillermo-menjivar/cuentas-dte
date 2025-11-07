@@ -90,7 +90,7 @@ CREATE TABLE notas_credito_line_items (
     -- Which CCF and line item this credits
     related_ccf_id VARCHAR(36) NOT NULL REFERENCES invoices(id),
     related_ccf_number VARCHAR(50) NOT NULL,
-    ccf_line_item_id VARCHAR(36) NOT NULL REFERENCES invoice_line_items(id),
+    ccf_line_item_id UUID NOT NULL REFERENCES invoice_line_items(id),  -- UUID! Not VARCHAR
 
     -- Original item details (snapshot from CCF)
     original_item_sku VARCHAR(100) NOT NULL,
