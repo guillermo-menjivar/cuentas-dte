@@ -140,7 +140,7 @@ echo ""
 NOTA_REQUEST=$(cat <<EOF
 {
   "ccf_ids": ["$CCF_ID"],
-  "credit_reason": "Producto defectuoso",
+  "credit_reason": "defect",
   "credit_description": "Cliente reportó defecto de fábrica en $QUANTITY_CREDITED unidades - automated test",
   "line_items": [
     {
@@ -148,7 +148,7 @@ NOTA_REQUEST=$(cat <<EOF
       "ccf_line_item_id": "$LINE_ITEM_ID",
       "quantity_credited": $QUANTITY_CREDITED,
       "credit_amount": $CREDIT_AMOUNT,
-      "credit_reason": "Material defectuoso - automated test"
+      "credit_reason": "Material defect - automated test"
     }
   ],
   "payment_terms": "contado",
