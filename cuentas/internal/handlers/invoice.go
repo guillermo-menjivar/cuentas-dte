@@ -213,6 +213,14 @@ func (h *InvoiceHandler) FinalizeInvoice(c *gin.Context) {
 		return
 	}
 
+	// ⭐ RE-FETCH with export fields to properly detect export invoices
+	// This ensures IsExportInvoice() works correctly by loading export_* columns
+	invoice, err = h.invoiceService.GetInvoiceExport(c.Request.Context(), companyID, invoiceID)
+	if err != nil {
+		// Fall back to regular get if export fetch fails
+		invoice, _ = h.invoiceService.GetInvoice(c.Request.Context(), companyID, invoiceID)
+	}
+
 	// ===== DTE PROCESSING WITH ROUTING =====
 	// Process DTE (build, sign, and prepare for transmission)
 	dteServiceInterface, exists := c.Get("dteService")
