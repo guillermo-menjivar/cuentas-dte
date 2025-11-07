@@ -195,4 +195,6 @@ test_notas_debito:
 
 test_notas_credito:
 	@echo "Testing notas de credito"
-	./test_notas_credito.sh $(COMPANY_ID)
+	./test_seed_notas_credito.py $(COMPANY_ID) --count 50
+
+
