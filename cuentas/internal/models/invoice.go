@@ -103,6 +103,7 @@ type Invoice struct {
 
 	ParentInvoiceType *string                  `json:"parent_invoice_type,omitempty"`
 	RelatedDocuments  []InvoiceRelatedDocument `json:"related_documents,omitempty"`
+	ExportDocuments   []InvoiceExportDocument  `json:"export_documents,omitempty"`
 }
 
 // CreateInvoiceRequest represents the request to create an invoice
