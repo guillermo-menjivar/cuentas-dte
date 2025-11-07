@@ -65,7 +65,7 @@ class InventoryPurchaseSeeder:
             },
             {
                 "name": "Proveedor Mayorista San Salvador",
-                "nit": "06144-56789-004-5",
+                "nit": "06144-567892-004-5",
             },
             {
                 "name": "Suministros Industriales SV",
