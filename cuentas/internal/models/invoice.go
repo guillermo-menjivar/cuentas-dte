@@ -72,6 +72,21 @@ type Invoice struct {
 	DteSubmittedAt      *time.Time `json:"dte_submitted_at,omitempty"`
 	DteType             *string    `json:"dte_type"`
 
+	// Export-specific fields (Type 11 only)
+	ExportTipoItemExpor         *int     `json:"export_tipo_item_expor,omitempty"`
+	ExportRecintoFiscal         *string  `json:"export_recinto_fiscal,omitempty"`
+	ExportRegimen               *string  `json:"export_regimen,omitempty"`
+	ExportIncotermsCode         *string  `json:"export_incoterms_code,omitempty"`
+	ExportIncotermsDesc         *string  `json:"export_incoterms_desc,omitempty"`
+	ExportSeguro                *float64 `json:"export_seguro,omitempty"`
+	ExportFlete                 *float64 `json:"export_flete,omitempty"`
+	ExportObservaciones         *string  `json:"export_observaciones,omitempty"`
+	ExportReceptorCodPais       *string  `json:"export_receptor_cod_pais,omitempty"`
+	ExportReceptorNombrePais    *string  `json:"export_receptor_nombre_pais,omitempty"`
+	ExportReceptorTipoDocumento *string  `json:"export_receptor_tipo_documento,omitempty"`
+	ExportReceptorNumDocumento  *string  `json:"export_receptor_num_documento,omitempty"`
+	ExportReceptorComplemento   *string  `json:"export_receptor_complemento,omitempty"`
+
 	// Timestamps
 	CreatedAt   time.Time  `json:"created_at"`
 	FinalizedAt *time.Time `json:"finalized_at,omitempty"`
@@ -172,4 +187,13 @@ func (r *FinalizeInvoiceRequest) Validate(invoiceTotal float64) error {
 	}
 
 	return nil
+}
+
+func (i *Invoice) IsExportInvoice() bool {
+	return i.DteType != nil && *i.DteType == "11"
+}
+
+// HasExportFields checks if export-specific fields are populated
+func (i *Invoice) HasExportFields() bool {
+	return i.ExportTipoItemExpor != nil
 }
