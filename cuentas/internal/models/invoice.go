@@ -102,6 +102,9 @@ type CreateInvoiceRequest struct {
 	ContactEmail    *string                        `json:"contact_email"`
 	ContactWhatsapp *string                        `json:"contact_whatsapp"`
 	LineItems       []CreateInvoiceLineItemRequest `json:"line_items" binding:"required,min=1"`
+	//export fields
+	ExportFields    *InvoiceExportFields                 `json:"export_fields,omitempty"`
+	ExportDocuments []CreateInvoiceExportDocumentRequest `json:"export_documents,omitempty"`
 }
 
 // Validate validates the create invoice request
@@ -138,6 +141,13 @@ func (r *CreateInvoiceRequest) Validate() error {
 	for i, item := range r.LineItems {
 		if err := item.Validate(); err != nil {
 			return fmt.Errorf("line item %d: %w", i+1, err)
+		}
+	}
+
+	// If export fields provided, validate as export invoice
+	if r.ExportFields != nil {
+		if err := ValidateExportInvoice(r.ExportFields, r.ExportDocuments); err != nil {
+			return fmt.Errorf("export invoice validation failed: %w", err)
 		}
 	}
 
