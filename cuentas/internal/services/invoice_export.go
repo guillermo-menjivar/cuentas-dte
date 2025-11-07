@@ -1,5 +1,3 @@
-package services
-
 import (
 	"context"
 	"cuentas/internal/codigos"
@@ -12,6 +10,8 @@ import (
 
 	"github.com/google/uuid"
 )
+
+// Add these methods to internal/services/invoice_service.go
 
 // ============================================
 // EXPORT INVOICE METHODS
@@ -105,6 +105,44 @@ func (s *InvoiceService) getExportDocuments(
 	return docs, nil
 }
 
+// GetInvoiceExport retrieves a complete export invoice with all fields and documents
+// Use this for Type 11 export invoices to get export-specific fields
+func (s *InvoiceService) GetInvoiceExport(ctx context.Context, companyID, invoiceID string) (*models.Invoice, error) {
+	// Get invoice header with export fields
+	invoice, err := s.getInvoiceHeaderExport(ctx, companyID, invoiceID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get line items
+	lineItems, err := s.getLineItems(ctx, invoiceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get line items: %w", err)
+	}
+
+	// Get taxes for each line item
+	for i := range lineItems {
+		taxes, err := s.getLineItemTaxes(ctx, lineItems[i].ID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get taxes for line item: %w", err)
+		}
+		lineItems[i].Taxes = taxes
+	}
+
+	invoice.LineItems = lineItems
+
+	// Load export documents
+	if invoice.IsExportInvoice() {
+		exportDocs, err := s.getExportDocuments(ctx, invoiceID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get export documents: %w", err)
+		}
+		invoice.ExportDocuments = exportDocs
+	}
+
+	return invoice, nil
+}
+
 // processLineItemsExport processes line items for export invoices (Type 11 - 0% IVA)
 func (s *InvoiceService) processLineItemsExport(
 	ctx context.Context,
@@ -184,11 +222,11 @@ func (s *InvoiceService) processLineItemsExport(
 }
 
 // ============================================
-// UPDATE EXISTING METHODS
+// SEPARATE EXPORT INVOICE METHODS (No conflicts)
 // ============================================
 
-// Update insertInvoice to include export fields
-func (s *InvoiceService) insertInvoice(ctx context.Context, tx *sql.Tx, invoice *models.Invoice) (string, error) {
+// insertInvoiceExport inserts an export invoice with export fields
+func (s *InvoiceService) insertInvoiceExport(ctx context.Context, tx *sql.Tx, invoice *models.Invoice) (string, error) {
 	id := strings.ToUpper(uuid.New().String())
 	query := `
 		INSERT INTO invoices (
@@ -238,8 +276,8 @@ func (s *InvoiceService) insertInvoice(ctx context.Context, tx *sql.Tx, invoice 
 	return id, nil
 }
 
-// Update getInvoiceHeader to load export fields
-func (s *InvoiceService) getInvoiceHeader(ctx context.Context, companyID, invoiceID string) (*models.Invoice, error) {
+// getInvoiceHeaderExport retrieves an export invoice header with export fields
+func (s *InvoiceService) getInvoiceHeaderExport(ctx context.Context, companyID, invoiceID string) (*models.Invoice, error) {
 	query := `
 		SELECT
 			id, company_id, establishment_id, point_of_sale_id, client_id,
