@@ -137,6 +137,7 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 	}
 
 	// 7. Insert invoice
+	// 7. Insert invoice (use export method if export fields present)
 	var invoiceID string
 	if req.ExportFields != nil {
 		// Populate export fields on invoice
@@ -150,8 +151,8 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 		invoice.ExportObservaciones = req.ExportFields.Observaciones
 		invoice.ExportReceptorCodPais = req.ExportFields.ReceptorCodPais
 		invoice.ExportReceptorNombrePais = req.ExportFields.ReceptorNombrePais
-		invoice.ExportReceptorTipoDocumento = req.ExportFields.ReceptorTipoDocumento
-		invoice.ExportReceptorNumDocumento = req.ExportFields.ReceptorNumDocumento
+		invoice.ExportReceptorTipoDocumento = req.ExportFields.ReceptorTipoDoc // ✅ CORRECT
+		invoice.ExportReceptorNumDocumento = req.ExportFields.ReceptorNumDoc   // ✅ CORRECT
 		invoice.ExportReceptorComplemento = req.ExportFields.ReceptorComplemento
 
 		// Use export insert method
