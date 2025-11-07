@@ -47,7 +47,7 @@ CREATE_ESTABLISHMENT_RESPONSE=$(curl -s -X POST "$BASE_URL/establishments" \
   -d '{
     "tipo_establecimiento": "02",
     "nombre": "Casa Matriz - San Salvador",
-    "cod_establecimiento": "0009",
+    "cod_establecimiento": "0019",
     "departamento": "06",
     "municipio": "14",
     "complemento_direccion": "Colonia Escalón, Calle Principal #123, San Salvador",
@@ -74,7 +74,7 @@ CREATE_SUCURSAL_RESPONSE=$(curl -s -X POST "$BASE_URL/establishments" \
   -d '{
     "tipo_establecimiento": "01",
     "nombre": "Sucursal Santa Ana",
-    "cod_establecimiento": "0022",
+    "cod_establecimiento": "0024",
     "departamento": "13",
     "municipio": "01",
     "complemento_direccion": "Centro Comercial Metrocentro, Local 45, Santa Ana",
