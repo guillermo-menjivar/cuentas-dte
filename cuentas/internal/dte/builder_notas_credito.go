@@ -11,16 +11,31 @@ import (
 	"cuentas/internal/models"
 )
 
+type NotaCreditoIdentificacion struct {
+	Version          int     `json:"version"`
+	Ambiente         string  `json:"ambiente"`
+	TipoDte          string  `json:"tipoDte"`
+	NumeroControl    string  `json:"numeroControl"`
+	CodigoGeneracion string  `json:"codigoGeneracion"`
+	TipoModelo       int     `json:"tipoModelo"`
+	TipoOperacion    int     `json:"tipoOperacion"`
+	TipoContingencia *int    `json:"tipoContingencia"`
+	MotivoContin     *string `json:"motivoContin"`
+	FecEmi           string  `json:"fecEmi"`
+	HorEmi           string  `json:"horEmi"`
+	TipoMoneda       string  `json:"tipoMoneda"`
+}
+
 type NotaCreditoDTE struct {
-	Identificacion       NotaCreditoIdentificacion `json:"identificacion"`
-	DocumentoRelacionado []DocumentoRelacionado    `json:"documentoRelacionado"`
-	Emisor               Emisor                    `json:"emisor"`
-	Receptor             Receptor                  `json:"receptor"`
-	VentaTercero         *VentaTercero             `json:"ventaTercero"`
-	CuerpoDocumento      []NotaCreditoCuerpoItem   `json:"cuerpoDocumento"`
-	Resumen              NotaCreditoResumen        `json:"resumen"`
-	Extension            *NotaCreditoExtension     `json:"extension"`
-	Apendice             *[]Apendice               `json:"apendice,omitempty"`
+	Identificacion       Identificacion          `json:"identificacion"`
+	DocumentoRelacionado []DocumentoRelacionado  `json:"documentoRelacionado"`
+	Emisor               Emisor                  `json:"emisor"`
+	Receptor             Receptor                `json:"receptor"`
+	VentaTercero         *VentaTercero           `json:"ventaTercero"`
+	CuerpoDocumento      []NotaCreditoCuerpoItem `json:"cuerpoDocumento"`
+	Resumen              NotaCreditoResumen      `json:"resumen"`
+	Extension            *NotaCreditoExtension   `json:"extension"`
+	Apendice             *[]Apendice             `json:"apendice,omitempty"`
 }
 
 type NotaCreditoResumen struct {
@@ -97,9 +112,9 @@ func (b *Builder) BuildNotaCredito(ctx context.Context, nota *models.NotaCredito
 
 	dte := &NotaCreditoDTE{
 		Identificacion:       identificacion,
-		DocumentoRelacionado: documentosRelacionados,
+		DocumentoRelacionado: *documentosRelacionados,
 		Emisor:               emisor,
-		Receptor:             receptor,
+		Receptor:             *receptor,
 		VentaTercero:         nil,
 		CuerpoDocumento:      cuerpoDocumento,
 		Resumen:              resumen,
@@ -152,7 +167,7 @@ func (b *Builder) buildNotaCreditoEmisor(company *CompanyData, establishment *Es
 		NombreComercial:     &company.NombreComercial,
 		TipoEstablecimiento: establishment.TipoEstablecimiento,
 		Direccion:           b.buildEmisorDireccion(establishment),
-		Telefono:            &establishment.Telefono,
+		Telefono:            establishment.Telefono,
 		Correo:              company.Email,
 	}
 }
@@ -281,7 +296,6 @@ func (b *Builder) buildNotaCreditoResumen(nota *models.NotaCredito, itemAmounts 
 		MontoTotalOperacion: resumenAmounts.MontoTotalOperacion,
 		TotalLetras:         b.numberToWords(resumenAmounts.MontoTotalOperacion),
 		CondicionOperacion:  b.parseCondicionOperacion(nota.PaymentTerms),
-		NumPagoElectronico:  nil,
 	}
 
 	// Add tributos for IVA
