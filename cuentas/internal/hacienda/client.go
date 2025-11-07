@@ -189,6 +189,9 @@ func (c *Client) SubmitDTE(
 	case codigos.DocTypeNotaDebito:
 		fmt.Println("assigning version for notas de debito 3")
 		version = 3
+	case codigos.DocTypeNotaCredito:
+		fmt.Println("assigning version for nota de credito")
+		version = 3
 	default:
 		version = 1
 	}
