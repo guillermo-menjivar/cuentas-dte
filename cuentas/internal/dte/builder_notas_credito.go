@@ -35,7 +35,7 @@ type NotaCreditoDTE struct {
 	CuerpoDocumento      []NotaCreditoCuerpoItem `json:"cuerpoDocumento"`
 	Resumen              NotaCreditoResumen      `json:"resumen"`
 	Extension            *NotaCreditoExtension   `json:"extension"`
-	Apendice             *[]Apendice             `json:"apendice,omitempty"`
+	Apendice             *[]Apendice             `json:"apendice"`
 }
 
 type NotaCreditoResumen struct {
