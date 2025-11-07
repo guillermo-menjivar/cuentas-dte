@@ -1277,6 +1277,117 @@ func (s *InvoiceService) getInvoiceForUpdate(ctx context.Context, tx *sql.Tx, co
 			subtotal, total_discount, total_taxes, total,
 			currency, payment_terms, payment_method, payment_status,
 			amount_paid, balance_due, due_date,
+			created_at,
+			export_tipo_item_expor,
+			export_recinto_fiscal,
+			export_regimen,
+			export_incoterms_code,
+			export_incoterms_desc,
+			export_seguro,
+			export_flete,
+			export_observaciones,
+			export_receptor_cod_pais,
+			export_receptor_nombre_pais,
+			export_receptor_tipo_documento,
+			export_receptor_num_documento,
+			export_receptor_complemento
+		FROM invoices
+		WHERE id = $1 AND company_id = $2
+		FOR UPDATE
+	`
+
+	invoice := &models.Invoice{}
+	err := tx.QueryRowContext(ctx, query, invoiceID, companyID).Scan(
+		&invoice.ID, &invoice.CompanyID, &invoice.EstablishmentID, &invoice.PointOfSaleID, &invoice.ClientID,
+		&invoice.InvoiceNumber, &invoice.InvoiceType, &invoice.Status,
+		&invoice.ClientName, &invoice.ClientLegalName, &invoice.ClientNit, &invoice.ClientNcr, &invoice.ClientDui,
+		&invoice.ClientAddress, &invoice.ClientTipoContribuyente, &invoice.ClientTipoPersona,
+		&invoice.Subtotal, &invoice.TotalDiscount, &invoice.TotalTaxes, &invoice.Total,
+		&invoice.Currency, &invoice.PaymentTerms, &invoice.PaymentMethod, &invoice.PaymentStatus,
+		&invoice.AmountPaid, &invoice.BalanceDue, &invoice.DueDate,
+		&invoice.CreatedAt,
+		&invoice.ExportTipoItemExpor,
+		&invoice.ExportRecintoFiscal,
+		&invoice.ExportRegimen,
+		&invoice.ExportIncotermsCode,
+		&invoice.ExportIncotermsDesc,
+		&invoice.ExportSeguro,
+		&invoice.ExportFlete,
+		&invoice.ExportObservaciones,
+		&invoice.ExportReceptorCodPais,
+		&invoice.ExportReceptorNombrePais,
+		&invoice.ExportReceptorTipoDocumento,
+		&invoice.ExportReceptorNumDocumento,
+		&invoice.ExportReceptorComplemento,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, ErrInvoiceNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to query invoice: %w", err)
+	}
+
+	// Load line items
+	log.Printf("[DEBUG] getInvoiceForUpdate: Loading line items for invoice %s", invoiceID)
+
+	lineItemsQuery := `
+		SELECT 
+			id, invoice_id, item_id, quantity, unit_price,
+			discount_percentage, discount_amount, taxable_amount,
+			total_taxes, line_total
+		FROM invoice_line_items
+		WHERE invoice_id = $1
+		ORDER BY id
+	`
+
+	rows, err := tx.QueryContext(ctx, lineItemsQuery, invoiceID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load line items: %w", err)
+	}
+	defer rows.Close()
+
+	invoice.LineItems = []models.InvoiceLineItem{}
+	for rows.Next() {
+		var lineItem models.InvoiceLineItem
+		err := rows.Scan(
+			&lineItem.ID,
+			&lineItem.InvoiceID,
+			&lineItem.ItemID,
+			&lineItem.Quantity,
+			&lineItem.UnitPrice,
+			&lineItem.DiscountPercentage,
+			&lineItem.DiscountAmount,
+			&lineItem.TaxableAmount,
+			&lineItem.TotalTaxes,
+			&lineItem.LineTotal,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan line item: %w", err)
+		}
+		invoice.LineItems = append(invoice.LineItems, lineItem)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating line items: %w", err)
+	}
+
+	log.Printf("[DEBUG] getInvoiceForUpdate: Loaded %d line items for invoice %s", len(invoice.LineItems), invoiceID)
+
+	return invoice, nil
+}
+
+// getInvoiceForUpdate gets an invoice with a row lock for safe concurrent updates
+func (s *InvoiceService) _getInvoiceForUpdate(ctx context.Context, tx *sql.Tx, companyID, invoiceID string) (*models.Invoice, error) {
+	query := `
+		SELECT
+			id, company_id, establishment_id, point_of_sale_id, client_id,
+			invoice_number, invoice_type, status,
+			client_name, client_legal_name, client_nit, client_ncr, client_dui,
+			client_address, client_tipo_contribuyente, client_tipo_persona,
+			subtotal, total_discount, total_taxes, total,
+			currency, payment_terms, payment_method, payment_status,
+			amount_paid, balance_due, due_date,
 			created_at
 		FROM invoices
 		WHERE id = $1 AND company_id = $2
