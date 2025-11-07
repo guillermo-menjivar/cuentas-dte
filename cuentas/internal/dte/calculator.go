@@ -483,7 +483,7 @@ func (c *Calculator) CalculateExportacion(
 	return ItemAmounts{
 		PrecioUni:    RoundToItemPrecision(precioUni),
 		VentaGravada: RoundToItemPrecision(ventaGravada),
-		IvaItem:      0.0, // Always 0 for Type 11
+		IvaItem:      ivaItem,
 		MontoDescu:   RoundToItemPrecision(discount),
 	}
 }
