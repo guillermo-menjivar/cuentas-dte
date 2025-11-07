@@ -11,6 +11,7 @@ func ValidateNIT(nit string) bool {
 	if nit == "" {
 		return false
 	}
+	fmt.Println("inspecting nit", nit)
 	pattern := `^\d{4}-\d{6}-\d{3}-\d$`
 	matched, err := regexp.MatchString(pattern, nit)
 	if err != nil {
