@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"cuentas/internal/dte"
+	"cuentas/internal/hacienda"
 	"cuentas/internal/models"
 	"cuentas/internal/services"
 
@@ -212,14 +213,26 @@ func (h *InvoiceHandler) FinalizeInvoice(c *gin.Context) {
 		return
 	}
 
-	// ===== ADD THIS SECTION =====
+	// ===== DTE PROCESSING WITH ROUTING =====
 	// Process DTE (build, sign, and prepare for transmission)
 	dteServiceInterface, exists := c.Get("dteService")
 	if exists {
 		dteService := dteServiceInterface.(*dte.DTEService)
 
 		fmt.Println("\n=== Starting DTE Processing ===")
-		signedDTE, err := dteService.ProcessInvoice(c.Request.Context(), invoice)
+
+		// ⭐ ROUTE TO CORRECT PROCESSOR BASED ON INVOICE TYPE
+		var signedDTE *hacienda.ReceptionResponse
+		var err error
+
+		if invoice.IsExportInvoice() {
+			fmt.Println("📦 Export Invoice (Type 11) detected - using export processor...")
+			signedDTE, err = dteService.ProcessExportInvoice(c.Request.Context(), invoice)
+		} else {
+			fmt.Println("📄 Regular Invoice (Type 01/03) - using standard processor...")
+			signedDTE, err = dteService.ProcessInvoice(c.Request.Context(), invoice)
+		}
+
 		if err != nil {
 			// Log the error but don't fail the invoice finalization
 			fmt.Printf("❌ DTE processing failed: %v\n", err)
@@ -245,7 +258,7 @@ func (h *InvoiceHandler) FinalizeInvoice(c *gin.Context) {
 	} else {
 		fmt.Println("⚠️  Warning: DTE service not available in context")
 	}
-	// ===== END NEW SECTION =====
+	// ===== END DTE PROCESSING =====
 
 	c.JSON(http.StatusOK, invoice)
 }
