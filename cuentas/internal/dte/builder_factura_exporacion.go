@@ -292,7 +292,7 @@ func (b *Builder) buildExportacionCuerpoDocumento(invoice *models.Invoice) ([]Fa
 
 	for i, lineItem := range invoice.LineItems {
 		// Use export calculator (0% IVA)
-		itemAmount := b.calculator.CalculateResumenExportacion(
+		itemAmount := b.calculator.CalculateExportacion(
 			lineItem.UnitPrice,
 			lineItem.Quantity,
 			lineItem.DiscountAmount,
