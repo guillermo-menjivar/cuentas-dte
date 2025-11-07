@@ -999,6 +999,13 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 	if err != nil {
 		return nil, err
 	}
+
+	if invoice.IsExportInvoice() {
+		_, err = s.dteService.ProcessExportInvoice(ctx, invoice)
+	} else {
+		_, err = s.dteService.ProcessInvoice(ctx, invoice)
+	}
+
 	fmt.Println(invoice)
 
 	if invoice.Status != "draft" {
