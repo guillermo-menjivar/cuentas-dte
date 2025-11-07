@@ -30,7 +30,10 @@ class InvoiceSalesSeeder:
         try:
             response = requests.get(url, headers=self.headers)
             response.raise_for_status()
-            clients = response.json().get("clients", [])
+            data = response.json()
+            clients = data.get("clients", []) if data else []
+            if clients is None:
+                clients = []
             print(f"✅ Found {len(clients)} clients\n")
             return clients
         except requests.exceptions.RequestException as e:
@@ -46,7 +49,13 @@ class InvoiceSalesSeeder:
         try:
             response = requests.get(url, headers=self.headers, params=params)
             response.raise_for_status()
-            establishments = response.json().get("establishments", [])
+            data = response.json()
+
+            # Handle None or missing key
+            establishments = data.get("establishments", []) if data else []
+            if establishments is None:
+                establishments = []
+
             print(f"✅ Found {len(establishments)} establishments\n")
             return establishments
         except requests.exceptions.RequestException as e:
@@ -61,7 +70,9 @@ class InvoiceSalesSeeder:
         try:
             response = requests.get(url, headers=self.headers, params=params)
             response.raise_for_status()
-            return response.json().get("points_of_sale", [])
+            data = response.json()
+            pos = data.get("points_of_sale", []) if data else []
+            return pos if pos is not None else []
         except requests.exceptions.RequestException:
             return []
 
@@ -74,7 +85,10 @@ class InvoiceSalesSeeder:
         try:
             response = requests.get(url, headers=self.headers, params=params)
             response.raise_for_status()
-            items = response.json().get("items", [])
+            data = response.json()
+            items = data.get("items", []) if data else []
+            if items is None:
+                items = []
             print(f"✅ Found {len(items)} inventory items\n")
             return items
         except requests.exceptions.RequestException as e:
