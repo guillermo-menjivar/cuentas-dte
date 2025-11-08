@@ -175,9 +175,15 @@ func (b *Builder) BuildFacturaExportacion(ctx context.Context, invoice *models.I
 		VentaTercero:         nil,
 		CuerpoDocumento:      cuerpoDocumento,
 		Resumen:              resumen,
-		Apendice:             nil, // Required field but can be null
+		Apendice:             nil,
 	}
 
+	log.Printf("[BuildFacturaExportacion] Validating DTE against schema...")
+	if err := ValidateBeforeSubmission("11", factura); err != nil {
+		log.Printf("[BuildFacturaExportacion] ❌ Schema validation failed: %v", err)
+		return nil, fmt.Errorf("schema validation failed: %w", err)
+	}
+	log.Printf("[BuildFacturaExportacion] ✅ Schema validation passed")
 	// Marshal to JSON
 	return MarshalFacturaExportacion(factura)
 }
