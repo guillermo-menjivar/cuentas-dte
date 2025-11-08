@@ -114,13 +114,19 @@ func (v *DTEValidator) Validate(tipoDte string, dteData interface{}) (*Validatio
 
 	if !result.Valid() {
 		for _, err := range result.Errors() {
-			validationResult.Errors = append(validationResult.Errors, ValidationError{
-				Field:       err.Field(),
-				Message:     err.Description(),
-				Value:       err.Value(),
-				Type:        err.Type(),
-				Description: err.Details()["description"],
-			})
+			valErr := ValidationError{
+				Field:   err.Field(),
+				Message: err.Description(),
+				Value:   err.Value(),
+				Type:    err.Type(),
+			}
+
+			// Safely extract description if it exists
+			if desc, ok := err.Details()["description"].(string); ok {
+				valErr.Description = desc
+			}
+
+			validationResult.Errors = append(validationResult.Errors, valErr)
 		}
 	}
 
@@ -130,16 +136,6 @@ func (v *DTEValidator) Validate(tipoDte string, dteData interface{}) (*Validatio
 // ValidateExportInvoice validates a Type 11 export invoice
 func (v *DTEValidator) ValidateExportInvoice(dte *FacturaExportacionDTE) (*ValidationResult, error) {
 	return v.Validate("11", dte)
-}
-
-// ValidateFactura validates a Type 01 factura
-func (v *DTEValidator) ValidateFactura(dte *FacturaDTE) (*ValidationResult, error) {
-	return v.Validate("01", dte)
-}
-
-// ValidateCCF validates a Type 03 credito fiscal
-func (v *DTEValidator) ValidateCCF(dte *CreditoFiscalDTE) (*ValidationResult, error) {
-	return v.Validate("03", dte)
 }
 
 // FormatValidationErrors formats validation errors into a readable string
