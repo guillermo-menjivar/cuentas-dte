@@ -18,7 +18,7 @@ import (
 // FacturaExportacionDTE represents a Type 11 export invoice DTE
 type FacturaExportacionDTE struct {
 	Identificacion       FacturaExportacionIdentificacion `json:"identificacion"`
-	DocumentoRelacionado *[]DocumentoRelacionado          `json:"documentoRelacionado"`
+	DocumentoRelacionado *[]DocumentoRelacionado          `json:"documentoRelacionado,omitempty"`
 	Emisor               FacturaExportacionEmisor         `json:"emisor"`
 	Receptor             *FacturaExportacionReceptor      `json:"receptor"`
 	OtrosDocumentos      *[]FacturaExportacionOtroDoc     `json:"otrosDocumentos"`
