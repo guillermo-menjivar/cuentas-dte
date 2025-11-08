@@ -4,12 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
 	"cuentas/internal/codigos"
 	"cuentas/internal/models"
 )
+
+func init() {
+	// Initialize validator on package load
+	if err := InitGlobalValidator(); err != nil {
+		log.Printf("WARNING: Failed to initialize DTE validator: %v", err)
+		log.Printf("DTE validation will be skipped!")
+	}
+}
 
 // ============================================
 // TYPE 11 - FACTURA DE EXPORTACIÓN TYPES
