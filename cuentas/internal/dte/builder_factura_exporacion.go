@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"cuentas/internal/codigos"
+	"cuentas/internal/dte_schemas"
 	"cuentas/internal/models"
-	"cuentas/internal/schemavalidator" // ✅ ADD THIS
 )
 
 // ============================================
@@ -179,7 +179,7 @@ func (b *Builder) BuildFacturaExportacion(ctx context.Context, invoice *models.I
 
 	// ✅ Validate JSON against schema
 	log.Printf("[BuildFacturaExportacion] Validating DTE against schema...")
-	if err := schemavalidator.Validate("11", jsonBytes); err != nil {
+	if err := dte_schemas.Validate("11", jsonBytes); err != nil {
 		log.Printf("[BuildFacturaExportacion] ❌ Schema validation failed: %v", err)
 		return nil, fmt.Errorf("schema validation failed: %w", err)
 	}
