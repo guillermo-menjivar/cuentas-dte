@@ -35,7 +35,7 @@ class ExportInvoiceSeeder:
     RECINTO_FISCAL = ["01", "02", "03"]
 
     # Regimen options
-    REGIMEN = ["10", "11", "12"]
+    REGIMEN = ["10", "11"]
 
     # INCOTERMS
     INCOTERMS = [
@@ -252,6 +252,7 @@ class ExportInvoiceSeeder:
             "point_of_sale_id": pos["id"],
             "payment_terms": "cash",
             "correo": client["correo"],
+            "contact_email": client["correo"],
             "payment_method": "01",
             "notes": f"Factura de exportación #{invoice_num} - {client_data['nombre_pais']}",
             "line_items": line_items,
