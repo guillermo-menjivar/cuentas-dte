@@ -256,6 +256,7 @@ class ExportInvoiceSeeder:
             "establishment_id": establishment["id"],
             "point_of_sale_id": pos["id"],
             "payment_terms": "cash",
+            "correo": client["correo"],
             "payment_method": "01",
             "notes": f"Factura de exportación #{invoice_num} - {client_data['nombre_pais']}",
             "line_items": line_items,
