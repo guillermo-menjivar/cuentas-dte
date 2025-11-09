@@ -71,7 +71,6 @@ const (
 	RegimenReexportacionDeposito                                        = "EX-3.3070.000"
 	RegimenReexportacionDepositoDecreto738                              = "EX-3.3070.072"
 	RegimenReexportacionProvDeposito                                    = "EX-3.3071.000"
-	RegimenReexportacionProvCentroServicioLSI                           = "EX-3.3057.000"
 )
 
 // RegimenTypes is a map of all regime types
@@ -132,7 +131,6 @@ var RegimenTypes = map[string]string{
 	RegimenReexportacionDeposito:                                        "Re-Exportación, Reexportación Proveniente de Depósito., Régimen Común",
 	RegimenReexportacionDepositoDecreto738:                              "Re-Exportación, Reexportación Proveniente de Depósito., Decreto 738 Eléctricos e Híbridos",
 	RegimenReexportacionProvDeposito:                                    "Reexp. Prov. de Deposito.",
-	RegimenReexportacionProvCentroServicioLSI:                           "Reexportación Prov. de Centro de Servicio LSI",
 }
 
 // GetRegimenTypeName returns the name of a regime type by code
