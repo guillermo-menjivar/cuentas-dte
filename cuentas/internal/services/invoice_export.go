@@ -333,8 +333,6 @@ func (s *InvoiceService) getInvoiceHeaderExport(ctx context.Context, companyID, 
 	return invoice, nil
 }
 
-// ValidateExportInvoice validates all required fields for a Type 11 export invoice
-// This runs BEFORE building the DTE to catch errors early
 func (s *InvoiceService) ValidateExportInvoice(ctx context.Context, invoice *models.Invoice) error {
 	var errors []string
 
@@ -363,6 +361,11 @@ func (s *InvoiceService) ValidateExportInvoice(ctx context.Context, invoice *mod
 		}
 		if invoice.ExportRegimen == nil {
 			errors = append(errors, "export_regimen is required for tipo_item_expor 1 and 3")
+		} else {
+			// ✅ NEW: Validate regimen code using the catalog
+			if !codigos.IsValidRegimenType(*invoice.ExportRegimen) {
+				errors = append(errors, fmt.Sprintf("invalid export_regimen code: %s", *invoice.ExportRegimen))
+			}
 		}
 	}
 
@@ -390,12 +393,12 @@ func (s *InvoiceService) ValidateExportInvoice(ctx context.Context, invoice *mod
 	if invoice.ExportReceptorComplemento == nil || *invoice.ExportReceptorComplemento == "" {
 		errors = append(errors, "export_receptor_complemento (address) is required")
 	}
+
 	// validate country
 	cc, err := codigos.CountryCodeFromName(*invoice.ExportReceptorNombrePais)
 	if err != nil {
 		errors = append(errors, "country code is invalid")
 	}
-
 	invoice.ExportReceptorCodPais = &cc
 
 	// 5. Validate numDocumento format based on tipoDocumento
