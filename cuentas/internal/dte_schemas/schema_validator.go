@@ -83,6 +83,8 @@ func (v *Validator) ValidateJSON(tipoDte string, jsonBytes []byte) error {
 	// Validate
 	result, err := schema.Validate(documentLoader)
 	if err != nil {
+		fmt.Println("this was the submission")
+		fmt.Println(string(jsonBytes))
 		return fmt.Errorf("validation error: %w", err)
 	}
 
