@@ -1,4 +1,4 @@
-package schemavalidator
+package dte_schemas
 
 import (
 	"embed"
