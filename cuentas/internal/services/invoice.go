@@ -136,6 +136,9 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 		CreatedAt:               time.Now(),
 	}
 
+	fmt.Println("this is the request")
+	fmt.Println(invoice)
+
 	// 7. Insert invoice
 	// 7. Insert invoice (use export method if export fields present)
 	var invoiceID string
