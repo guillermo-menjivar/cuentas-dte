@@ -93,7 +93,7 @@ var ServeCmd = &cobra.Command{
 func initializeDTEValidator() error {
 	fmt.Println("🔧 Initializing DTE schema validator...")
 
-	if err := dte_schemas.InitGlobalValidator(); err != nil {
+	if err := dte_schemas.Init(); err != nil {
 		return fmt.Errorf("failed to initialize DTE validator: %w", err)
 	}
 

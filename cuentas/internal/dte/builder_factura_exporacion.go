@@ -10,6 +10,7 @@ import (
 
 	"cuentas/internal/codigos"
 	"cuentas/internal/models"
+	"cuentas/internal/schemavalidator" // ✅ ADD THIS
 )
 
 // ============================================
@@ -170,14 +171,21 @@ func (b *Builder) BuildFacturaExportacion(ctx context.Context, invoice *models.I
 		Apendice:             nil,
 	}
 
+	// Marshal to JSON first
+	jsonBytes, err := MarshalFacturaExportacion(factura)
+	if err != nil {
+		return nil, err
+	}
+
+	// ✅ Validate JSON against schema
 	log.Printf("[BuildFacturaExportacion] Validating DTE against schema...")
-	if err := ValidateBeforeSubmission("11", factura); err != nil {
+	if err := schemavalidator.Validate("11", jsonBytes); err != nil {
 		log.Printf("[BuildFacturaExportacion] ❌ Schema validation failed: %v", err)
 		return nil, fmt.Errorf("schema validation failed: %w", err)
 	}
 	log.Printf("[BuildFacturaExportacion] ✅ Schema validation passed")
-	// Marshal to JSON
-	return MarshalFacturaExportacion(factura)
+
+	return jsonBytes, nil
 }
 
 // ============================================
@@ -309,7 +317,6 @@ func (b *Builder) buildExportacionCuerpoDocumento(invoice *models.Invoice) ([]Fa
 		amounts[i] = itemAmount
 
 		// Tributos must be C3 (0% export)
-
 		tributoFull := codigos.TributoIVAExportaciones                     // "S1.C3"
 		tributoCode := tributoFull[strings.LastIndex(tributoFull, ".")+1:] // Extract "C3"
 		tributos := []string{tributoCode}
@@ -421,22 +428,4 @@ func MarshalFacturaExportacion(dte *FacturaExportacionDTE) ([]byte, error) {
 		return nil, fmt.Errorf("failed to marshal export DTE to JSON: %w", err)
 	}
 	return jsonBytes, nil
-}
-
-func ValidateBeforeSubmission(tipoDte string, dte interface{}) error {
-	if globalValidator == nil {
-		log.Printf("WARNING: Global validator not initialized, skipping validation")
-		return nil
-	}
-
-	result, err := globalValidator.Validate(tipoDte, dte)
-	if err != nil {
-		return fmt.Errorf("validation failed: %w", err)
-	}
-
-	if !result.Valid {
-		return fmt.Errorf("%s", FormatValidationErrors(result.Errors))
-	}
-
-	return nil
 }
