@@ -1,8 +1,7 @@
-package dte_schemas
+package schemavalidator
 
 import (
 	"embed"
-	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -13,18 +12,17 @@ import (
 //go:embed schemas/*.json
 var schemasFS embed.FS
 
-// DTEValidator validates DTEs against official Hacienda JSON schemas
-type DTEValidator struct {
+// Validator validates JSON against Hacienda DTE schemas
+type Validator struct {
 	schemas map[string]*gojsonschema.Schema
 }
 
-// ValidationError represents a single DTE validation error
+// ValidationError represents a single validation error
 type ValidationError struct {
-	Field       string      `json:"field"`
-	Message     string      `json:"message"`
-	Value       interface{} `json:"value,omitempty"`
-	Type        string      `json:"type"`
-	Description string      `json:"description"`
+	Field   string      `json:"field"`
+	Message string      `json:"message"`
+	Value   interface{} `json:"value,omitempty"`
+	Type    string      `json:"type"`
 }
 
 func (e ValidationError) Error() string {
@@ -34,28 +32,22 @@ func (e ValidationError) Error() string {
 	return fmt.Sprintf("%s: %s", e.Field, e.Message)
 }
 
-// ValidationResult contains validation results
-type ValidationResult struct {
-	Valid  bool              `json:"valid"`
-	Errors []ValidationError `json:"errors,omitempty"`
-}
-
-// NewDTEValidator creates a validator and loads all schemas
-func NewDTEValidator() (*DTEValidator, error) {
-	validator := &DTEValidator{
+// NewValidator creates a validator and loads all schemas
+func NewValidator() (*Validator, error) {
+	validator := &Validator{
 		schemas: make(map[string]*gojsonschema.Schema),
 	}
 
-	// Map of DTE types to schema filenames
+	// Map DTE types to schema files
 	schemaFiles := map[string]string{
-		"01": "schemas/fe-fc-v1.json",
-		"03": "schemas/fe-ccf-v3.json",
-		"11": "schemas/fe-fex-v1.json",
-		"05": "schemas/fe-nc-v3.json",
-		"06": "schemas/fe-nd-v3.json",
+		"01": "schemas/fe-fc-v1.json",  // Factura
+		"03": "schemas/fe-ccf-v3.json", // Crédito Fiscal
+		"05": "schemas/fe-nc-v3.json",  // Nota de Crédito
+		"06": "schemas/fe-nd-v3.json",  // Nota de Débito
+		"11": "schemas/fe-fex-v1.json", // Factura Exportación
 	}
 
-	// Load and compile each schema
+	// Load and compile schemas
 	for tipoDte, filename := range schemaFiles {
 		schemaBytes, err := schemasFS.ReadFile(filename)
 		if err != nil {
@@ -69,81 +61,55 @@ func NewDTEValidator() (*DTEValidator, error) {
 		}
 
 		validator.schemas[tipoDte] = schema
-		log.Printf("[Validator] Loaded schema for DTE type %s", tipoDte)
+		log.Printf("[SchemaValidator] Loaded schema for DTE type %s", tipoDte)
 	}
 
-	log.Printf("[Validator] Successfully loaded %d schemas", len(validator.schemas))
+	log.Printf("[SchemaValidator] Successfully loaded %d schemas", len(validator.schemas))
 	return validator, nil
 }
 
-// Validate validates a DTE against its type's schema
-func (v *DTEValidator) Validate(tipoDte string, dteData interface{}) (*ValidationResult, error) {
+// ValidateJSON validates JSON bytes against the schema for the given DTE type
+// This is the ONLY public method - pure validation, no side effects
+func (v *Validator) ValidateJSON(tipoDte string, jsonBytes []byte) error {
+	// Check if schema exists
 	schema, exists := v.schemas[tipoDte]
 	if !exists {
-		return nil, fmt.Errorf("no schema found for tipo DTE: %s", tipoDte)
+		return fmt.Errorf("no schema found for DTE type: %s", tipoDte)
 	}
 
-	// Convert DTE to JSON bytes
-	var dteBytes []byte
-	var err error
+	// Load JSON document
+	documentLoader := gojsonschema.NewBytesLoader(jsonBytes)
 
-	switch dte := dteData.(type) {
-	case []byte:
-		dteBytes = dte
-	case string:
-		dteBytes = []byte(dte)
-	default:
-		dteBytes, err = json.Marshal(dteData)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal DTE to JSON: %w", err)
-		}
-	}
-
-	// Create document loader
-	documentLoader := gojsonschema.NewBytesLoader(dteBytes)
-
-	// Validate against schema
+	// Validate
 	result, err := schema.Validate(documentLoader)
 	if err != nil {
-		return nil, fmt.Errorf("schema validation failed: %w", err)
+		return fmt.Errorf("validation error: %w", err)
 	}
 
-	// Build result
-	validationResult := &ValidationResult{
-		Valid:  result.Valid(),
-		Errors: []ValidationError{},
+	// If valid, return nil
+	if result.Valid() {
+		return nil
 	}
 
-	if !result.Valid() {
-		for _, err := range result.Errors() {
-			valErr := ValidationError{
-				Field:   err.Field(),
-				Message: err.Description(),
-				Value:   err.Value(),
-				Type:    err.Type(),
-			}
-
-			// Safely extract description if it exists
-			if desc, ok := err.Details()["description"].(string); ok {
-				valErr.Description = desc
-			}
-
-			validationResult.Errors = append(validationResult.Errors, valErr)
-		}
+	// Build error list
+	var errors []ValidationError
+	for _, err := range result.Errors() {
+		errors = append(errors, ValidationError{
+			Field:   err.Field(),
+			Message: err.Description(),
+			Value:   err.Value(),
+			Type:    err.Type(),
+		})
 	}
 
-	return validationResult, nil
+	// Format and return error
+	return formatValidationErrors(errors)
 }
 
-// ValidateExportInvoice validates a Type 11 export invoice
-func (v *DTEValidator) ValidateExportInvoice(dte *FacturaExportacionDTE) (*ValidationResult, error) {
-	return v.Validate("11", dte)
-}
-
-// FormatValidationErrors formats validation errors into a readable string
-func FormatValidationErrors(errors []ValidationError) string {
+// formatValidationErrors formats errors into a readable error message
+func formatValidationErrors(errors []ValidationError) error {
 	if len(errors) == 0 {
-		return ""
+		return nil
 	}
 
 	var lines []string
@@ -153,62 +119,27 @@ func FormatValidationErrors(errors []ValidationError) string {
 		lines = append(lines, fmt.Sprintf("  [%d] %s", i+1, err.Error()))
 	}
 
-	return strings.Join(lines, "\n")
+	return fmt.Errorf("%s", strings.Join(lines, "\n"))
 }
 
-// Global validator instance (initialized once)
-var globalValidator *DTEValidator
+// Global validator instance
+var globalValidator *Validator
 
-// InitGlobalValidator initializes the global validator
-// Call this during application startup
-func InitGlobalValidator() error {
-	validator, err := NewDTEValidator()
+// Init initializes the global validator (call once at startup)
+func Init() error {
+	validator, err := NewValidator()
 	if err != nil {
-		return fmt.Errorf("failed to initialize DTE validator: %w", err)
+		return fmt.Errorf("failed to initialize schema validator: %w", err)
 	}
 	globalValidator = validator
 	return nil
 }
 
-// GetGlobalValidator returns the global validator instance
-func GetGlobalValidator() *DTEValidator {
-	return globalValidator
-}
-
-// MustValidate validates a DTE and panics if validation fails
-// Use this during development/testing
-func MustValidate(tipoDte string, dte interface{}) {
-	if globalValidator == nil {
-		log.Printf("WARNING: Global validator not initialized, skipping validation")
-		return
-	}
-
-	result, err := globalValidator.Validate(tipoDte, dte)
-	if err != nil {
-		panic(fmt.Sprintf("Validation error: %v", err))
-	}
-
-	if !result.Valid {
-		panic(FormatValidationErrors(result.Errors))
-	}
-}
-
-// ValidateBeforeSubmission validates a DTE before submission to Hacienda
+// Validate validates JSON bytes using the global validator
 // Returns nil if valid, error with details if invalid
-func ValidateBeforeSubmission(tipoDte string, dte interface{}) error {
+func Validate(tipoDte string, jsonBytes []byte) error {
 	if globalValidator == nil {
-		log.Printf("WARNING: Global validator not initialized, skipping validation")
-		return nil
+		return fmt.Errorf("schema validator not initialized - call schemavalidator.Init() first")
 	}
-
-	result, err := globalValidator.Validate(tipoDte, dte)
-	if err != nil {
-		return fmt.Errorf("validation failed: %w", err)
-	}
-
-	if !result.Valid {
-		return fmt.Errorf("%s", FormatValidationErrors(result.Errors))
-	}
-
-	return nil
+	return globalValidator.ValidateJSON(tipoDte, jsonBytes)
 }
