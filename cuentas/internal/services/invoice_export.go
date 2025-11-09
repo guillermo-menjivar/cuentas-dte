@@ -4,6 +4,7 @@ import (
 	"context"
 	"cuentas/internal/codigos"
 	"cuentas/internal/database"
+	"cuentas/internal/dte"
 	"cuentas/internal/models"
 	"database/sql"
 	"fmt"
@@ -331,4 +332,148 @@ func (s *InvoiceService) getInvoiceHeaderExport(ctx context.Context, companyID, 
 	}
 
 	return invoice, nil
+}
+
+// ValidateExportInvoice validates all required fields for a Type 11 export invoice
+// This runs BEFORE building the DTE to catch errors early
+func (s *InvoiceService) ValidateExportInvoice(ctx context.Context, invoice *models.Invoice) error {
+	var errors []string
+
+	// 1. Basic invoice validation
+	if invoice.ID == "" {
+		errors = append(errors, "invoice ID is required")
+	}
+	if invoice.CompanyID == "" {
+		errors = append(errors, "company ID is required")
+	}
+	if invoice.ClientID == "" {
+		errors = append(errors, "client ID is required")
+	}
+
+	// 2. Export-specific required fields
+	if invoice.ExportTipoItemExpor == nil {
+		errors = append(errors, "export_tipo_item_expor is required for export invoices")
+	} else if *invoice.ExportTipoItemExpor < 1 || *invoice.ExportTipoItemExpor > 3 {
+		errors = append(errors, "export_tipo_item_expor must be 1, 2, or 3")
+	}
+
+	// Recinto fiscal required for tipo 1 and 3
+	if invoice.ExportTipoItemExpor != nil && *invoice.ExportTipoItemExpor != 2 {
+		if invoice.ExportRecintoFiscal == nil {
+			errors = append(errors, "export_recinto_fiscal is required for tipo_item_expor 1 and 3")
+		}
+		if invoice.ExportRegimen == nil {
+			errors = append(errors, "export_regimen is required for tipo_item_expor 1 and 3")
+		}
+	}
+
+	// 3. INCOTERMS validation
+	if invoice.ExportIncotermsCode == nil || *invoice.ExportIncotermsCode == "" {
+		errors = append(errors, "export_incoterms_code is required")
+	}
+	if invoice.ExportIncotermsDesc == nil || *invoice.ExportIncotermsDesc == "" {
+		errors = append(errors, "export_incoterms_desc is required")
+	}
+
+	// 4. Receptor (international client) validation
+	if invoice.ExportReceptorCodPais == nil || *invoice.ExportReceptorCodPais == "" {
+		errors = append(errors, "export_receptor_cod_pais is required")
+	}
+	if invoice.ExportReceptorNombrePais == nil || *invoice.ExportReceptorNombrePais == "" {
+		errors = append(errors, "export_receptor_nombre_pais is required")
+	}
+	if invoice.ExportReceptorTipoDocumento == nil || *invoice.ExportReceptorTipoDocumento == "" {
+		errors = append(errors, "export_receptor_tipo_documento is required")
+	}
+	if invoice.ExportReceptorNumDocumento == nil || *invoice.ExportReceptorNumDocumento == "" {
+		errors = append(errors, "export_receptor_num_documento is required")
+	}
+	if invoice.ExportReceptorComplemento == nil || *invoice.ExportReceptorComplemento == "" {
+		errors = append(errors, "export_receptor_complemento (address) is required")
+	}
+	// validate country
+	cc, err := codigos.CountryCodeFromName(invoice.ExportReceptorNombrePais)
+	if err != nil {
+		errors = append(errors, "country code is invalid")
+	}
+
+	invoice.ExportReceptorCodPais = cc
+
+	// 5. Validate numDocumento format based on tipoDocumento
+	if invoice.ExportReceptorTipoDocumento != nil && invoice.ExportReceptorNumDocumento != nil {
+		tipoDoc := *invoice.ExportReceptorTipoDocumento
+		numDoc := *invoice.ExportReceptorNumDocumento
+
+		switch tipoDoc {
+		case "36": // NIT - must be 9 or 14 digits
+			if !isDigitsOnly(numDoc) {
+				errors = append(errors, "export_receptor_num_documento for tipo 36 (NIT) must contain only digits")
+			} else if len(numDoc) != 9 && len(numDoc) != 14 {
+				errors = append(errors, "export_receptor_num_documento for tipo 36 (NIT) must be 9 or 14 digits")
+			}
+		case "13": // DUI - must be 8 digits + dash + 1 digit
+			if !strings.Contains(numDoc, "-") {
+				errors = append(errors, "export_receptor_num_documento for tipo 13 (DUI) must have format: 12345678-9")
+			}
+		}
+	}
+
+	// 6. Email required for invoices > $10,000
+	if invoice.Total >= 10000 {
+		if invoice.ContactEmail == nil || *invoice.ContactEmail == "" {
+			errors = append(errors, "contact_email is required for export invoices with total >= $10,000")
+		}
+	}
+
+	// 7. Validate line items
+	if len(invoice.LineItems) == 0 {
+		errors = append(errors, "at least one line item is required")
+	}
+
+	// 8. Validate export documents exist
+	if len(invoice.ExportDocuments) == 0 {
+		errors = append(errors, "at least one export document is required")
+	}
+
+	// 9. Validate totals are positive
+	if invoice.Total <= 0 {
+		errors = append(errors, "invoice total must be greater than 0")
+	}
+
+	// If any validation errors, return them
+	if len(errors) > 0 {
+		return fmt.Errorf("export invoice validation failed:\n  - %s", strings.Join(errors, "\n  - "))
+	}
+
+	// 10. Build a temporary DTE and validate against JSON schema
+	// This catches schema violations early before submission
+	if err := s.validateExportInvoiceSchema(ctx, invoice); err != nil {
+		return fmt.Errorf("schema validation failed: %w", err)
+	}
+
+	return nil
+}
+
+// validateExportInvoiceSchema builds the DTE and validates it against the JSON schema
+func (s *InvoiceService) validateExportInvoiceSchema(ctx context.Context, invoice *models.Invoice) error {
+	// Get DTE builder
+	builder := dte.NewBuilder(s.db)
+
+	// Build the DTE (this will trigger schema validation internally)
+	_, err := builder.BuildFacturaExportacion(ctx, invoice)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Helper function to check if string contains only digits
+func isDigitsOnly(s string) bool {
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return len(s) > 0
 }

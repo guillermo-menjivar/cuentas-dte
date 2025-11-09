@@ -1,6 +1,9 @@
 package codigos
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // Country represents a country
 type Country struct {
@@ -550,8 +553,6 @@ func IsValidCountry(code string) bool {
 	return exists
 }
 
-const CountryCodeUnknown = "9999"
-
 var CountryNameToCode = map[string]string{
 	"el salvador":                 "9300",
 	"afganistán":                  "9303",
@@ -621,5 +622,5 @@ func CountryCodeFromName(name string) string {
 	if code, ok := CountryNameToCode[key]; ok {
 		return code
 	}
-	return CountryCodeUnknown
+	return fmt.Errorf("country code not found for country name: %q", name)
 }
