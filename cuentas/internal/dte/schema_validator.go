@@ -48,9 +48,11 @@ func NewDTEValidator() (*DTEValidator, error) {
 
 	// Map of DTE types to schema filenames
 	schemaFiles := map[string]string{
-		"01": "schemas/factura_v1.json",
-		"03": "schemas/credito_fiscal_v1.json",
-		"11": "schemas/factura_exportacion_v1.json",
+		"01": "schemas/fe-fc-v1.json",
+		"03": "schemas/fe-ccf-v3.json",
+		"11": "schemas/fe-fex-v1.json",
+		"05": "schemas/fe-nc-v3.json",
+		"06": "schemas/fe-nd-v3.json",
 	}
 
 	// Load and compile each schema
