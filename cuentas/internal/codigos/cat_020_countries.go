@@ -549,3 +549,77 @@ func IsValidCountry(code string) bool {
 	_, exists := Countries[code]
 	return exists
 }
+
+const CountryCodeUnknown = "9999"
+
+var CountryNameToCode = map[string]string{
+	"el salvador":                 "9300",
+	"afganistán":                  "9303",
+	"albania":                     "9306",
+	"alemania occidental":         "9309",
+	"alemania oriental":           "9310",
+	"alto volta":                  "9315",
+	"andorra":                     "9317",
+	"angola":                      "9318",
+	"antigua y barbuda":           "9319",
+	"arabia saudita":              "9324",
+	"argelia":                     "9327",
+	"argentina":                   "9330",
+	"australia":                   "9333",
+	"austria":                     "9336",
+	"bangladesh":                  "9339",
+	"bahréin":                     "9342",
+	"barbados":                    "9345",
+	"bélgica":                     "9348",
+	"belice":                      "9349",
+	"benin":                       "9350",
+	"birmania":                    "9354",
+	"bolivia":                     "9357",
+	"botswana":                    "9360",
+	"brasil":                      "9363",
+	"brunei":                      "9366",
+	"bulgaria":                    "9369",
+	"burundi":                     "9372",
+	"bophuthatswana":              "9374",
+	"bután":                       "9375",
+	"cabo verde":                  "9377",
+	"camboya":                     "9378",
+	"camerún":                     "9381",
+	"canadá":                      "9384",
+	"ceilán":                      "9387",
+	"centro áfrica república":     "9390",
+	"colombia":                    "9393",
+	"comoras-islas":               "9394",
+	"congo república":             "9396",
+	"congo república democrática": "9399",
+	"corea norte":                 "9402",
+	"corea sur":                   "9405",
+	"costa marfil":                "9408",
+	"costa rica":                  "9411",
+	"cuba":                        "9414",
+	"chad":                        "9417",
+	"checoslovaquia":              "9420",
+	"chile":                       "9423",
+	"china república popular":     "9426",
+	"chipre":                      "9432",
+	"dahomey":                     "9435",
+	"dinamarca":                   "9438",
+	"djibouti":                    "9439",
+	"dominica":                    "9440",
+	"república dominicana":        "9441",
+	"ecuador":                     "9444",
+	"emiratos árabes unidos":      "9446",
+	"españa":                      "9447",
+	"estados unidos":              "9450",
+}
+
+// CountryCodeFromName returns the Hacienda 4-digit code for a given country name.
+// The input should be any case; this function lowercases and trims it.
+// If not found, it returns CountryCodeUnknown ("9999").
+func CountryCodeFromName(name string) string {
+	key := strings.ToLower(strings.TrimSpace(name))
+	if code, ok := CountryNameToCode[key]; ok {
+		return code
+	}
+	return CountryCodeUnknown
+}
