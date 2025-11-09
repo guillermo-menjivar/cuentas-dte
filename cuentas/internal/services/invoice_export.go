@@ -4,7 +4,6 @@ import (
 	"context"
 	"cuentas/internal/codigos"
 	"cuentas/internal/database"
-	"cuentas/internal/dte"
 	"cuentas/internal/models"
 	"database/sql"
 	"fmt"
@@ -392,12 +391,12 @@ func (s *InvoiceService) ValidateExportInvoice(ctx context.Context, invoice *mod
 		errors = append(errors, "export_receptor_complemento (address) is required")
 	}
 	// validate country
-	cc, err := codigos.CountryCodeFromName(invoice.ExportReceptorNombrePais)
+	cc, err := codigos.CountryCodeFromName(*invoice.ExportReceptorNombrePais)
 	if err != nil {
 		errors = append(errors, "country code is invalid")
 	}
 
-	invoice.ExportReceptorCodPais = cc
+	invoice.ExportReceptorCodPais = &cc
 
 	// 5. Validate numDocumento format based on tipoDocumento
 	if invoice.ExportReceptorTipoDocumento != nil && invoice.ExportReceptorNumDocumento != nil {
@@ -443,26 +442,6 @@ func (s *InvoiceService) ValidateExportInvoice(ctx context.Context, invoice *mod
 	// If any validation errors, return them
 	if len(errors) > 0 {
 		return fmt.Errorf("export invoice validation failed:\n  - %s", strings.Join(errors, "\n  - "))
-	}
-
-	// 10. Build a temporary DTE and validate against JSON schema
-	// This catches schema violations early before submission
-	if err := s.validateExportInvoiceSchema(ctx, invoice); err != nil {
-		return fmt.Errorf("schema validation failed: %w", err)
-	}
-
-	return nil
-}
-
-// validateExportInvoiceSchema builds the DTE and validates it against the JSON schema
-func (s *InvoiceService) validateExportInvoiceSchema(ctx context.Context, invoice *models.Invoice) error {
-	// Get DTE builder
-	builder := dte.NewBuilder(s.db)
-
-	// Build the DTE (this will trigger schema validation internally)
-	_, err := builder.BuildFacturaExportacion(ctx, invoice)
-	if err != nil {
-		return err
 	}
 
 	return nil

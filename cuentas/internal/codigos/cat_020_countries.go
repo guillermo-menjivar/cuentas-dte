@@ -617,10 +617,10 @@ var CountryNameToCode = map[string]string{
 // CountryCodeFromName returns the Hacienda 4-digit code for a given country name.
 // The input should be any case; this function lowercases and trims it.
 // If not found, it returns CountryCodeUnknown ("9999").
-func CountryCodeFromName(name string) string {
+func CountryCodeFromName(name string) (string, error) {
 	key := strings.ToLower(strings.TrimSpace(name))
 	if code, ok := CountryNameToCode[key]; ok {
-		return code
+		return code, nil
 	}
-	return fmt.Errorf("country code not found for country name: %q", name)
+	return "", fmt.Errorf("country code not found for country name: %q", name)
 }
