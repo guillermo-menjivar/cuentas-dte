@@ -79,9 +79,25 @@ var ServeCmd = &cobra.Command{
 			log.Fatalf("Failed to initialize DTE service: %v", err)
 		}
 
+		// Initialize DTE Schema Validator ⭐ ADD THIS
+		if err := initializeDTEValidator(); err != nil {
+			log.Fatalf("Failed to initialize DTE validator: %v", err)
+		}
+
 		fmt.Printf("Server running on port: %s\n", GlobalConfig.Port)
 		startServer()
 	},
+}
+
+func initializeDTEValidator() error {
+	fmt.Println("🔧 Initializing DTE schema validator...")
+
+	if err := dte.InitGlobalValidator(); err != nil {
+		return fmt.Errorf("failed to initialize DTE validator: %w", err)
+	}
+
+	fmt.Println("✅ DTE schema validator initialized successfully")
+	return nil
 }
 
 func initializeHacienda() error {
