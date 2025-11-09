@@ -126,15 +126,6 @@ func formatValidationErrors(errors []ValidationError) error {
 var globalValidator *Validator
 
 // Init initializes the global validator (call once at startup)
-func Init() error {
-	validator, err := NewValidator()
-	if err != nil {
-		return fmt.Errorf("failed to initialize schema validator: %w", err)
-	}
-	globalValidator = validator
-	return nil
-}
-
 // Validate validates JSON bytes using the global validator
 // Returns nil if valid, error with details if invalid
 func Validate(tipoDte string, jsonBytes []byte) error {

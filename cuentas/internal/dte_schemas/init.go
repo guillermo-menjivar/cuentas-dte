@@ -1,11 +1,12 @@
 package dte_schemas
 
-import "log"
+import "fmt"
 
-func init() {
-	// Initialize validator on package load
-	if err := InitGlobalValidator(); err != nil {
-		log.Printf("WARNING: Failed to initialize DTE validator: %v", err)
-		log.Printf("DTE validation will be skipped!")
+func Init() error {
+	validator, err := NewValidator()
+	if err != nil {
+		return fmt.Errorf("failed to initialize schema validator: %w", err)
 	}
+	globalValidator = validator
+	return nil
 }
