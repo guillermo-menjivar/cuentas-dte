@@ -358,11 +358,17 @@ func (s *InvoiceService) ValidateExportInvoice(ctx context.Context, invoice *mod
 	if invoice.ExportTipoItemExpor != nil && *invoice.ExportTipoItemExpor != 2 {
 		if invoice.ExportRecintoFiscal == nil {
 			errors = append(errors, "export_recinto_fiscal is required for tipo_item_expor 1 and 3")
+		} else {
+			// ✅ Validate recinto fiscal code
+			if !codigos.IsValidTaxEnclosure(*invoice.ExportRecintoFiscal) {
+				errors = append(errors, fmt.Sprintf("invalid export_recinto_fiscal code: %s", *invoice.ExportRecintoFiscal))
+			}
 		}
+
 		if invoice.ExportRegimen == nil {
 			errors = append(errors, "export_regimen is required for tipo_item_expor 1 and 3")
 		} else {
-			// ✅ NEW: Validate regimen code using the catalog
+			// ✅ Validate regimen code using the catalog
 			if !codigos.IsValidRegimenType(*invoice.ExportRegimen) {
 				errors = append(errors, fmt.Sprintf("invalid export_regimen code: %s", *invoice.ExportRegimen))
 			}
@@ -372,7 +378,13 @@ func (s *InvoiceService) ValidateExportInvoice(ctx context.Context, invoice *mod
 	// 3. INCOTERMS validation
 	if invoice.ExportIncotermsCode == nil || *invoice.ExportIncotermsCode == "" {
 		errors = append(errors, "export_incoterms_code is required")
+	} else {
+		// ✅ Validate INCOTERMS code
+		if !codigos.IsValidIncoterm(*invoice.ExportIncotermsCode) {
+			errors = append(errors, fmt.Sprintf("invalid export_incoterms_code: %s", *invoice.ExportIncotermsCode))
+		}
 	}
+
 	if invoice.ExportIncotermsDesc == nil || *invoice.ExportIncotermsDesc == "" {
 		errors = append(errors, "export_incoterms_desc is required")
 	}
@@ -435,6 +447,32 @@ func (s *InvoiceService) ValidateExportInvoice(ctx context.Context, invoice *mod
 	// 8. Validate export documents exist
 	if len(invoice.ExportDocuments) == 0 {
 		errors = append(errors, "at least one export document is required")
+	} else {
+		// ✅ Validate each export document
+		for i, doc := range invoice.ExportDocuments {
+			// Validate cod_doc_asociado
+			if doc.CodDocAsociado == "" {
+				errors = append(errors, fmt.Sprintf("export_document[%d]: cod_doc_asociado is required", i))
+			} else if !codigos.IsValidAssociatedDocument(doc.CodDocAsociado) {
+				errors = append(errors, fmt.Sprintf("export_document[%d]: invalid cod_doc_asociado: %s", i, doc.CodDocAsociado))
+			}
+
+			// For transport documents (code "4"), additional fields are required
+			if doc.CodDocAsociado == codigos.AssociatedDocTransporte {
+				if doc.PlacaTrans == nil || *doc.PlacaTrans == "" {
+					errors = append(errors, fmt.Sprintf("export_document[%d]: placa_trans is required for transport documents", i))
+				}
+				if doc.ModoTransp == nil || *doc.ModoTransp == "" {
+					errors = append(errors, fmt.Sprintf("export_document[%d]: modo_transp is required for transport documents", i))
+				}
+				if doc.NumConductor == nil || *doc.NumConductor == "" {
+					errors = append(errors, fmt.Sprintf("export_document[%d]: num_conductor is required for transport documents", i))
+				}
+				if doc.NombreConductor == nil || *doc.NombreConductor == "" {
+					errors = append(errors, fmt.Sprintf("export_document[%d]: nombre_conductor is required for transport documents", i))
+				}
+			}
+		}
 	}
 
 	// 9. Validate totals are positive
