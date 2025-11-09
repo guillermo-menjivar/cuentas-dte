@@ -1,4 +1,4 @@
-package dte
+package dte_schemas
 
 import (
 	"embed"
