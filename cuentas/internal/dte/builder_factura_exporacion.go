@@ -422,3 +422,21 @@ func MarshalFacturaExportacion(dte *FacturaExportacionDTE) ([]byte, error) {
 	}
 	return jsonBytes, nil
 }
+
+func ValidateBeforeSubmission(tipoDte string, dte interface{}) error {
+	if globalValidator == nil {
+		log.Printf("WARNING: Global validator not initialized, skipping validation")
+		return nil
+	}
+
+	result, err := globalValidator.Validate(tipoDte, dte)
+	if err != nil {
+		return fmt.Errorf("validation failed: %w", err)
+	}
+
+	if !result.Valid {
+		return fmt.Errorf("%s", FormatValidationErrors(result.Errors))
+	}
+
+	return nil
+}
