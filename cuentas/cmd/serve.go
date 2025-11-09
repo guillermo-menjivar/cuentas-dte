@@ -7,6 +7,7 @@ import (
 
 	"cuentas/internal/database"
 	"cuentas/internal/dte"
+	"cuentas/internal/dte_schemas"
 	"cuentas/internal/hacienda"
 	"cuentas/internal/handlers"
 	"cuentas/internal/middleware"
@@ -92,7 +93,7 @@ var ServeCmd = &cobra.Command{
 func initializeDTEValidator() error {
 	fmt.Println("🔧 Initializing DTE schema validator...")
 
-	if err := dte.InitGlobalValidator(); err != nil {
+	if err := dte_schemas.InitGlobalValidator(); err != nil {
 		return fmt.Errorf("failed to initialize DTE validator: %w", err)
 	}
 
