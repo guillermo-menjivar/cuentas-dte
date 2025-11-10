@@ -407,11 +407,14 @@ func (s *InvoiceService) ValidateExportInvoice(ctx context.Context, invoice *mod
 	}
 
 	// validate country
-	cc, err := codigos.CountryCodeFromName(*invoice.ExportReceptorNombrePais)
-	if err != nil {
-		errors = append(errors, "country code is invalid")
+	if invoice.ExportReceptorNombrePais != nil {
+		cc, err := codigos.CountryCodeFromName(*invoice.ExportReceptorNombrePais)
+		if err != nil {
+			errors = append(errors, "country code is invalid")
+		} else {
+			invoice.ExportReceptorCodPais = &cc
+		}
 	}
-	invoice.ExportReceptorCodPais = &cc
 
 	// 5. Validate numDocumento format based on tipoDocumento
 	if invoice.ExportReceptorTipoDocumento != nil && invoice.ExportReceptorNumDocumento != nil {
@@ -450,19 +453,22 @@ func (s *InvoiceService) ValidateExportInvoice(ctx context.Context, invoice *mod
 	} else {
 		// ✅ Validate each export document
 		for i, doc := range invoice.ExportDocuments {
-			// Validate cod_doc_asociado
-			if doc.CodDocAsociado == "" {
+			// Validate cod_doc_asociado (convert int to string for validation)
+			if doc.CodDocAsociado == 0 {
 				errors = append(errors, fmt.Sprintf("export_document[%d]: cod_doc_asociado is required", i))
-			} else if !codigos.IsValidAssociatedDocument(doc.CodDocAsociado) {
-				errors = append(errors, fmt.Sprintf("export_document[%d]: invalid cod_doc_asociado: %s", i, doc.CodDocAsociado))
+			} else {
+				codDocStr := fmt.Sprintf("%d", doc.CodDocAsociado)
+				if !codigos.IsValidAssociatedDocument(codDocStr) {
+					errors = append(errors, fmt.Sprintf("export_document[%d]: invalid cod_doc_asociado: %d", i, doc.CodDocAsociado))
+				}
 			}
 
-			// For transport documents (code "4"), additional fields are required
-			if doc.CodDocAsociado == codigos.AssociatedDocTransporte {
+			// For transport documents (code 4), additional fields are required
+			if doc.CodDocAsociado == 4 {
 				if doc.PlacaTrans == nil || *doc.PlacaTrans == "" {
 					errors = append(errors, fmt.Sprintf("export_document[%d]: placa_trans is required for transport documents", i))
 				}
-				if doc.ModoTransp == nil || *doc.ModoTransp == "" {
+				if doc.ModoTransp == nil || *doc.ModoTransp == 0 {
 					errors = append(errors, fmt.Sprintf("export_document[%d]: modo_transp is required for transport documents", i))
 				}
 				if doc.NumConductor == nil || *doc.NumConductor == "" {
@@ -488,7 +494,6 @@ func (s *InvoiceService) ValidateExportInvoice(ctx context.Context, invoice *mod
 	return nil
 }
 
-// Helper function to check if string contains only digits
 func isDigitsOnly(s string) bool {
 	for _, r := range s {
 		if r < '0' || r > '9' {
