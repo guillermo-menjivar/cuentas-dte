@@ -418,17 +418,16 @@ func (c *Calculator) CalculateExportacion(
 	discount float64,
 ) ItemAmounts {
 	precioUni := priceWithoutIVA
-	ventaNoSuj := precioUni * quantity
+	ventaGravada := precioUni * quantity
 
-	fmt.Printf("[DEBUG] CalculateExportacion: price=%.2f, qty=%.2f, discount=%.2f → ventaNoSuj=%.2f (exports at 0%% rate)\n",
-		priceWithoutIVA, quantity, discount, ventaNoSuj)
+	fmt.Printf("[DEBUG] CalculateExportacion: price=%.2f, qty=%.2f, discount=%.2f → ventaGravada=%.2f (export 0%% with C3)\n",
+		priceWithoutIVA, quantity, discount, ventaGravada)
 
 	ivaItem := 0.0
 
 	return ItemAmounts{
 		PrecioUni:    RoundToItemPrecision(precioUni),
-		VentaGravada: 0,
-		VentaNoSuj:   RoundToItemPrecision(ventaNoSuj),
+		VentaGravada: RoundToItemPrecision(ventaGravada),
 		IvaItem:      ivaItem,
 		MontoDescu:   RoundToItemPrecision(discount),
 	}
@@ -439,31 +438,31 @@ func (c *Calculator) CalculateResumenExportacion(
 	seguro float64,
 	flete float64,
 ) ResumenAmounts {
-	var totalNoSuj, totalDescu float64
+	var totalGravada, totalDescu float64
 
 	for _, item := range items {
-		totalNoSuj += item.VentaNoSuj
+		totalGravada += item.VentaGravada
 		totalDescu += item.MontoDescu
 	}
 
-	totalNoSuj = RoundToResumenPrecision(totalNoSuj)
+	totalGravada = RoundToResumenPrecision(totalGravada)
 	totalDescu = RoundToResumenPrecision(totalDescu)
 	seguro = RoundToResumenPrecision(seguro)
 	flete = RoundToResumenPrecision(flete)
 
 	totalIva := 0.0
 
-	montoTotalOperacion := RoundToResumenPrecision(totalNoSuj - totalDescu)
-	totalPagar := RoundToResumenPrecision(totalNoSuj + seguro + flete - totalDescu)
+	montoTotalOperacion := RoundToResumenPrecision(totalGravada - totalDescu)
+	totalPagar := RoundToResumenPrecision(totalGravada + seguro + flete - totalDescu)
 
 	return ResumenAmounts{
-		TotalNoSuj:          totalNoSuj,
+		TotalNoSuj:          0,
 		TotalExenta:         0,
-		TotalGravada:        0,
-		SubTotalVentas:      totalNoSuj,
+		TotalGravada:        totalGravada,
+		SubTotalVentas:      totalGravada,
 		TotalDescu:          totalDescu,
 		TotalIva:            totalIva,
-		SubTotal:            totalNoSuj,
+		SubTotal:            totalGravada,
 		MontoTotalOperacion: montoTotalOperacion,
 		TotalPagar:          totalPagar,
 		TotalNoGravado:      0,

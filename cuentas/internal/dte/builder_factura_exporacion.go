@@ -341,19 +341,21 @@ func (b *Builder) _buildExportacionCuerpoDocumento(invoice *models.Invoice) ([]F
 }
 
 // ✅ CORRECTED VERSION - Replace the entire function
-
 func (b *Builder) buildExportacionCuerpoDocumento(invoice *models.Invoice) ([]FacturaExportacionCuerpoItem, []ItemAmounts) {
 	items := make([]FacturaExportacionCuerpoItem, len(invoice.LineItems))
 	amounts := make([]ItemAmounts, len(invoice.LineItems))
 
 	for i, lineItem := range invoice.LineItems {
-		// Use export calculator (0% IVA)
 		itemAmount := b.calculator.CalculateExportacion(
 			lineItem.UnitPrice,
 			lineItem.Quantity,
 			lineItem.DiscountAmount,
 		)
 		amounts[i] = itemAmount
+
+		tributoFull := codigos.TributoIVAExportaciones
+		tributoCode := tributoFull[strings.LastIndex(tributoFull, ".")+1:]
+		tributos := []string{tributoCode}
 
 		items[i] = FacturaExportacionCuerpoItem{
 			NumItem:      lineItem.LineNumber,
@@ -363,9 +365,8 @@ func (b *Builder) buildExportacionCuerpoDocumento(invoice *models.Invoice) ([]Fa
 			Descripcion:  lineItem.ItemName,
 			PrecioUni:    itemAmount.PrecioUni,
 			MontoDescu:   itemAmount.MontoDescu,
-			VentaNoSuj:   itemAmount.VentaNoSuj, // ✅ ADD THIS - From calculator
-			VentaGravada: 0,                     // ✅ CHANGE THIS - Always 0 for exports
-			Tributos:     nil,                   // ✅ CHANGE THIS - No tributos for exports
+			VentaGravada: itemAmount.VentaGravada,
+			Tributos:     tributos,
 			NoGravado:    0,
 		}
 	}
