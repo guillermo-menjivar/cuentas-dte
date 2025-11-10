@@ -24,11 +24,11 @@ class ExportInvoiceSeeder:
 
     # Country codes for common export destinations (ONLY VALID CODES FROM SCHEMA)
     EXPORT_COUNTRIES = [
-        ("9450", "Estados Unidos", "36", "123 Main Street, Miami, FL 33101"),
-        ("9450", "Estados Unidos", "36", "456 Broadway, New York, NY 10013"),
-        ("9450", "Estados Unidos", "36", "789 Market St, San Francisco, CA 94102"),
-        ("9411", "Costa Rica", "36", "San José Centro, Costa Rica"),
-        ("9447", "España", "36", "Calle Gran Vía 123, Madrid, España"),
+        ("9450", "Estados Unidos", "37", "123 Main Street, Miami, FL 33101"),
+        ("9450", "Estados Unidos", "37", "456 Broadway, New York, NY 10013"),
+        ("9450", "Estados Unidos", "37", "789 Market St, San Francisco, CA 94102"),
+        ("9411", "Costa Rica", "37", "San José Centro, Costa Rica"),
+        ("9447", "España", "37", "Calle Gran Vía 123, Madrid, España"),
     ]
 
     # Recinto fiscal options (Tax Enclosures - most common)
