@@ -94,6 +94,7 @@ func (b *Builder) buildIdentificacion(invoiceType string, invoice *models.Invoic
 		fmt.Println("creating identification CCF")
 		return b.buildCCFIdentificacion(invoice, company)
 	default:
+		fmt.Println("creting identificaiton for CF")
 
 		// Load El Salvador timezone
 		loc, err := time.LoadLocation("America/El_Salvador")
@@ -187,6 +188,11 @@ func (b *Builder) buildReceptor(invoiceType string, client *ClientData) *Recepto
 		if client.DepartmentCode != "" && client.MunicipalityCode != "" {
 			dir := b.buildReceptorDireccion(client)
 			direccion = &dir
+		}
+
+		if client.CodActividad == nil {
+			fmt.Println("we are assigning 10005 to factura")
+			client.CodActividad = stringPtr(codigos.ActEcon10005)
 		}
 
 		return &Receptor{
@@ -676,4 +682,8 @@ func (b *Builder) buildCCFReceptor(client *ClientData) *Receptor {
 		Correo:          client.Correo,
 		NombreComercial: client.BusinessName,
 	}
+}
+
+func stringPtr(s string) *string {
+	return &s
 }
