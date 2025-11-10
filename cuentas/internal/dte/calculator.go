@@ -452,7 +452,8 @@ func (c *Calculator) CalculateResumenExportacion(
 
 	totalIva := 0.0
 
-	montoTotalOperacion := RoundToResumenPrecision(totalGravada - totalDescu)
+	montoTotalOperacion := RoundToResumenPrecision(totalGravada + seguro + flete - totalDescu)
+
 	totalPagar := RoundToResumenPrecision(totalGravada + seguro + flete - totalDescu)
 
 	return ResumenAmounts{
