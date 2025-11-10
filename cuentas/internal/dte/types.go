@@ -31,6 +31,7 @@ const (
 type ItemAmounts struct {
 	PrecioUni    float64 // Unit price (with or without IVA depending on invoice type)
 	VentaGravada float64 // Taxable amount (with or without IVA depending on invoice type)
+	VentaNoSuj   float64
 	IvaItem      float64 // IVA amount
 	MontoDescu   float64 // Discount amount for this item
 }

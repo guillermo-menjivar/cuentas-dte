@@ -412,40 +412,27 @@ func CalculateTotalFromBase(baseAmount float64) float64 {
 // ============================================
 
 // CalculateExportacion calculates amounts for export invoices (Factura de Exportación)
-// where items are subject to 0% IVA (not exempt, but zero-rated).
-//
-// Formula:
-//   - precioUni = priceWithoutIVA (base price)
-//   - ventaGravada = (precioUni × cantidad) - descuento
-//   - ivaItem = 0 (always 0% for exports)
-//
-// Example:
-//
-//	Export invoice for $100.00:
-//	- precioUni: 100.00 (without IVA)
-//	- ventaGravada: 100.00
-//	- ivaItem: 0.00 (0% export rate)
-//	- Total customer pays: 100.00
 func (c *Calculator) CalculateExportacion(
 	priceWithoutIVA float64,
 	quantity float64,
 	discount float64,
 ) ItemAmounts {
 	precioUni := priceWithoutIVA
-	ventaGravada := precioUni * quantity
+	ventaNoSuj := precioUni * quantity // ← Use ventaNoSuj for 0% exports!
 
-	// ⭐ DEBUG: Confirm new code is running
-	fmt.Printf("[DEBUG] CalculateExportacion: price=%.2f, qty=%.2f, discount=%.2f → ventaGravada=%.2f (BEFORE discount)\n",
-		priceWithoutIVA, quantity, discount, ventaGravada)
+	fmt.Printf("[DEBUG] CalculateExportacion: price=%.2f, qty=%.2f, discount=%.2f → ventaNoSuj=%.2f (exports at 0%% rate)\n",
+		priceWithoutIVA, quantity, discount, ventaNoSuj)
 
 	ivaItem := 0.0
 
 	return ItemAmounts{
 		PrecioUni:    RoundToItemPrecision(precioUni),
-		VentaGravada: RoundToItemPrecision(ventaGravada),
+		VentaGravada: 0,                                // ← Change to 0
+		VentaNoSuj:   RoundToItemPrecision(ventaNoSuj), // ← ADD THIS
 		IvaItem:      ivaItem,
 		MontoDescu:   RoundToItemPrecision(discount),
 	}
+
 }
 
 func (c *Calculator) CalculateResumenExportacion(
@@ -453,10 +440,11 @@ func (c *Calculator) CalculateResumenExportacion(
 	seguro float64,
 	flete float64,
 ) ResumenAmounts {
-	var totalGravada, totalDescu float64
+
+	var totalNoSuj, totalDescu float64 // ← Rename variable
 
 	for _, item := range items {
-		totalGravada += item.VentaGravada
+		totalNoSuj += item.VentaNoSuj // ← Change from VentaGravada
 		totalDescu += item.MontoDescu
 	}
 
