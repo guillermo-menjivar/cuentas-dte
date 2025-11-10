@@ -51,6 +51,20 @@ func (s *InvoiceService) validatePointOfSale(ctx context.Context, tx *sql.Tx, co
 	return nil
 }
 
+// ClientSnapshot represents the snapshot of client data at transaction time
+type ClientSnapshot struct {
+	ClientName              string
+	ClientLegalName         string
+	ClientNit               *string
+	ClientNcr               *string
+	ClientDui               *string
+	ClientAddress           string
+	ClientTipoContribuyente *string
+	ClientTipoPersona       *string
+}
+
+// CreateInvoice creates a new invoice (domestic or export)
+// Replace this function in internal/services/invoice_service.go
 func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, req *models.CreateInvoiceRequest) (*models.Invoice, error) {
 	// Validate request
 	if err := req.Validate(); err != nil {
@@ -77,27 +91,26 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 
 	// 3. Generate invoice number
 	invoiceNumber, err := s.generateInvoiceNumber(ctx, tx, companyID)
-	fmt.Println("this is the invoice number I got", invoiceNumber)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate invoice number: %w", err)
 	}
 
-	// 4. Process line items and calculate totals
+	// 4. ✅ SOLUTION A: Process line items based on invoice type
 	var lineItems []models.InvoiceLineItem
 	var subtotal, totalDiscount, totalTaxes float64
 
 	if req.ExportFields != nil {
-		// ✅ Export invoice: use special processor (0% IVA)
+		// ✅ Export invoice: use export processor (applies C3 = 0% IVA)
 		lineItems, subtotal, totalDiscount, totalTaxes, err = s.processLineItemsExport(ctx, tx, companyID, req.LineItems)
 	} else {
-		// Regular invoice: use normal processor
+		// Regular invoice: use normal processor (applies configured taxes)
 		lineItems, subtotal, totalDiscount, totalTaxes, err = s.processLineItems(ctx, tx, companyID, req.LineItems)
 	}
 	if err != nil {
 		return nil, err
 	}
 
-	// Calculate total based on invoice type
+	// 5. ✅ SOLUTION A: Calculate total based on invoice type
 	var total float64
 	if req.ExportFields != nil {
 		// ✅ Export invoice: total = items + seguro + flete (NO taxes!)
@@ -109,12 +122,14 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 		if req.ExportFields.Flete != nil {
 			flete = *req.ExportFields.Flete
 		}
+		// Export: subtotal - discount + seguro + flete
 		total = round(subtotal - totalDiscount + seguro + flete)
 	} else {
-		// Regular invoice: total = items + taxes
+		// Regular invoice: subtotal - discount + taxes
 		total = round(subtotal - totalDiscount + totalTaxes)
 	}
-	// 5. Calculate due date if needed
+
+	// 6. Calculate due date if needed
 	var dueDate *time.Time
 	if req.DueDate != nil {
 		dueDate = req.DueDate
@@ -126,7 +141,7 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 		dueDate = &date
 	}
 
-	// 6. Create invoice record
+	// 7. Create invoice record
 	invoice := &models.Invoice{
 		CompanyID:               companyID,
 		EstablishmentID:         req.EstablishmentID,
@@ -144,8 +159,8 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 		ClientTipoPersona:       client.ClientTipoPersona,
 		Subtotal:                subtotal,
 		TotalDiscount:           totalDiscount,
-		TotalTaxes:              totalTaxes,
-		Total:                   total,
+		TotalTaxes:              totalTaxes, // 0 for export, normal for domestic
+		Total:                   total,      // Correct for both types
 		Currency:                "USD",
 		PaymentMethod:           req.PaymentMethod,
 		PaymentTerms:            req.PaymentTerms,
@@ -160,11 +175,7 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 		CreatedAt:               time.Now(),
 	}
 
-	fmt.Println("this is the request")
-	fmt.Println(invoice)
-
-	// 7. Insert invoice
-	// 7. Insert invoice (use export method if export fields present)
+	// 8. Insert invoice (use export method if export fields present)
 	var invoiceID string
 	if req.ExportFields != nil {
 		// Populate export fields on invoice
@@ -178,8 +189,8 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 		invoice.ExportObservaciones = req.ExportFields.Observaciones
 		invoice.ExportReceptorCodPais = req.ExportFields.ReceptorCodPais
 		invoice.ExportReceptorNombrePais = req.ExportFields.ReceptorNombrePais
-		invoice.ExportReceptorTipoDocumento = req.ExportFields.ReceptorTipoDoc // ✅ CORRECT
-		invoice.ExportReceptorNumDocumento = req.ExportFields.ReceptorNumDoc   // ✅ CORRECT
+		invoice.ExportReceptorTipoDocumento = req.ExportFields.ReceptorTipoDoc
+		invoice.ExportReceptorNumDocumento = req.ExportFields.ReceptorNumDoc
 		invoice.ExportReceptorComplemento = req.ExportFields.ReceptorComplemento
 
 		// Use export insert method
@@ -202,8 +213,8 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 		}
 	}
 	invoice.ID = invoiceID
-	// 8. Insert line items and taxes
 
+	// 9. Insert line items and taxes
 	for i := range lineItems {
 		lineItems[i].InvoiceID = invoiceID
 		lineItems[i].LineNumber = i + 1
@@ -221,34 +232,23 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 			if err != nil {
 				return nil, fmt.Errorf("failed to insert tax for line item %d: %w", i+1, err)
 			}
-			lineItems[i].Taxes[j].ID = taxID // SET THE ID
+			lineItems[i].Taxes[j].ID = taxID
 		}
 	}
 
-	// 9. Commit transaction
+	// 10. Commit transaction
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// 10. Attach line items to invoice
+	// 11. Attach line items to invoice
 	invoice.LineItems = lineItems
 
 	return invoice, nil
 }
 
-// ClientSnapshot represents the snapshot of client data at transaction time
-type ClientSnapshot struct {
-	ClientName              string
-	ClientLegalName         string
-	ClientNit               *string
-	ClientNcr               *string
-	ClientDui               *string
-	ClientAddress           string
-	ClientTipoContribuyente *string
-	ClientTipoPersona       *string
-}
-
 // snapshotClient retrieves and snapshots client data
+
 func (s *InvoiceService) snapshotClient(ctx context.Context, tx *sql.Tx, companyID, clientID string) (*ClientSnapshot, error) {
 	query := `
 		SELECT
