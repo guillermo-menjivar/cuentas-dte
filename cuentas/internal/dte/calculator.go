@@ -418,7 +418,7 @@ func (c *Calculator) CalculateExportacion(
 	discount float64,
 ) ItemAmounts {
 	precioUni := priceWithoutIVA
-	ventaNoSuj := precioUni * quantity // ← Use ventaNoSuj for 0% exports!
+	ventaNoSuj := precioUni * quantity
 
 	fmt.Printf("[DEBUG] CalculateExportacion: price=%.2f, qty=%.2f, discount=%.2f → ventaNoSuj=%.2f (exports at 0%% rate)\n",
 		priceWithoutIVA, quantity, discount, ventaNoSuj)
@@ -427,12 +427,11 @@ func (c *Calculator) CalculateExportacion(
 
 	return ItemAmounts{
 		PrecioUni:    RoundToItemPrecision(precioUni),
-		VentaGravada: 0,                                // ← Change to 0
-		VentaNoSuj:   RoundToItemPrecision(ventaNoSuj), // ← ADD THIS
+		VentaGravada: 0,
+		VentaNoSuj:   RoundToItemPrecision(ventaNoSuj),
 		IvaItem:      ivaItem,
 		MontoDescu:   RoundToItemPrecision(discount),
 	}
-
 }
 
 func (c *Calculator) CalculateResumenExportacion(
@@ -440,38 +439,33 @@ func (c *Calculator) CalculateResumenExportacion(
 	seguro float64,
 	flete float64,
 ) ResumenAmounts {
-
-	var totalNoSuj, totalDescu float64 // ← Rename variable
+	var totalNoSuj, totalDescu float64
 
 	for _, item := range items {
-		totalNoSuj += item.VentaNoSuj // ← Change from VentaGravada
+		totalNoSuj += item.VentaNoSuj
 		totalDescu += item.MontoDescu
 	}
 
-	totalGravada = RoundToResumenPrecision(totalGravada)
+	totalNoSuj = RoundToResumenPrecision(totalNoSuj)
 	totalDescu = RoundToResumenPrecision(totalDescu)
 	seguro = RoundToResumenPrecision(seguro)
 	flete = RoundToResumenPrecision(flete)
 
 	totalIva := 0.0
-	subTotal := totalGravada
 
-	// ✅ CHANGE #1: montoTotalOperacion = ONLY totalGravada (no seguro/flete)
-	montoTotalOperacion := RoundToResumenPrecision(totalGravada - totalDescu)
-
-	// ✅ CHANGE #2: Add separate totalPagar calculation
-	totalPagar := RoundToResumenPrecision(totalGravada + seguro + flete - totalDescu)
+	montoTotalOperacion := RoundToResumenPrecision(totalNoSuj - totalDescu)
+	totalPagar := RoundToResumenPrecision(totalNoSuj + seguro + flete - totalDescu)
 
 	return ResumenAmounts{
-		TotalNoSuj:          0,
+		TotalNoSuj:          totalNoSuj,
 		TotalExenta:         0,
-		TotalGravada:        totalGravada,
-		SubTotalVentas:      totalGravada,
+		TotalGravada:        0,
+		SubTotalVentas:      totalNoSuj,
 		TotalDescu:          totalDescu,
 		TotalIva:            totalIva,
-		SubTotal:            subTotal,
-		MontoTotalOperacion: montoTotalOperacion, // ✅ CHANGE #3: Now just goods value
-		TotalPagar:          totalPagar,          // ✅ CHANGE #4: New separate calculation
-		TotalNoGravado:      0,                   // ✅ CHANGE #5: Changed from seguro+flete to 0
+		SubTotal:            totalNoSuj,
+		MontoTotalOperacion: montoTotalOperacion,
+		TotalPagar:          totalPagar,
+		TotalNoGravado:      0,
 	}
 }

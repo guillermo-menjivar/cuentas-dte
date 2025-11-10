@@ -304,7 +304,7 @@ func (b *Builder) buildExportacionOtrosDocumentos(docs []models.InvoiceExportDoc
 // BUILD CUERPO DOCUMENTO (Type 11 - 0% IVA)
 // ============================================
 
-func (b *Builder) buildExportacionCuerpoDocumento(invoice *models.Invoice) ([]FacturaExportacionCuerpoItem, []ItemAmounts) {
+func (b *Builder) _buildExportacionCuerpoDocumento(invoice *models.Invoice) ([]FacturaExportacionCuerpoItem, []ItemAmounts) {
 	items := make([]FacturaExportacionCuerpoItem, len(invoice.LineItems))
 	amounts := make([]ItemAmounts, len(invoice.LineItems))
 
@@ -333,6 +333,39 @@ func (b *Builder) buildExportacionCuerpoDocumento(invoice *models.Invoice) ([]Fa
 			MontoDescu:   itemAmount.MontoDescu,   // ✅ FIXED: Use calculator value
 			VentaGravada: itemAmount.VentaGravada, // ✅ From calculator
 			Tributos:     tributos,
+			NoGravado:    0,
+		}
+	}
+
+	return items, amounts
+}
+
+// ✅ CORRECTED VERSION - Replace the entire function
+
+func (b *Builder) buildExportacionCuerpoDocumento(invoice *models.Invoice) ([]FacturaExportacionCuerpoItem, []ItemAmounts) {
+	items := make([]FacturaExportacionCuerpoItem, len(invoice.LineItems))
+	amounts := make([]ItemAmounts, len(invoice.LineItems))
+
+	for i, lineItem := range invoice.LineItems {
+		// Use export calculator (0% IVA)
+		itemAmount := b.calculator.CalculateExportacion(
+			lineItem.UnitPrice,
+			lineItem.Quantity,
+			lineItem.DiscountAmount,
+		)
+		amounts[i] = itemAmount
+
+		items[i] = FacturaExportacionCuerpoItem{
+			NumItem:      lineItem.LineNumber,
+			Cantidad:     lineItem.Quantity,
+			Codigo:       &lineItem.ItemSku,
+			UniMedida:    b.parseUniMedida(lineItem.UnitOfMeasure),
+			Descripcion:  lineItem.ItemName,
+			PrecioUni:    itemAmount.PrecioUni,
+			MontoDescu:   itemAmount.MontoDescu,
+			VentaNoSuj:   itemAmount.VentaNoSuj, // ✅ ADD THIS - From calculator
+			VentaGravada: 0,                     // ✅ CHANGE THIS - Always 0 for exports
+			Tributos:     nil,                   // ✅ CHANGE THIS - No tributos for exports
 			NoGravado:    0,
 		}
 	}
