@@ -469,7 +469,8 @@ func (c *Calculator) CalculateResumenExportacion(
 	subTotal := totalGravada
 
 	// ✅ FIX: Subtract totalDescu
-	montoTotalOperacion := RoundToResumenPrecision(totalGravada - totalDescu + seguro + flete)
+	//montoTotalOperacion := RoundToResumenPrecision(totalGravada - totalDescu + seguro + flete)
+	montoTotalOperacion := RoundToResumenPrecision(totalGravada + seguro + flete)
 
 	return ResumenAmounts{
 		TotalNoSuj:          0,
