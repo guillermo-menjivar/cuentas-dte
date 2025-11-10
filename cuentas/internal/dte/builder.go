@@ -191,7 +191,7 @@ func (b *Builder) buildReceptor(invoiceType string, client *ClientData) *Recepto
 			direccion = &dir
 		}
 
-		if client.CodActividad == nil {
+		if client.CodActividad == nil && client.NIT != nil {
 			fmt.Println("we are assigning 10005 to factura")
 			receptor.CodActividad = stringPtr(codigos.ActEcon10005)
 			//we know this exist no need to inspect
@@ -199,17 +199,22 @@ func (b *Builder) buildReceptor(invoiceType string, client *ClientData) *Recepto
 			receptor.DescActividad = stringPtr(desc)
 		}
 
-		return &Receptor{
-			TipoDocumento: tipoDocumento,
-			NumDocumento:  numDocumento,
-			NRC:           nrc,
-			Nombre:        client.BusinessName,
-			CodActividad:  nil, // Not available in client table
-			DescActividad: nil, // Not available in client table
-			Direccion:     direccion,
-			Telefono:      nil, // Not available in client table
-			Correo:        nil, // Not available in client table
+		if client.Correo != nil {
+			receptor.Correo = client.Correo
 		}
+
+		if client.Telefono != nil {
+			receptor.Telefono = client.Telefono
+		}
+
+		receptor.TipoDocumento = tipoDocumento
+		receptor.TipoDocumento = tipoDocumento
+		receptor.NumDocumento = numDocumento
+		receptor.NRC = nrc
+		receptor.Nombre = client.BusinessName
+		receptor.Direccion = direccion
+
+		return receptor
 	}
 }
 
