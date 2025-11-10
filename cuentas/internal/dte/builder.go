@@ -202,13 +202,15 @@ func (b *Builder) buildReceptor(invoiceType string, client *ClientData) *Recepto
 		if client.Correo != nil {
 			receptor.Correo = client.Correo
 		} else {
-			receptor.Correo = "gmenjivar4@gmail.com"
+			receptor.Correo = stringPtr("gmenjivar4@gmail.com")
 		}
 
 		if client.Telefono != nil {
+			fmt.Println("we have a phone number")
 			receptor.Telefono = client.Telefono
 		} else {
-			receptor.Telefono = "44441223"
+
+			receptor.Telefono = stringPtr("68609504")
 		}
 
 		receptor.TipoDocumento = tipoDocumento
