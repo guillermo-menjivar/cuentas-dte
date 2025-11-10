@@ -253,23 +253,28 @@ func (b *Builder) buildExportacionEmisor(company *CompanyData, establishment *Es
 
 func (b *Builder) buildExportacionReceptor(invoice *models.Invoice) *FacturaExportacionReceptor {
 	// Parse tipo_persona from string to int
-	tipoPersona := 1 // Default to natural
-	if invoice.ClientTipoPersona != nil && *invoice.ClientTipoPersona == "2" {
-		tipoPersona = 2 // Juridica
+	tipoPersona := 2
+
+	nombreEmpresa := "International Client" // Default fallback
+
+	if invoice.ClientLegalName != "" {
+		nombreEmpresa = invoice.ClientLegalName
 	}
 
 	return &FacturaExportacionReceptor{
-		Nombre:          invoice.ClientName,
-		TipoDocumento:   *invoice.ExportReceptorTipoDocumento,
-		NumDocumento:    *invoice.ExportReceptorNumDocumento,
-		NombreComercial: &invoice.ClientLegalName,
-		CodPais:         *invoice.ExportReceptorCodPais,
-		NombrePais:      *invoice.ExportReceptorNombrePais,
-		Complemento:     *invoice.ExportReceptorComplemento,
-		TipoPersona:     tipoPersona,
-		DescActividad:   getDefaultActivity(),
-		Telefono:        invoice.ContactWhatsapp,
-		Correo:          invoice.ContactEmail,
+		// ✅ CRITICAL: Use export receptor fields (international client data)
+		// NOT the local Salvadoran client fields (ClientName, ClientNit, etc.)
+		Nombre:          nombreEmpresa,                              // International company name
+		TipoDocumento:   *invoice.ExportReceptorTipoDocumento,       // Foreign document type
+		NumDocumento:    *invoice.ExportReceptorNumDocumento,        // ✅ FOREIGN NIT (NOT Salvadoran)
+		NombreComercial: &nombreEmpresa,                             // Trade name
+		CodPais:         *invoice.ExportReceptorCodPais,             // Foreign country code
+		NombrePais:      *invoice.ExportReceptorNombrePais,          // Foreign country name
+		Complemento:     *invoice.ExportReceptorComplemento,         // International address
+		TipoPersona:     tipoPersona,                                // 2 = Company
+		DescActividad:   "Importación y comercialización de bienes", // Their activity
+		Telefono:        invoice.ContactWhatsapp,                    // Optional
+		Correo:          invoice.ContactEmail,                       // Optional
 	}
 }
 
