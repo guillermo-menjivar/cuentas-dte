@@ -31,25 +31,34 @@ class ExportInvoiceSeeder:
         ("9447", "España", "36", "Calle Gran Vía 123, Madrid, España"),
     ]
 
-    # Recinto fiscal options
-    RECINTO_FISCAL = ["01", "02", "03"]
-
-    # Regimen options
-    REGIMEN = ["10", "11"]
-
-    # INCOTERMS
-    INCOTERMS = [
-        ("FOB", "Free on Board - Puerto Acajutla"),
-        ("CIF", "Cost, Insurance and Freight"),
-        ("EXW", "Ex Works"),
-        ("FCA", "Free Carrier"),
-        ("CPT", "Carriage Paid To"),
+    # Recinto fiscal options (Tax Enclosures - most common)
+    RECINTO_FISCAL = [
+        "01",  # Terrestre San Bartolo
+        "02",  # Marítima de Acajutla
+        "03",  # Aérea De Comalapa
     ]
 
-    # Export document types (ONLY TYPE 2 - CUSTOMS)
+    # ✅ FIXED: Regimen options (CAT-028) - Most common export regimes
+    REGIMEN = [
+        "EX-1.1000.000",  # Exportación Definitiva, Régimen Común
+        "EX-1.1040.000",  # Exportación Definitiva Sustitución de Mercancías
+        "EX-1.1400.000",  # Exportación Definitiva Courier
+    ]
+
+    # ✅ FIXED: INCOTERMS with proper codes (01-11)
+    INCOTERMS = [
+        ("09", "FOB-Libre a bordo"),  # Most common
+        ("11", "CIF- Costo seguro y flete"),  # Most common
+        ("10", "CFR-Costo y flete"),
+        ("01", "EXW-En fabrica"),
+        ("02", "FCA-Libre transportista"),
+        ("07", "DDP-Entrega con impuestos pagados"),
+    ]
+
+    # ✅ Export document types - Type 2 (Receptor/Customs) is most common
     EXPORT_DOCUMENTS = [
         {
-            "cod_doc_asociado": 2,
+            "cod_doc_asociado": 2,  # Receptor (customs documents)
             "desc_documento": "DUA-2025-{num:06d}",
             "detalle_documento": "Declaración Única Aduanera - Aduana La Hachadura",
         },
@@ -240,7 +249,7 @@ class ExportInvoiceSeeder:
         seguro = round(estimated_total * 0.01, 2)  # 1% insurance
         flete = round(estimated_total * 0.02, 2)  # 2% freight
 
-        # Select INCOTERMS
+        # ✅ Select INCOTERMS (now with proper codes)
         incoterms_code, incoterms_desc = random.choice(self.INCOTERMS)
 
         # Generate export documents
@@ -258,10 +267,12 @@ class ExportInvoiceSeeder:
             "line_items": line_items,
             "export_fields": {
                 "tipo_item_expor": 1,  # Bienes
-                "recinto_fiscal": random.choice(self.RECINTO_FISCAL),
-                "regimen": random.choice(self.REGIMEN),
-                "incoterms_code": incoterms_code,
-                "incoterms_desc": incoterms_desc,
+                "recinto_fiscal": random.choice(
+                    self.RECINTO_FISCAL
+                ),  # ✅ "01", "02", or "03"
+                "regimen": random.choice(self.REGIMEN),  # ✅ "EX-1.1000.000", etc.
+                "incoterms_code": incoterms_code,  # ✅ "09", "11", etc.
+                "incoterms_desc": incoterms_desc,  # ✅ "FOB-Libre a bordo", etc.
                 "seguro": seguro,
                 "flete": flete,
                 "observaciones": f"Exportación a {client_data['nombre_pais']} - {client_data['company_name']}",
@@ -372,6 +383,8 @@ class ExportInvoiceSeeder:
         print(f"   Establishments: {len(establishments_with_pos)}")
         print(f"   Inventory Items: {len(inventory_items)}")
         print(f"   Export Destinations: {len(self.EXPORT_COUNTRIES)} countries")
+        print(f"   Regimen Options: {len(self.REGIMEN)}")
+        print(f"   INCOTERMS Options: {len(self.INCOTERMS)}")
         print()
 
         # Parse date range
@@ -451,7 +464,8 @@ class ExportInvoiceSeeder:
             print("   1. Check DTE Type 11 in Hacienda portal")
             print("   2. Verify export documents attached")
             print("   3. Check commit log for tipo_dte = '11'")
-            print("   4. Validate 0% IVA (tributo C3) applied\n")
+            print("   4. Validate 0% IVA (tributo C3) applied")
+            print("   5. Verify regimen codes (EX-1.x.x) in DTE JSON\n")
         else:
             print(f"\n⚠️  {self.errors} error(s) occurred.\n")
 
