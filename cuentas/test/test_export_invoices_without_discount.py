@@ -274,4 +274,244 @@ class ExportInvoiceSeeder:
                 "seguro": seguro,
                 "flete": flete,
                 "observaciones": f"Exportación a {client_data['nombre_pais']} - {client_data['company_name']} [NO DISCOUNT TEST]",
-                "receptor_cod_pais": client_data["co
+                "receptor_cod_pais": client_data["cod_pais"],
+                "receptor_nombre_pais": client_data["nombre_pais"],
+                "receptor_tipo_documento": client_data["tipo_documento"],
+                "receptor_num_documento": client_data["num_documento"],
+                "receptor_complemento": client_data["address"],
+            },
+            "export_documents": export_documents,
+        }
+
+        try:
+            response = requests.post(url, headers=self.headers, json=payload)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"      ❌ Failed to create export invoice: {e}")
+            if hasattr(e, "response") and e.response is not None:
+                try:
+                    error_detail = e.response.json()
+                    print(f"         Error: {error_detail}")
+                except:
+                    print(f"         Error: {e.response.text}")
+            self.errors += 1
+            return None
+
+    def finalize_invoice(self, invoice: Dict) -> bool:
+        """Finalize an export invoice"""
+        url = f"{self.base_url}/v1/invoices/{invoice['id']}/finalize"
+
+        total = invoice.get("total", 0)
+
+        payload = {
+            "payment": {
+                "amount": total,
+                "payment_method": "01",
+                "reference_number": f"EXP-PAY-{invoice['id'][:8]}",
+            }
+        }
+
+        try:
+            response = requests.post(url, headers=self.headers, json=payload)
+            response.raise_for_status()
+            self.invoices_finalized += 1
+            return True
+        except requests.exceptions.RequestException as e:
+            print(f"      ❌ Failed to finalize export invoice: {e}")
+            if hasattr(e, "response") and e.response is not None:
+                try:
+                    error_detail = e.response.json()
+                    print(f"         Error: {error_detail}")
+                except:
+                    print(f"         Error: {e.response.text}")
+            self.errors += 1
+            return False
+
+    def seed_export_invoices(
+        self,
+        start_date: str,
+        end_date: str,
+        num_invoices: int = 10,
+    ):
+        """Create and finalize export invoices"""
+        print("=" * 70)
+        print(" " * 5 + "EXPORT INVOICE (TYPE 11) SEEDER - NO DISCOUNTS TEST")
+        print("=" * 70)
+        print(f"Company ID: {self.company_id}")
+        print(f"Date Range: {start_date} to {end_date}")
+        print(f"Export Invoices to Create: {num_invoices}")
+        print(f"⭐ Discounts: DISABLED (all items at 0% discount)\n")
+
+        # Load data
+        clients = self.get_clients()
+        establishments = self.get_establishments()
+        inventory_items = self.get_inventory_items()
+
+        # Validate
+        if not clients:
+            print("❌ No clients found. Please create clients first.")
+            sys.exit(1)
+
+        if not establishments:
+            print("❌ No establishments found.")
+            sys.exit(1)
+
+        if not inventory_items:
+            print("❌ No inventory items found.")
+            sys.exit(1)
+
+        # Get points of sale
+        establishments_with_pos = []
+        for est in establishments:
+            pos_list = self.get_points_of_sale(est["id"])
+            if pos_list:
+                establishments_with_pos.append(
+                    {
+                        "establishment": est,
+                        "points_of_sale": pos_list,
+                    }
+                )
+
+        if not establishments_with_pos:
+            print("❌ No points of sale found.")
+            sys.exit(1)
+
+        print(f"📊 Data Summary:")
+        print(f"   Clients: {len(clients)}")
+        print(f"   Establishments: {len(establishments_with_pos)}")
+        print(f"   Inventory Items: {len(inventory_items)}")
+        print(f"   Export Destinations: {len(self.EXPORT_COUNTRIES)} countries")
+        print(f"   Regimen Options: {len(self.REGIMEN)}")
+        print(f"   INCOTERMS Options: {len(self.INCOTERMS)}")
+        print()
+
+        # Parse date range
+        start = datetime.strptime(start_date, "%Y-%m-%d")
+        end = datetime.strptime(end_date, "%Y-%m-%d")
+        date_range_days = (end - start).days
+
+        # Create export invoices
+        for i in range(num_invoices):
+            print(f"[{i+1}/{num_invoices}] Creating export invoice (NO DISCOUNTS)...")
+
+            # Pick a random real client
+            client = random.choice(clients)
+
+            # Generate international client data (for export fields)
+            client_data = self.create_export_client(i + 1)
+
+            # Select establishment and POS
+            est_with_pos = random.choice(establishments_with_pos)
+            establishment = est_with_pos["establishment"]
+            pos = random.choice(est_with_pos["points_of_sale"])
+
+            # Select 2-5 items with stock
+            items_with_stock = []
+            for item in inventory_items:
+                state = self.get_inventory_state(item["id"])
+                if state and state.get("current_quantity", 0) > 50:
+                    items_with_stock.append(item)
+
+            if len(items_with_stock) < 2:
+                print(f"      ⚠️  Insufficient items with stock, skipping...")
+                continue
+
+            # Select 2-5 items
+            num_items = random.randint(2, min(5, len(items_with_stock)))
+            selected_items = random.sample(items_with_stock, num_items)
+
+            # Create export invoice (pass both real client and export data)
+            invoice = self.create_export_invoice(
+                client, client_data, establishment, pos, selected_items, i + 1
+            )
+
+            if not invoice:
+                continue
+
+            self.invoices_created += 1
+            invoice_id = invoice["id"]
+            total = invoice.get("total", 0)
+
+            print(f"      ✅ Export invoice created: {invoice_id}")
+            print(f"         Destination: {client_data['nombre_pais']}")
+            print(f"         Client: {client_data['company_name']}")
+            print(f"         Establishment: {establishment['nombre']}")
+            print(f"         Items: {len(selected_items)}")
+            print(f"         Total: ${total:.2f}")
+            print(f"         Discounts: NONE (0%)")
+            print(f"         Export Docs: {len(invoice.get('export_documents', []))}")
+
+            # Finalize
+            print(f"      🔄 Finalizing export invoice...")
+            if self.finalize_invoice(invoice):
+                print(f"      ✅ Exported! DTE Type 11 submitted to Hacienda")
+
+            print()
+
+        # Summary
+        print("=" * 70)
+        print("EXPORT SEEDING SUMMARY (NO DISCOUNTS TEST)")
+        print("=" * 70)
+        print(f"✅ Export Invoices Created: {self.invoices_created}")
+        print(f"✅ Export Invoices Finalized: {self.invoices_finalized}")
+        print(f"❌ Errors: {self.errors}")
+        print("=" * 70)
+
+        if self.errors == 0 and self.invoices_finalized > 0:
+            print("\n🎉 All export invoices (NO DISCOUNTS) processed successfully!")
+            print("\n💡 If this works, the issue is discount handling!")
+        else:
+            print(f"\n⚠️  {self.errors} error(s) occurred.\n")
+
+
+def main():
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Export invoice tester - NO DISCOUNTS VERSION",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("company_id", help="Company ID")
+    parser.add_argument(
+        "--base-url",
+        default="http://localhost:8080",
+        help="API base URL (default: http://localhost:8080)",
+    )
+    parser.add_argument(
+        "--start-date",
+        required=True,
+        help="Start date (YYYY-MM-DD)",
+    )
+    parser.add_argument(
+        "--end-date",
+        required=True,
+        help="End date (YYYY-MM-DD)",
+    )
+    parser.add_argument(
+        "--count",
+        type=int,
+        default=5,
+        help="Number of export invoices (default: 5)",
+    )
+
+    args = parser.parse_args()
+
+    # Validate dates
+    try:
+        datetime.strptime(args.start_date, "%Y-%m-%d")
+        datetime.strptime(args.end_date, "%Y-%m-%d")
+    except ValueError:
+        print("❌ Error: Dates must be in YYYY-MM-DD format")
+        sys.exit(1)
+
+    if args.count < 1:
+        print("❌ Error: --count must be at least 1")
+        sys.exit(1)
+
+    seeder = ExportInvoiceSeeder(args.base_url, args.company_id)
+    seeder.seed_export_invoices(args.start_date, args.end_date, args.count)
+
+
+if __name__ == "__main__":
+    main()
