@@ -468,12 +468,10 @@ func (c *Calculator) CalculateResumenExportacion(
 	totalIva := 0.0
 	subTotal := totalGravada
 
-	// ✅ FIX #1: montoTotalOperacion should be ONLY totalGravada (goods value)
-	// NOT including seguro + flete
+	// ✅ CHANGE #1: montoTotalOperacion = ONLY totalGravada (no seguro/flete)
 	montoTotalOperacion := RoundToResumenPrecision(totalGravada - totalDescu)
 
-	// ✅ FIX #2: totalPagar = totalGravada + seguro + flete - totalDescu
-	// This is Hacienda's formula for Type 11 exports
+	// ✅ CHANGE #2: Add separate totalPagar calculation
 	totalPagar := RoundToResumenPrecision(totalGravada + seguro + flete - totalDescu)
 
 	return ResumenAmounts{
@@ -484,10 +482,8 @@ func (c *Calculator) CalculateResumenExportacion(
 		TotalDescu:          totalDescu,
 		TotalIva:            totalIva,
 		SubTotal:            subTotal,
-		MontoTotalOperacion: montoTotalOperacion, // ← Just goods value
-		TotalPagar:          totalPagar,          // ← Goods + seguro + flete
-		TotalNoGravado:      0,                   // ← ALWAYS 0 for Type 11
-		Seguro:              seguro,              // Make sure these are passed through
-		Flete:               flete,               // if they're in ResumenAmounts struct
+		MontoTotalOperacion: montoTotalOperacion, // ✅ CHANGE #3: Now just goods value
+		TotalPagar:          totalPagar,          // ✅ CHANGE #4: New separate calculation
+		TotalNoGravado:      0,                   // ✅ CHANGE #5: Changed from seguro+flete to 0
 	}
 }
