@@ -214,7 +214,7 @@ func (b *Builder) buildReceptor(invoiceType string, client *ClientData) *Recepto
 		receptor.Nombre = client.BusinessName
 		receptor.Direccion = direccion
 
-		return receptor
+		return &receptor
 	}
 }
 
