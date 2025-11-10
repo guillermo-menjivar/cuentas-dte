@@ -266,7 +266,7 @@ type Resumen struct {
 	Tributos            *[]Tributo `json:"tributos"`
 	SubTotal            float64    `json:"subTotal"`
 	IvaRete1            float64    `json:"ivaRete1"`
-	IvaPerci1           float64    `json:"ivaPerci1"`
+	IvaPerci1           float64    `json:"ivaPerci1,omitempty"`
 	ReteRenta           float64    `json:"reteRenta"`
 	MontoTotalOperacion float64    `json:"montoTotalOperacion"`
 	TotalNoGravado      float64    `json:"totalNoGravado"`
