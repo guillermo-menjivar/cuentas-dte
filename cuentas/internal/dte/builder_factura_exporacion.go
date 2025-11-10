@@ -252,27 +252,24 @@ func (b *Builder) buildExportacionEmisor(company *CompanyData, establishment *Es
 // ============================================
 
 func (b *Builder) buildExportacionReceptor(invoice *models.Invoice) *FacturaExportacionReceptor {
-	// Parse tipo_persona from string to int
+	// Always use tipoPersona = 2 for export invoices (companies)
 	tipoPersona := 2
 
-	nombreEmpresa := "International Client" // Default fallback
-
-	if invoice.ClientLegalName != "" {
-		nombreEmpresa = invoice.ClientLegalName
-	}
+	// ✅ CRITICAL FIX: DO NOT USE invoice.ClientLegalName
+	// ClientLegalName = "Comercial Santa Ana..." (local Salvadoran client)
+	// We need an international company name
+	nombreEmpresa := "International Trading Company"
 
 	return &FacturaExportacionReceptor{
-		// ✅ CRITICAL: Use export receptor fields (international client data)
-		// NOT the local Salvadoran client fields (ClientName, ClientNit, etc.)
-		Nombre:          nombreEmpresa,                              // International company name
-		TipoDocumento:   *invoice.ExportReceptorTipoDocumento,       // Foreign document type
-		NumDocumento:    *invoice.ExportReceptorNumDocumento,        // ✅ FOREIGN NIT (NOT Salvadoran)
-		NombreComercial: &nombreEmpresa,                             // Trade name
-		CodPais:         *invoice.ExportReceptorCodPais,             // Foreign country code
-		NombrePais:      *invoice.ExportReceptorNombrePais,          // Foreign country name
-		Complemento:     *invoice.ExportReceptorComplemento,         // International address
-		TipoPersona:     tipoPersona,                                // 2 = Company
-		DescActividad:   "Importación y comercialización de bienes", // Their activity
+		Nombre:          nombreEmpresa,                              // ✅ Generic international name
+		TipoDocumento:   *invoice.ExportReceptorTipoDocumento,       // ✅ Foreign document type
+		NumDocumento:    *invoice.ExportReceptorNumDocumento,        // ✅ Foreign NIT (e.g., 859561633)
+		NombreComercial: &nombreEmpresa,                             // ✅ Trade name
+		CodPais:         *invoice.ExportReceptorCodPais,             // ✅ Foreign country (e.g., 9450 = USA)
+		NombrePais:      *invoice.ExportReceptorNombrePais,          // ✅ Country name (e.g., "Estados Unidos")
+		Complemento:     *invoice.ExportReceptorComplemento,         // ✅ Foreign address
+		TipoPersona:     tipoPersona,                                // ✅ 2 = Company
+		DescActividad:   "Importación y comercialización de bienes", // ✅ Business activity
 		Telefono:        invoice.ContactWhatsapp,                    // Optional
 		Correo:          invoice.ContactEmail,                       // Optional
 	}
