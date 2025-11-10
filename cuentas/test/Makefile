@@ -191,6 +191,14 @@ test_export_invoices:
 	--end-date $(END_DATE) \
 	--count 5
 
+.PHONY: test_export_invoices_no_discount
+test_export_invoices_no_discount:
+	@echo "Test export invoices"
+	@./test_export_invoices_without_discount.py $(COMPANY_ID) \
+	--start-date $(START_DATE) \
+	--end-date $(END_DATE) \
+	--count 5
+
 test_dte_reconciliation:
 	@echo "Running reconciliation"
 	@./test_dte_reconciliation.py $(COMPANY_ID)
