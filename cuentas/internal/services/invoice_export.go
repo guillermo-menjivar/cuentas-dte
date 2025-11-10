@@ -13,8 +13,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// Add these methods to internal/services/invoice_service.go
-
 // ============================================
 // EXPORT INVOICE METHODS
 // ============================================
@@ -145,7 +143,25 @@ func (s *InvoiceService) GetInvoiceExport(ctx context.Context, companyID, invoic
 	return invoice, nil
 }
 
+// ============================================
+// SOLUTION A: CONTEXT-DEPENDENT TAX APPLICATION
+// ============================================
 // processLineItemsExport processes line items for export invoices (Type 11 - 0% IVA)
+//
+// ARCHITECTURAL DECISION: Tax is context-dependent
+// The tax rate applied depends on the TRANSACTION TYPE (domestic vs export),
+// not on the item's database configuration.
+//
+// For export invoices (Type 11 DTE), El Salvador tax law mandates:
+// - 0% IVA (tributo C3 - IVA Exportaciones)
+// - This applies to ALL items, regardless of their configured tax in the database
+//
+// The same laptop with tributo D1 (13% IVA) in the database will:
+// - Have 13% IVA when sold domestically (Type 01/03 DTE)
+// - Have 0% IVA when exported (Type 11 DTE)
+//
+// This matches real-world tax systems (SAP, Oracle, QuickBooks) where tax
+// is determined by transaction context, not item configuration.
 func (s *InvoiceService) processLineItemsExport(
 	ctx context.Context,
 	tx *sql.Tx,
@@ -162,34 +178,28 @@ func (s *InvoiceService) processLineItemsExport(
 			return nil, 0, 0, 0, err
 		}
 
-		// 2. Calculate line amounts with 0% IVA (export rate)
+		// 2. Calculate line amounts
 		lineSubtotal := round(item.UnitPrice * reqItem.Quantity)
 		discountAmount := round(lineSubtotal * (reqItem.DiscountPercentage / 100))
 		taxableAmount := round(lineSubtotal - discountAmount)
 
-		// 3. Get taxes for this item - should be tributo C3 (0% export)
-		taxes, lineTaxTotal, err := s.snapshotItemTaxes(ctx, tx, reqItem.ItemID, taxableAmount)
-		if err != nil {
-			return nil, 0, 0, 0, err
+		// 3. ✅ CONTEXT-DEPENDENT TAX APPLICATION
+		// For export invoices (Type 11 DTE), ALWAYS apply tributo C3 (0% IVA)
+		// We do NOT query the item's configured taxes via s.snapshotItemTaxes()
+		// because the export tax rate is mandated by law and transaction type
+		lineTaxTotal := 0.0
+		taxes := []models.InvoiceLineItemTax{
+			{
+				TributoCode: codigos.TributoIVAExportaciones, // "S1.C3"
+				TributoName: "IVA Exportaciones 0%",
+				TaxRate:     0.00,
+				TaxableBase: taxableAmount,
+				TaxAmount:   0.00,
+				CreatedAt:   time.Now(),
+			},
 		}
 
-		// Validate: Type 11 items should have tributo C3 (0% export IVA)
-		hasExportTributo := false
-		for _, tax := range taxes {
-			if tax.TributoCode == codigos.TributoIVAExportaciones {
-				hasExportTributo = true
-				break
-			}
-		}
-
-		if !hasExportTributo {
-			return nil, 0, 0, 0, fmt.Errorf(
-				"export invoice item '%s' must have tributo C3 (IVA Exportaciones 0%%)",
-				item.Name,
-			)
-		}
-
-		lineTotal := round(taxableAmount + lineTaxTotal)
+		lineTotal := round(taxableAmount + lineTaxTotal) // Same as taxableAmount since tax is 0
 
 		// 4. Create line item
 		lineItem := models.InvoiceLineItem{
@@ -205,8 +215,8 @@ func (s *InvoiceService) processLineItemsExport(
 			DiscountPercentage: reqItem.DiscountPercentage,
 			DiscountAmount:     discountAmount,
 			TaxableAmount:      taxableAmount,
-			TotalTaxes:         lineTaxTotal, // Will be 0 for export
-			LineTotal:          lineTotal,
+			TotalTaxes:         lineTaxTotal, // Always 0 for export
+			LineTotal:          lineTotal,    // Same as taxableAmount
 			Taxes:              taxes,
 			CreatedAt:          time.Now(),
 		}
@@ -216,7 +226,7 @@ func (s *InvoiceService) processLineItemsExport(
 		// 5. Accumulate totals
 		subtotal += lineSubtotal
 		totalDiscount += discountAmount
-		totalTaxes += lineTaxTotal // Should be 0 for Type 11
+		totalTaxes += lineTaxTotal // Always 0 for Type 11
 	}
 
 	// Round final totals
@@ -224,7 +234,7 @@ func (s *InvoiceService) processLineItemsExport(
 }
 
 // ============================================
-// SEPARATE EXPORT INVOICE METHODS (No conflicts)
+// EXPORT INVOICE DATABASE METHODS
 // ============================================
 
 // insertInvoiceExport inserts an export invoice with export fields
@@ -333,6 +343,10 @@ func (s *InvoiceService) getInvoiceHeaderExport(ctx context.Context, companyID, 
 	return invoice, nil
 }
 
+// ============================================
+// VALIDATION
+// ============================================
+
 func (s *InvoiceService) ValidateExportInvoice(ctx context.Context, invoice *models.Invoice) error {
 	var errors []string
 
@@ -359,7 +373,6 @@ func (s *InvoiceService) ValidateExportInvoice(ctx context.Context, invoice *mod
 		if invoice.ExportRecintoFiscal == nil {
 			errors = append(errors, "export_recinto_fiscal is required for tipo_item_expor 1 and 3")
 		} else {
-			// ✅ Validate recinto fiscal code
 			if !codigos.IsValidTaxEnclosure(*invoice.ExportRecintoFiscal) {
 				errors = append(errors, fmt.Sprintf("invalid export_recinto_fiscal code: %s", *invoice.ExportRecintoFiscal))
 			}
@@ -368,7 +381,6 @@ func (s *InvoiceService) ValidateExportInvoice(ctx context.Context, invoice *mod
 		if invoice.ExportRegimen == nil {
 			errors = append(errors, "export_regimen is required for tipo_item_expor 1 and 3")
 		} else {
-			// ✅ Validate regimen code using the catalog
 			if !codigos.IsValidRegimenType(*invoice.ExportRegimen) {
 				errors = append(errors, fmt.Sprintf("invalid export_regimen code: %s", *invoice.ExportRegimen))
 			}
@@ -379,7 +391,6 @@ func (s *InvoiceService) ValidateExportInvoice(ctx context.Context, invoice *mod
 	if invoice.ExportIncotermsCode == nil || *invoice.ExportIncotermsCode == "" {
 		errors = append(errors, "export_incoterms_code is required")
 	} else {
-		// ✅ Validate INCOTERMS code
 		if !codigos.IsValidIncoterm(*invoice.ExportIncotermsCode) {
 			errors = append(errors, fmt.Sprintf("invalid export_incoterms_code: %s", *invoice.ExportIncotermsCode))
 		}
@@ -451,9 +462,7 @@ func (s *InvoiceService) ValidateExportInvoice(ctx context.Context, invoice *mod
 	if len(invoice.ExportDocuments) == 0 {
 		errors = append(errors, "at least one export document is required")
 	} else {
-		// ✅ Validate each export document
 		for i, doc := range invoice.ExportDocuments {
-			// Validate cod_doc_asociado (convert int to string for validation)
 			if doc.CodDocAsociado == 0 {
 				errors = append(errors, fmt.Sprintf("export_document[%d]: cod_doc_asociado is required", i))
 			} else {

@@ -85,7 +85,6 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 	// 4. Process line items and calculate totals
 	var lineItems []models.InvoiceLineItem
 	var subtotal, totalDiscount, totalTaxes float64
-	var err error
 
 	if req.ExportFields != nil {
 		// ✅ Export invoice: use special processor (0% IVA)
