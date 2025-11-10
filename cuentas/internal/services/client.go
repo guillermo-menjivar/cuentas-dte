@@ -142,13 +142,11 @@ func (s *ClientService) ListClients(ctx context.Context, companyID string, activ
 		FROM clients
 		WHERE company_id = $1
 	`
-
 	args := []interface{}{companyID}
 	if activeOnly {
 		query += " AND active = $2"
 		args = append(args, true)
 	}
-
 	query += " ORDER BY business_name ASC"
 
 	rows, err := s.db.QueryContext(ctx, query, args...)
@@ -161,10 +159,27 @@ func (s *ClientService) ListClients(ctx context.Context, companyID string, activ
 	for rows.Next() {
 		var client models.Client
 		err := rows.Scan(
-			&client.ID, &client.CompanyID, &client.NCR, &client.NIT, &client.DUI,
-			&client.BusinessName, &client.LegalBusinessName, &client.Giro, &client.TipoContribuyente,
-			&client.FullAddress, &client.CountryCode, &client.DepartmentCode, &client.MunicipalityCode, &client.TipoPersona, &client.CodActividad, &client.CodActividadDescription, &client.Correo, &client.Telefono,
-			&client.Active, &client.CreatedAt, &client.UpdatedAt,
+			&client.ID,
+			&client.CompanyID,
+			&client.NCR,
+			&client.NIT,
+			&client.DUI,
+			&client.BusinessName,
+			&client.LegalBusinessName,
+			&client.Giro,
+			&client.TipoContribuyente,
+			&client.FullAddress,
+			&client.CountryCode,
+			&client.DepartmentCode,
+			&client.MunicipalityCode,
+			&client.TipoPersona,
+			&client.CodActividad,            // ✅ Should be *string in model
+			&client.CodActividadDescription, // ✅ Should be *string in model
+			&client.Correo,                  // ✅ Should be *string in model
+			&client.Telefono,                // ✅ Should be *string in model
+			&client.Active,
+			&client.CreatedAt,
+			&client.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan client: %w", err)

@@ -36,13 +36,13 @@ type Client struct {
 	DepartmentCode          string    `json:"department_code"`
 	MunicipalityCode        string    `json:"municipality_code"`
 	TipoPersona             string    `json:"tipo_persona"`
-	CodActividad            string    `json:"cod_actividad"`
-	CodActividadDescription string    `json:"cod_actividad_description"`
+	CodActividad            *string   `json:"cod_actividad"`
+	CodActividadDescription *string   `json:"cod_actividad_description"`
 	Active                  bool      `json:"active"`
 	CreatedAt               time.Time `json:"created_at"`
 	UpdatedAt               time.Time `json:"updated_at"`
-	Correo                  string    `json:"correo"`
-	Telefono                string    `json:"telefono"`
+	Correo                  *string   `json:"correo"`
+	Telefono                *string   `json:"telefono"`
 }
 
 // CreateClientRequest represents the request to create a client
