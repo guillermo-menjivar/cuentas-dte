@@ -166,6 +166,7 @@ func (b *Builder) buildReceptor(invoiceType string, client *ClientData) *Recepto
 		var tipoDocumento *string
 		var numDocumento *string
 		var nrc *string
+		receptor := Receptor{}
 
 		if client.NIT != nil {
 			td := DocTypeNIT
@@ -192,7 +193,10 @@ func (b *Builder) buildReceptor(invoiceType string, client *ClientData) *Recepto
 
 		if client.CodActividad == nil {
 			fmt.Println("we are assigning 10005 to factura")
-			client.CodActividad = stringPtr(codigos.ActEcon10005)
+			receptor.CodActividad = stringPtr(codigos.ActEcon10005)
+			//we know this exist no need to inspect
+			desc, _ := codigos.GetEconomicActivityName(codigos.ActEcon10005)
+			receptor.DescActividad = stringPtr(desc)
 		}
 
 		return &Receptor{
