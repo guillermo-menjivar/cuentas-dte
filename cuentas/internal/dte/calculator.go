@@ -3,6 +3,7 @@ package dte
 
 import (
 	"cuentas/internal/codigos"
+	"fmt"
 	"math"
 )
 
@@ -431,9 +432,11 @@ func (c *Calculator) CalculateExportacion(
 	discount float64,
 ) ItemAmounts {
 	precioUni := priceWithoutIVA
+	ventaGravada := precioUni * quantity
 
-	// ✅ FIX: ventaGravada = BEFORE discount (Hacienda expects this)
-	ventaGravada := precioUni * quantity // Changed: removed "- discount"
+	// ⭐ DEBUG: Confirm new code is running
+	fmt.Printf("[DEBUG] CalculateExportacion: price=%.2f, qty=%.2f, discount=%.2f → ventaGravada=%.2f (BEFORE discount)\n",
+		priceWithoutIVA, quantity, discount, ventaGravada)
 
 	ivaItem := 0.0
 

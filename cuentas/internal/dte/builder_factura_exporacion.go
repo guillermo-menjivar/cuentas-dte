@@ -329,9 +329,9 @@ func (b *Builder) buildExportacionCuerpoDocumento(invoice *models.Invoice) ([]Fa
 			Codigo:       &lineItem.ItemSku,
 			UniMedida:    b.parseUniMedida(lineItem.UnitOfMeasure),
 			Descripcion:  lineItem.ItemName,
-			PrecioUni:    itemAmount.PrecioUni,
-			MontoDescu:   lineItem.DiscountAmount,
-			VentaGravada: itemAmount.VentaGravada,
+			PrecioUni:    itemAmount.PrecioUni,    // ✅ From calculator
+			MontoDescu:   itemAmount.MontoDescu,   // ✅ FIXED: Use calculator value
+			VentaGravada: itemAmount.VentaGravada, // ✅ From calculator
 			Tributos:     tributos,
 			NoGravado:    0,
 		}
