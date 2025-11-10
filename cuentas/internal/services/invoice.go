@@ -83,13 +83,38 @@ func (s *InvoiceService) CreateInvoice(ctx context.Context, companyID string, re
 	}
 
 	// 4. Process line items and calculate totals
-	lineItems, subtotal, totalDiscount, totalTaxes, err := s.processLineItems(ctx, tx, companyID, req.LineItems)
+	var lineItems []models.InvoiceLineItem
+	var subtotal, totalDiscount, totalTaxes float64
+	var err error
+
+	if req.ExportFields != nil {
+		// ✅ Export invoice: use special processor (0% IVA)
+		lineItems, subtotal, totalDiscount, totalTaxes, err = s.processLineItemsExport(ctx, tx, companyID, req.LineItems)
+	} else {
+		// Regular invoice: use normal processor
+		lineItems, subtotal, totalDiscount, totalTaxes, err = s.processLineItems(ctx, tx, companyID, req.LineItems)
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	total := round(subtotal - totalDiscount + totalTaxes)
-
+	// Calculate total based on invoice type
+	var total float64
+	if req.ExportFields != nil {
+		// ✅ Export invoice: total = items + seguro + flete (NO taxes!)
+		seguro := float64(0)
+		flete := float64(0)
+		if req.ExportFields.Seguro != nil {
+			seguro = *req.ExportFields.Seguro
+		}
+		if req.ExportFields.Flete != nil {
+			flete = *req.ExportFields.Flete
+		}
+		total = round(subtotal - totalDiscount + seguro + flete)
+	} else {
+		// Regular invoice: total = items + taxes
+		total = round(subtotal - totalDiscount + totalTaxes)
+	}
 	// 5. Calculate due date if needed
 	var dueDate *time.Time
 	if req.DueDate != nil {
