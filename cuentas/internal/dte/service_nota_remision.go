@@ -1,3 +1,5 @@
+package dte
+
 import (
 	"context"
 	"cuentas/internal/hacienda"
