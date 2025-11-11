@@ -335,6 +335,19 @@ func startServer() {
 		// commitlog
 		v1.GET("/dte/commit-log", handlers.ListDTECommitLogHandler)
 		v1.GET("/dte/commit-log/:codigo_generacion", handlers.GetDTECommitLogEntryHandler)
+
+		remisionHandler := handlers.NewRemisionHandler(invoiceService)
+		remisiones := v1.Group("/remisiones")
+		{
+			remisiones.POST("", remisionHandler.CreateRemision)
+			remisiones.GET("", remisionHandler.ListRemisiones)
+			remisiones.GET("/:id", remisionHandler.GetRemision)
+			remisiones.DELETE("/:id", remisionHandler.DeleteRemision)
+			remisiones.POST("/:id/finalize", remisionHandler.FinalizeRemision)
+			remisiones.POST("/:id/link-invoice", remisionHandler.LinkRemisionToInvoice)
+			remisiones.GET("/:id/invoices", remisionHandler.GetRemisionLinkedInvoices)
+		}
+
 		// notas
 
 		notaService := services.NewNotaService()
