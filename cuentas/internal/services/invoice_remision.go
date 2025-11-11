@@ -74,14 +74,11 @@ func (s *InvoiceService) CreateRemision(ctx context.Context, companyID string, r
 		Total:           total,
 		Currency:        "USD",
 		// Payment fields are NULL for remisiones (not a sale)
-		PaymentMethod: nil,
-		PaymentTerms:  nil,
-		PaymentStatus: nil,
-		AmountPaid:    0,
-		BalanceDue:    0,
-		Status:        "draft",
-		Notes:         req.Notes,
-		CreatedAt:     time.Now(),
+		AmountPaid: 0,
+		BalanceDue: 0,
+		Status:     "draft",
+		Notes:      req.Notes,
+		CreatedAt:  time.Now(),
 	}
 
 	// Set client fields if receptor provided
@@ -210,7 +207,6 @@ func (s *InvoiceService) insertRemision(ctx context.Context, tx *sql.Tx, invoice
             client_address, client_tipo_contribuyente, client_tipo_persona,
             subtotal, total_discount, total_taxes, total,
             currency,
-            payment_terms, payment_method, payment_status,
             amount_paid, balance_due,
             dte_codigo_generacion,
             status, notes, created_at
@@ -222,10 +218,9 @@ func (s *InvoiceService) insertRemision(ctx context.Context, tx *sql.Tx, invoice
             $17, $18, $19,
             $20, $21, $22, $23,
             $24,
-            $25, $26, $27,
-            $28, $29,
-            $30,
-            $31, $32, $33
+            $25, $26,
+            $27,
+            $28, $29, $30
         ) RETURNING id
     `
 
@@ -237,7 +232,6 @@ func (s *InvoiceService) insertRemision(ctx context.Context, tx *sql.Tx, invoice
 		invoice.ClientAddress, invoice.ClientTipoContribuyente, invoice.ClientTipoPersona,
 		invoice.Subtotal, invoice.TotalDiscount, invoice.TotalTaxes, invoice.Total,
 		invoice.Currency,
-		invoice.PaymentTerms, invoice.PaymentMethod, invoice.PaymentStatus, // All NULL for remision
 		invoice.AmountPaid, invoice.BalanceDue,
 		id, // dte_codigo_generacion = invoice ID
 		invoice.Status, invoice.Notes, invoice.CreatedAt,
