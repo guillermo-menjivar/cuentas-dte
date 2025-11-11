@@ -10,11 +10,20 @@ import (
 type InvoiceRelatedDocument struct {
 	ID                     string    `json:"id"`
 	InvoiceID              string    `json:"invoice_id"`
+	RelatedDocumentType    string    `json:"related_document_type"` // "01", "03" (for Type 04 remisiones)
+	RelatedDocumentGenType int       `json:"related_document_gen_type"`
 	RelatedDocumentType    string    `json:"related_document_type"`     // "03", "07"
 	RelatedDocumentGenType int       `json:"related_document_gen_type"` // 1 or 2
 	RelatedDocumentNumber  string    `json:"related_document_number"`
 	RelatedDocumentDate    time.Time `json:"related_document_date"`
 	CreatedAt              time.Time `json:"created_at"`
+}
+
+type RemisionInvoiceLink struct {
+	ID         string    `json:"id"`
+	RemisionID string    `json:"remision_id"`
+	InvoiceID  string    `json:"invoice_id"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 // Invoice represents an invoice transaction
@@ -104,6 +113,12 @@ type Invoice struct {
 	ParentInvoiceType *string                  `json:"parent_invoice_type,omitempty"`
 	RelatedDocuments  []InvoiceRelatedDocument `json:"related_documents,omitempty"`
 	ExportDocuments   []InvoiceExportDocument  `json:"export_documents,omitempty"`
+
+	// Remision-specific fields (Type 04 only)
+	RemisionType   *string `json:"remision_type,omitempty"`
+	DeliveryPerson *string `json:"delivery_person,omitempty"`
+	VehiclePlate   *string `json:"vehicle_plate,omitempty"`
+	DeliveryNotes  *string `json:"delivery_notes,omitempty"`
 }
 
 // CreateInvoiceRequest represents the request to create an invoice
@@ -197,4 +212,14 @@ func (i *Invoice) IsExportInvoice() bool {
 // HasExportFields checks if export-specific fields are populated
 func (i *Invoice) HasExportFields() bool {
 	return i.ExportTipoItemExpor != nil
+}
+
+// IsRemision checks if this is a remision (Type 04)
+func (i *Invoice) IsRemision() bool {
+	return i.DteType != nil && *i.DteType == "04"
+}
+
+// IsInternalTransfer checks if remision has no external receptor
+func (i *Invoice) IsInternalTransfer() bool {
+	return i.IsRemision() && i.ClientID == ""
 }
