@@ -150,7 +150,6 @@ func (s *InvoiceService) CreateRemision(ctx context.Context, companyID string, r
 // processLineItemsRemision processes line items for remision (typically $0 amounts)
 func (s *InvoiceService) processLineItemsRemision(ctx context.Context, tx *sql.Tx, companyID string, reqItems []models.CreateInvoiceLineItemRequest) ([]models.InvoiceLineItem, float64, float64, float64, error) {
 	var lineItems []models.InvoiceLineItem
-	var subtotal, totalDiscount, totalTaxes float64
 
 	for _, reqItem := range reqItems {
 		// 1. Snapshot inventory item
