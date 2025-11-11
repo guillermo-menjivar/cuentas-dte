@@ -131,21 +131,6 @@ func (r *FinalizeRemisionRequest) Validate() error {
 }
 
 // ============================================
-// FIX: Update InvoiceRelatedDocument to remove duplicate
-// REPLACE the existing InvoiceRelatedDocument struct with this:
-// ============================================
-
-type InvoiceRelatedDocument struct {
-	ID                     string    `json:"id"`
-	InvoiceID              string    `json:"invoice_id"`
-	RelatedDocumentType    string    `json:"related_document_type"`     // "01", "03" (for Type 04 remisiones)
-	RelatedDocumentGenType int       `json:"related_document_gen_type"` // 1=physical, 2=electronic
-	RelatedDocumentNumber  string    `json:"related_document_number"`   // UUID or correlativo
-	RelatedDocumentDate    time.Time `json:"related_document_date"`
-	CreatedAt              time.Time `json:"created_at"`
-}
-
-// ============================================
 // HELPER: Add RemisionInvoiceLink model
 // ============================================
 

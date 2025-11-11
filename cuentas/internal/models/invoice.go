@@ -10,20 +10,11 @@ import (
 type InvoiceRelatedDocument struct {
 	ID                     string    `json:"id"`
 	InvoiceID              string    `json:"invoice_id"`
-	RelatedDocumentType    string    `json:"related_document_type"` // "01", "03" (for Type 04 remisiones)
-	RelatedDocumentGenType int       `json:"related_document_gen_type"`
-	RelatedDocumentType    string    `json:"related_document_type"`     // "03", "07"
-	RelatedDocumentGenType int       `json:"related_document_gen_type"` // 1 or 2
+	RelatedDocumentType    string    `json:"related_document_type"`     // "01", "03" for remisiones
+	RelatedDocumentGenType int       `json:"related_document_gen_type"` // 1=physical, 2=electronic
 	RelatedDocumentNumber  string    `json:"related_document_number"`
 	RelatedDocumentDate    time.Time `json:"related_document_date"`
 	CreatedAt              time.Time `json:"created_at"`
-}
-
-type RemisionInvoiceLink struct {
-	ID         string    `json:"id"`
-	RemisionID string    `json:"remision_id"`
-	InvoiceID  string    `json:"invoice_id"`
-	CreatedAt  time.Time `json:"created_at"`
 }
 
 // Invoice represents an invoice transaction
