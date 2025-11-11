@@ -119,7 +119,7 @@ func (b *Builder) BuildNotaRemision(ctx context.Context, invoice *models.Invoice
 		if err != nil {
 			return nil, fmt.Errorf("load client: %w", err)
 		}
-		receptor = b.buildReceptor(client)
+		receptor = b.buildReceptor(client, invoice)
 	}
 
 	// Load related documents if any
@@ -256,25 +256,6 @@ func (b *Builder) buildNotaRemisionExtension(invoice *models.Invoice) *NotaRemis
 		Observaciones: invoice.DeliveryNotes,
 		PlacaVehiculo: invoice.VehiclePlate,
 	}
-}
-
-// ============================================
-// BUILD DOCUMENTOS RELACIONADOS
-// ============================================
-
-func (b *Builder) buildDocumentosRelacionados(docs []models.InvoiceRelatedDocument) []DocumentoRelacionado {
-	result := make([]DocumentoRelacionado, len(docs))
-
-	for i, doc := range docs {
-		result[i] = DocumentoRelacionado{
-			TipoDocumento:   doc.RelatedDocumentType,
-			TipoGeneracion:  doc.RelatedDocumentGenType,
-			NumeroDocumento: doc.RelatedDocumentNumber,
-			FechaEmision:    doc.RelatedDocumentDate.Format("2006-01-02"),
-		}
-	}
-
-	return result
 }
 
 // ============================================
