@@ -45,6 +45,7 @@ func NewValidator() (*Validator, error) {
 		"05": "schemas/fe-nc-v3.json",  // Nota de Crédito
 		"06": "schemas/fe-nd-v3.json",  // Nota de Débito
 		"11": "schemas/fe-fex-v1.json", // Factura Exportación
+		"04": "schemas/fe-nr-v3.json",
 	}
 
 	// Load and compile schemas
