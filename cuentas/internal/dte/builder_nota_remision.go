@@ -119,7 +119,7 @@ func (b *Builder) BuildNotaRemision(ctx context.Context, invoice *models.Invoice
 		if err != nil {
 			return nil, fmt.Errorf("load client: %w", err)
 		}
-		receptor = b.buildReceptor(client, invoice)
+		receptor = b.buildReceptorRemision(client)
 	}
 
 	// Load related documents if any
@@ -129,7 +129,7 @@ func (b *Builder) BuildNotaRemision(ctx context.Context, invoice *models.Invoice
 		return nil, fmt.Errorf("load related documents: %w", err)
 	}
 	if len(relatedDocs) > 0 {
-		docs := b.buildDocumentosRelacionados(relatedDocs)
+		docs := b.buildDocumentosRelacionadosRemision(relatedDocs)
 		documentoRelacionado = &docs
 	}
 
@@ -256,6 +256,77 @@ func (b *Builder) buildNotaRemisionExtension(invoice *models.Invoice) *NotaRemis
 		Observaciones: invoice.DeliveryNotes,
 		PlacaVehiculo: invoice.VehiclePlate,
 	}
+}
+
+// ============================================
+// BUILD RECEPTOR FOR REMISION
+// ============================================
+
+func (b *Builder) buildReceptorRemision(client *ClientData) *Receptor {
+	// Determine document type and number
+	var tipoDocumento *string
+	var numDocumento *string
+	var nrc *string
+
+	if client.NIT != nil {
+		td := DocTypeNIT
+		tipoDocumento = &td
+		nitStr := fmt.Sprintf("%014d", *client.NIT)
+		numDocumento = &nitStr
+		if client.NCR != nil {
+			ncrStr := fmt.Sprintf("%d", *client.NCR)
+			nrc = &ncrStr
+		}
+	} else if client.DUI != nil {
+		td := DocTypeDUI
+		tipoDocumento = &td
+		duiStr := fmt.Sprintf("%08d-%d", *client.DUI/10, *client.DUI%10)
+		numDocumento = &duiStr
+	}
+
+	// Build direccion
+	var direccion *Direccion
+	if client.DepartmentCode != "" && client.MunicipalityCode != "" {
+		dir := b.buildReceptorDireccion(client)
+		direccion = &dir
+	}
+
+	receptor := &Receptor{
+		TipoDocumento: tipoDocumento,
+		NumDocumento:  numDocumento,
+		NRC:           nrc,
+		Nombre:        client.BusinessName,
+		Direccion:     direccion,
+		Telefono:      client.Telefono,
+		Correo:        client.Correo,
+	}
+
+	// Set activity if available
+	if client.CodActividad != nil {
+		receptor.CodActividad = client.CodActividad
+		receptor.DescActividad = client.DescActividad
+	}
+
+	return receptor
+}
+
+// ============================================
+// BUILD DOCUMENTOS RELACIONADOS FOR REMISION
+// ============================================
+
+func (b *Builder) buildDocumentosRelacionadosRemision(docs []models.InvoiceRelatedDocument) []DocumentoRelacionado {
+	result := make([]DocumentoRelacionado, len(docs))
+
+	for i, doc := range docs {
+		result[i] = DocumentoRelacionado{
+			TipoDocumento:   doc.RelatedDocumentType,
+			TipoGeneracion:  doc.RelatedDocumentGenType,
+			NumeroDocumento: doc.RelatedDocumentNumber,
+			FechaEmision:    doc.RelatedDocumentDate.Format("2006-01-02"),
+		}
+	}
+
+	return result
 }
 
 // ============================================

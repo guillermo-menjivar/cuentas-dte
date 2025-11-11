@@ -268,8 +268,8 @@ func (h *RemisionHandler) FinalizeRemision(c *gin.Context) {
 		fmt.Printf("Sello Recibido: %s\n", signedDTE.SelloRecibido)
 	}
 
-	if signedDTE.FechaProcesamiento != "" {
-		fmt.Printf("Fecha Procesamiento: %s\n", signedDTE.FechaProcesamiento)
+	if signedDTE.FhProcesamiento != "" {
+		fmt.Printf("Fecha Procesamiento: %s\n", signedDTE.FhProcesamiento)
 	}
 
 	// Update remision with Hacienda response
