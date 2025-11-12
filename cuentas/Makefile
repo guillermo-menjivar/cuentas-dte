@@ -92,8 +92,6 @@ refresh:
 	docker-compose build cuentas
 	@echo "2. Restarting cuentas container..."
 	docker-compose up -d cuentas
-	@echo "3. Showing logs..."
-	docker-compose logs -f cuentas
 
 .PHONY: refresh-full
 refresh-full:
