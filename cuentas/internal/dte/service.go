@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"cuentas/internal/codigos"
 	"cuentas/internal/hacienda"
 	"cuentas/internal/models"
 	"cuentas/internal/services"
@@ -420,7 +421,7 @@ func (s *DTEService) ProcessExportInvoice(ctx context.Context, invoice *models.I
 		ctx,
 		authResponse.Body.Token,
 		exportDTE.Identificacion.Ambiente,
-		"11", // Type 11 - Factura de Exportación
+		codigos.DocTypeFacturasExportacion, // Type 11 - Factura de Exportación
 		strings.ToUpper(exportDTE.Identificacion.CodigoGeneracion),
 		signedDTE,
 	)

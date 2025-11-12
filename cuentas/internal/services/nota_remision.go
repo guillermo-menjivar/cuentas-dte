@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"cuentas/internal/database"
+	"cuentas/internal/dte"
 	"cuentas/internal/models"
 )
 
@@ -275,6 +276,7 @@ func (s *InvoiceService) insertRelatedDocuments(ctx context.Context, tx *sql.Tx,
 }
 
 // FinalizeRemision finalizes a draft remision and generates DTE identifiers
+// FinalizeRemision finalizes a draft remision and generates DTE identifiers
 func (s *InvoiceService) FinalizeRemision(ctx context.Context, companyID, remisionID, userID string) (*models.Invoice, error) {
 	log.Printf("[INFO] FinalizeRemision: Starting finalization for remision_id=%s, company_id=%s, user_id=%s",
 		remisionID, companyID, userID)
@@ -295,15 +297,15 @@ func (s *InvoiceService) FinalizeRemision(ctx context.Context, companyID, remisi
 		return nil, err
 	}
 
-	log.Printf("[DEBUG] FinalizeRemision: Loaded invoice - ID=%s, InvoiceType=%s, Status=%s, RemisionType=%v, DteType=%v",
-		remision.ID, remision.InvoiceType, remision.Status, remision.RemisionType, remision.DteType)
+	log.Printf("[DEBUG] FinalizeRemision: Loaded invoice - ID=%s, InvoiceType=%s, Status=%s, RemisionType=%v",
+		remision.ID, remision.InvoiceType, remision.Status, remision.RemisionType)
 
 	if remision.Status != "draft" {
 		log.Printf("[ERROR] FinalizeRemision: Invoice %s is not draft (status=%s)", remisionID, remision.Status)
 		return nil, ErrInvoiceNotDraft
 	}
 
-	// 2. Verify it's actually a remision by checking RemisionType field (not DteType which is NULL until finalized)
+	// 2. Verify it's actually a remision
 	if remision.RemisionType == nil || *remision.RemisionType == "" {
 		log.Printf("[ERROR] FinalizeRemision: Invoice %s is not a remision - RemisionType is nil or empty", remisionID)
 		return nil, fmt.Errorf("document is not a remision (Type 04)")
@@ -320,9 +322,23 @@ func (s *InvoiceService) FinalizeRemision(ctx context.Context, companyID, remisi
 	}
 	log.Printf("[INFO] FinalizeRemision: Generated numero control: %s", numeroControl)
 
-	// 4. Update remision to finalized
+	// 4. ⭐ VALIDATE DTE SCHEMA BEFORE COMMITTING
+	// Temporarily set fields needed for DTE building
+	remision.DteNumeroControl = &numeroControl
+	tipoDte := "04"
+	remision.DteType = &tipoDte
+
+	log.Printf("[INFO] FinalizeRemision: ⚠️  VALIDATING DTE SCHEMA BEFORE COMMIT...")
+	dteBuilder := dte.NewBuilder(database.DB)
+	_, err = dteBuilder.BuildNotaRemision(ctx, remision)
+	if err != nil {
+		log.Printf("[ERROR] FinalizeRemision: ❌ DTE VALIDATION FAILED - ROLLING BACK: %v", err)
+		return nil, fmt.Errorf("DTE validation failed, remision not finalized: %w", err)
+	}
+	log.Printf("[INFO] FinalizeRemision: ✅ DTE VALIDATION PASSED - PROCEEDING WITH COMMIT")
+
+	// 5. Update remision to finalized (only if validation passed)
 	now := time.Now()
-	tipoDte := codigots.DocTypeNotaRemision
 
 	updateQuery := `
         UPDATE invoices
@@ -352,18 +368,17 @@ func (s *InvoiceService) FinalizeRemision(ctx context.Context, companyID, remisi
 	rowsAffected, _ := result.RowsAffected()
 	log.Printf("[DEBUG] FinalizeRemision: Updated %d rows", rowsAffected)
 
-	// 5. Note: Remisiones do NOT deduct inventory
-	// Inventory is deducted when the actual sale invoice is created later
-	log.Printf("[INFO] FinalizeRemision: Skipping inventory deduction (remisiones don't deduct stock)")
+	// 6. Remisiones do NOT deduct inventory
+	log.Printf("[INFO] FinalizeRemision: Skipping inventory deduction")
 
-	// 6. Commit transaction
+	// 7. Commit transaction (only if DTE validation passed)
 	log.Printf("[DEBUG] FinalizeRemision: Committing transaction")
 	if err := tx.Commit(); err != nil {
 		log.Printf("[ERROR] FinalizeRemision: Failed to commit transaction: %v", err)
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// 7. Get and return the finalized remision
+	// 8. Get and return the finalized remision
 	log.Printf("[DEBUG] FinalizeRemision: Loading finalized remision")
 	finalizedRemision, err := s.GetInvoice(ctx, companyID, remisionID)
 	if err != nil {
@@ -371,7 +386,7 @@ func (s *InvoiceService) FinalizeRemision(ctx context.Context, companyID, remisi
 		return nil, err
 	}
 
-	log.Printf("[INFO] FinalizeRemision: Successfully finalized remision %s (numero_control=%s)",
+	log.Printf("[INFO] FinalizeRemision: ✅ Successfully finalized remision %s (numero_control=%s)",
 		remisionID, numeroControl)
 
 	return finalizedRemision, nil

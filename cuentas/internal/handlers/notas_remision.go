@@ -262,18 +262,18 @@ func (h *RemisionHandler) FinalizeRemision(c *gin.Context) {
 	// Process remision DTE (build, sign, submit to Hacienda)
 	signedDTE, err := dteService.ProcessRemision(c.Request.Context(), remision)
 	if err != nil {
-		// Log the error but don't fail the remision finalization
 		log.Printf("[ERROR] FinalizeRemision Handler: DTE processing failed for %s: %v", remisionID, err)
 		fmt.Printf("❌ DTE processing failed: %v\n", err)
 
-		// Update remision status to indicate DTE issue
+		// Update remision status to indicate failure
 		dteStatus := "failed_signing"
 		remision.DteStatus = &dteStatus
 
-		c.JSON(http.StatusOK, gin.H{
-			"remision": remision,
-			"warning":  "Remision finalized but DTE processing failed",
-			"error":    err.Error(),
+		// THIS IS A FAILURE - RETURN ERROR
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":       fmt.Sprintf("DTE processing failed: %v", err),
+			"remision_id": remisionID,
+			"details":     "Remision was finalized but DTE could not be signed or submitted to Hacienda",
 		})
 		return
 	}
