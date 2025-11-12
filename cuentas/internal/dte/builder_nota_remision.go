@@ -19,7 +19,7 @@ type NotaRemisionDTE struct {
 	Identificacion       NotaRemisionIdentificacion `json:"identificacion"`
 	DocumentoRelacionado *[]DocumentoRelacionado    `json:"documentoRelacionado"`
 	Emisor               Emisor                     `json:"emisor"`
-	Receptor             *Receptor                  `json:"receptor"` // Can be null for internal transfers
+	Receptor             *ReceptorRemision          `json:"receptor"`
 	VentaTercero         *VentaTercero              `json:"ventaTercero"`
 	CuerpoDocumento      []NotaRemisionCuerpoItem   `json:"cuerpoDocumento"`
 	Resumen              NotaRemisionResumen        `json:"resumen"`
@@ -60,6 +60,20 @@ type NotaRemisionCuerpoItem struct {
 	VentaGravada    float64   `json:"ventaGravada"`
 	Tributos        *[]string `json:"tributos"`
 	// Do NOT add noGravado - it's not in schema
+}
+
+type ReceptorRemision struct {
+	TipoDocumento   *string    `json:"tipoDocumento,omitempty"`
+	NumDocumento    *string    `json:"numDocumento,omitempty"`
+	NRC             *string    `json:"nrc"` // NO omitempty - always included even if nil
+	Nombre          *string    `json:"nombre,omitempty"`
+	NombreComercial *string    `json:"nombreComercial,omitempty"`
+	CodActividad    *string    `json:"codActividad,omitempty"`
+	DescActividad   *string    `json:"descActividad,omitempty"`
+	Direccion       *Direccion `json:"direccion,omitempty"`
+	Telefono        *string    `json:"telefono,omitempty"`
+	Correo          *string    `json:"correo,omitempty"`
+	BienTitulo      *string    `json:"bienTitulo,omitempty"`
 }
 
 // NotaRemisionResumen - simpler than invoices (no IVA)
@@ -267,7 +281,7 @@ func (b *Builder) buildNotaRemisionExtension(invoice *models.Invoice) *NotaRemis
 // BUILD RECEPTOR FOR REMISION
 // ============================================
 
-func (b *Builder) buildReceptorRemision(client *ClientData) *Receptor {
+func (b *Builder) buildReceptorRemision(client *ClientData) *ReceptorRemision {
 	// Document identification
 	var tipoDocumento *string
 	var numDocumento *string
@@ -301,10 +315,10 @@ func (b *Builder) buildReceptorRemision(client *ClientData) *Receptor {
 	// Default to goods
 	bienTitulo := "1"
 
-	return &Receptor{
+	return &ReceptorRemision{ // Changed from &Receptor
 		TipoDocumento:   tipoDocumento,
 		NumDocumento:    numDocumento,
-		NRC:             nrc,
+		NRC:             nrc, // Will always be in JSON (null if nil)
 		Nombre:          client.BusinessName,
 		CodActividad:    &codActividad,
 		DescActividad:   &descActividad,
