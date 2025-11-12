@@ -1294,6 +1294,7 @@ func (s *InvoiceService) calculatePaymentStatus(amountPaid, total float64) strin
 }
 
 func (s *InvoiceService) getInvoiceForUpdate(ctx context.Context, tx *sql.Tx, companyID, invoiceID string) (*models.Invoice, error) {
+	fmt.Println("we are inside the invocie for update function")
 	query := `
         SELECT
             id, company_id, establishment_id, point_of_sale_id, client_id,
@@ -1355,6 +1356,7 @@ func (s *InvoiceService) getInvoiceForUpdate(ctx context.Context, tx *sql.Tx, co
 		return nil, ErrInvoiceNotFound
 	}
 	if err != nil {
+		fmt.Println("we failed to run query inside the invoice update function")
 		return nil, fmt.Errorf("failed to query invoice: %w", err)
 	}
 

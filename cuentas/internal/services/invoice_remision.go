@@ -283,6 +283,7 @@ func (s *InvoiceService) FinalizeRemision(ctx context.Context, companyID, remisi
 	defer tx.Rollback()
 
 	// 1. Get remision and verify it's a draft
+	fmt.Println("we are updating invoice")
 	remision, err := s.getInvoiceForUpdate(ctx, tx, companyID, remisionID)
 	if err != nil {
 		return nil, err
