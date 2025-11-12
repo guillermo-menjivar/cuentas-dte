@@ -736,35 +736,37 @@ func (s *InvoiceService) insertInvoice(ctx context.Context, tx *sql.Tx, invoice 
 }
 
 // Update getInvoiceHeader to include establishment_id
-// Update getInvoiceHeader to include establishment_id
 func (s *InvoiceService) getInvoiceHeader(ctx context.Context, companyID, invoiceID string) (*models.Invoice, error) {
 	query := `
-        SELECT
-            id, company_id, establishment_id, point_of_sale_id, client_id,
-            invoice_number, invoice_type,
-            references_invoice_id, void_reason,
-            client_name, client_legal_name, client_nit, client_ncr, client_dui,
-            client_address, client_tipo_contribuyente, client_tipo_persona,
-            subtotal, total_discount, total_taxes, total,
-            currency,
-            payment_terms, payment_method, payment_status, amount_paid, balance_due, due_date,
-            status,
-            dte_numero_control, dte_status, dte_hacienda_response, dte_submitted_at, dte_type,
-            created_at, finalized_at, voided_at,
-            created_by, voided_by, notes,
-            contact_email, contact_whatsapp
-        FROM invoices
-        WHERE id = $1 AND company_id = $2
-    `
+		SELECT
+			id, company_id, establishment_id, point_of_sale_id, client_id,
+			invoice_number, invoice_type,
+			remision_type, delivery_person, vehicle_plate, delivery_notes,
+			references_invoice_id, void_reason,
+			client_name, client_legal_name, client_nit, client_ncr, client_dui,
+			client_address, client_tipo_contribuyente, client_tipo_persona,
+			subtotal, total_discount, total_taxes, total,
+			currency,
+			payment_terms, payment_method, payment_status, amount_paid, balance_due, due_date,
+			status,
+			dte_numero_control, dte_status, dte_hacienda_response, dte_submitted_at, dte_type,
+			created_at, finalized_at, voided_at,
+			created_by, voided_by, notes,
+			contact_email, contact_whatsapp
+		FROM invoices
+		WHERE id = $1 AND company_id = $2
+	`
 
 	invoice := &models.Invoice{}
 
 	// Use sql.NullString for nullable fields (remisiones can have NULLs)
 	var clientID, paymentTerms, paymentMethod, paymentStatus sql.NullString
+	var remisionType, deliveryPerson, vehiclePlate, deliveryNotes sql.NullString
 
 	err := database.DB.QueryRowContext(ctx, query, invoiceID, companyID).Scan(
 		&invoice.ID, &invoice.CompanyID, &invoice.EstablishmentID, &invoice.PointOfSaleID, &clientID,
 		&invoice.InvoiceNumber, &invoice.InvoiceType,
+		&remisionType, &deliveryPerson, &vehiclePlate, &deliveryNotes,
 		&invoice.ReferencesInvoiceID, &invoice.VoidReason,
 		&invoice.ClientName, &invoice.ClientLegalName, &invoice.ClientNit, &invoice.ClientNcr, &invoice.ClientDui,
 		&invoice.ClientAddress, &invoice.ClientTipoContribuyente, &invoice.ClientTipoPersona,
@@ -792,54 +794,22 @@ func (s *InvoiceService) getInvoiceHeader(ctx context.Context, companyID, invoic
 	invoice.PaymentMethod = paymentMethod.String
 	invoice.PaymentStatus = paymentStatus.String
 
-	log.Printf("[DEBUG] getInvoiceHeader: Successfully loaded invoice %s (type=%s, client_id=%s)",
-		invoiceID, invoice.InvoiceType, invoice.ClientID)
-
-	return invoice, nil
-}
-func (s *InvoiceService) _getInvoiceHeader(ctx context.Context, companyID, invoiceID string) (*models.Invoice, error) {
-	query := `
-		SELECT
-			id, company_id, establishment_id, point_of_sale_id, client_id,
-			invoice_number, invoice_type,
-			references_invoice_id, void_reason,
-			client_name, client_legal_name, client_nit, client_ncr, client_dui,
-			client_address, client_tipo_contribuyente, client_tipo_persona,
-			subtotal, total_discount, total_taxes, total,
-			currency,
-			payment_terms, payment_method, payment_status, amount_paid, balance_due, due_date,
-			status,
-			dte_numero_control, dte_status, dte_hacienda_response, dte_submitted_at, dte_type,
-			created_at, finalized_at, voided_at,
-			created_by, voided_by, notes,
-			contact_email, contact_whatsapp
-		FROM invoices
-		WHERE id = $1 AND company_id = $2
-	`
-
-	invoice := &models.Invoice{}
-	err := database.DB.QueryRowContext(ctx, query, invoiceID, companyID).Scan(
-		&invoice.ID, &invoice.CompanyID, &invoice.EstablishmentID, &invoice.PointOfSaleID, &invoice.ClientID,
-		&invoice.InvoiceNumber, &invoice.InvoiceType,
-		&invoice.ReferencesInvoiceID, &invoice.VoidReason,
-		&invoice.ClientName, &invoice.ClientLegalName, &invoice.ClientNit, &invoice.ClientNcr, &invoice.ClientDui,
-		&invoice.ClientAddress, &invoice.ClientTipoContribuyente, &invoice.ClientTipoPersona,
-		&invoice.Subtotal, &invoice.TotalDiscount, &invoice.TotalTaxes, &invoice.Total,
-		&invoice.Currency,
-		&invoice.PaymentTerms, &invoice.PaymentMethod, &invoice.PaymentStatus, &invoice.AmountPaid, &invoice.BalanceDue, &invoice.DueDate,
-		&invoice.Status,
-		&invoice.DteNumeroControl, &invoice.DteStatus, &invoice.DteHaciendaResponse, &invoice.DteSubmittedAt, &invoice.DteType, // ⭐ Removed DteCodigoGeneracion
-		&invoice.CreatedAt, &invoice.FinalizedAt, &invoice.VoidedAt,
-		&invoice.CreatedBy, &invoice.VoidedBy, &invoice.Notes,
-		&invoice.ContactEmail, &invoice.ContactWhatsapp,
-	)
-	if err == sql.ErrNoRows {
-		return nil, ErrInvoiceNotFound
+	// Convert remision fields
+	if remisionType.Valid {
+		invoice.RemisionType = &remisionType.String
 	}
-	if err != nil {
-		fmt.Println("the error is comfing from the getInvocieHeahder")
-		return nil, fmt.Errorf("failed to query invoice: %w", err)
+	if deliveryPerson.Valid {
+		invoice.DeliveryPerson = &deliveryPerson.String
 	}
+	if vehiclePlate.Valid {
+		invoice.VehiclePlate = &vehiclePlate.String
+	}
+	if deliveryNotes.Valid {
+		invoice.DeliveryNotes = &deliveryNotes.String
+	}
+
+	log.Printf("[DEBUG] getInvoiceHeader: Successfully loaded invoice %s (type=%s, client_id=%s, remision_type=%v)",
+		invoiceID, invoice.InvoiceType, invoice.ClientID, invoice.RemisionType)
 
 	return invoice, nil
 }
