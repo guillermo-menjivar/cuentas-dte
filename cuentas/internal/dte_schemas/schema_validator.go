@@ -79,7 +79,8 @@ func (v *Validator) ValidateJSON(tipoDte string, jsonBytes []byte) error {
 	if !exists {
 		return fmt.Errorf("no schema found for DTE type: %s", tipoDte)
 	}
-	fmt.Println("we are inspecting against schema ", schema)
+	fmt.Println("we are inspecting against schema ", tipoDte)
+	fmt.Println("9999999999999999999999999999999999")
 
 	// Load JSON document
 	documentLoader := gojsonschema.NewBytesLoader(jsonBytes)
