@@ -89,7 +89,6 @@ type NotaRemisionResumen struct {
 	TotalDescu          float64    `json:"totalDescu"`
 	Tributos            *[]Tributo `json:"tributos"` // Usually null for remision
 	SubTotal            float64    `json:"subTotal"`
-	IvaPerci1           float64    `json:"ivaPerci1"`
 	MontoTotalOperacion float64    `json:"montoTotalOperacion"`
 	TotalLetras         string     `json:"totalLetras"`
 }
@@ -257,7 +256,6 @@ func (b *Builder) buildNotaRemisionResumen(invoice *models.Invoice) NotaRemision
 		Tributos:            nil,
 		SubTotal:            0,
 		MontoTotalOperacion: 0,
-		IvaPerci1:           0,
 		TotalLetras:         "CERO DÓLARES",
 	}
 }
