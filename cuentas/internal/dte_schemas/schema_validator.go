@@ -50,6 +50,8 @@ func NewValidator() (*Validator, error) {
 
 	// Load and compile schemas
 	for tipoDte, filename := range schemaFiles {
+		fmt.Println("we are using DTE schema", filename)
+		fmt.Println("00000000000000000000000000000")
 		schemaBytes, err := schemasFS.ReadFile(filename)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read schema %s: %w", filename, err)
@@ -77,6 +79,7 @@ func (v *Validator) ValidateJSON(tipoDte string, jsonBytes []byte) error {
 	if !exists {
 		return fmt.Errorf("no schema found for DTE type: %s", tipoDte)
 	}
+	fmt.Println("we are inspecting against schema ", schema)
 
 	// Load JSON document
 	documentLoader := gojsonschema.NewBytesLoader(jsonBytes)
