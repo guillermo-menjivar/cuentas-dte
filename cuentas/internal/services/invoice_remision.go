@@ -210,7 +210,7 @@ func (s *InvoiceService) insertRemision(ctx context.Context, tx *sql.Tx, invoice
             dte_codigo_generacion,
             status, notes, created_at
         ) VALUES (
-            $1, $2, $3, $4, NULLIF($5, ''),
+            $1, $2, $3, $4, $5,
             $6, $7,
             $8, $9, $10, $11,
             $12, $13, $14, $15, $16,
@@ -223,8 +223,16 @@ func (s *InvoiceService) insertRemision(ctx context.Context, tx *sql.Tx, invoice
         ) RETURNING id
     `
 
+	// Handle NULL client_id for internal transfers
+	var clientID interface{}
+	if invoice.ClientID == "" {
+		clientID = nil
+	} else {
+		clientID = invoice.ClientID
+	}
+
 	_, err := tx.ExecContext(ctx, query,
-		id, invoice.CompanyID, invoice.EstablishmentID, invoice.PointOfSaleID, invoice.ClientID,
+		id, invoice.CompanyID, invoice.EstablishmentID, invoice.PointOfSaleID, clientID, // Use interface{} for NULL
 		invoice.InvoiceNumber, invoice.InvoiceType,
 		invoice.RemisionType, invoice.DeliveryPerson, invoice.VehiclePlate, invoice.DeliveryNotes,
 		invoice.ClientName, invoice.ClientLegalName, invoice.ClientNit, invoice.ClientNcr, invoice.ClientDui,

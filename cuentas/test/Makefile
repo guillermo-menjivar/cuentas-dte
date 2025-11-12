@@ -213,4 +213,7 @@ test_notas_credito:
 	@echo "Testing notas de credito"
 	./test_seed_notas_credito.py $(COMPANY_ID) --count 50
 
+.PHONY: test_nota_remision
+test_nota_remision:
+	./test_nota_remision.py $(COMPANY_ID)
 
