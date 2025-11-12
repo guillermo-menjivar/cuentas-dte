@@ -197,6 +197,7 @@ func (h *RemisionHandler) FinalizeRemision(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "remision not found"})
 			return
 		}
+		fmt.Println("we received an error at the handler level... for remision")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

@@ -776,6 +776,7 @@ func (s *InvoiceService) getInvoiceHeader(ctx context.Context, companyID, invoic
 		return nil, ErrInvoiceNotFound
 	}
 	if err != nil {
+		fmt.Println("the error is comfing from the getInvocieHeahder")
 		return nil, fmt.Errorf("failed to query invoice: %w", err)
 	}
 
