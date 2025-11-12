@@ -380,7 +380,7 @@ func (c *ClientData) GetNRC() *string {
 		log.Printf("[ERROR] NIT client missing NCR: client_id=%s, nit=%d", c.ID, *c.NIT)
 		return nil
 	}
-	fmt.PrintlN("This is the NCR", c.NCR)
+	fmt.Println("This is the NCR", c.NCR)
 	fmt.Println("!!!())()()()")
 
 	return nil
