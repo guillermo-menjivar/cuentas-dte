@@ -200,6 +200,7 @@ type Receptor struct {
 	Direccion       *Direccion `json:"direccion,omitempty"`
 	Telefono        *string    `json:"telefono,omitempty"`
 	Correo          *string    `json:"correo,omitempty"`
+	BienTitulo      *string    `json:"bienTitulo,omitempty"`
 }
 
 // Direccion represents an address

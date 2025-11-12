@@ -45,18 +45,21 @@ type NotaRemisionIdentificacion struct {
 
 // NotaRemisionCuerpoItem - line items for remision
 type NotaRemisionCuerpoItem struct {
-	NumItem      int       `json:"numItem"`
-	TipoItem     int       `json:"tipoItem"`
-	Cantidad     float64   `json:"cantidad"`
-	Codigo       *string   `json:"codigo"`
-	UniMedida    int       `json:"uniMedida"`
-	Descripcion  string    `json:"descripcion"`
-	PrecioUni    float64   `json:"precioUni"`    // Typically 0 for remision
-	MontoDescu   float64   `json:"montoDescu"`   // Typically 0
-	VentaNoSuj   float64   `json:"ventaNoSuj"`   // Typically 0
-	VentaExenta  float64   `json:"ventaExenta"`  // Typically 0
-	VentaGravada float64   `json:"ventaGravada"` // Typically 0
-	Tributos     *[]string `json:"tributos"`     // Usually null
+	NumItem         int       `json:"numItem"`
+	TipoItem        int       `json:"tipoItem"`
+	NumeroDocumento *string   `json:"numeroDocumento"` // ⭐ ADD THIS LINE
+	Cantidad        float64   `json:"cantidad"`
+	Codigo          *string   `json:"codigo"`
+	CodTributo      *string   `json:"codTributo"` // ⭐ ADD THIS LINE
+	UniMedida       int       `json:"uniMedida"`
+	Descripcion     string    `json:"descripcion"`
+	PrecioUni       float64   `json:"precioUni"`
+	MontoDescu      float64   `json:"montoDescu"`
+	VentaNoSuj      float64   `json:"ventaNoSuj"`
+	VentaExenta     float64   `json:"ventaExenta"`
+	VentaGravada    float64   `json:"ventaGravada"`
+	Tributos        *[]string `json:"tributos"`
+	// Do NOT add noGravado - it's not in schema
 }
 
 // NotaRemisionResumen - simpler than invoices (no IVA)
