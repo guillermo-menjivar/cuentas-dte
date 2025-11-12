@@ -322,7 +322,7 @@ func (s *InvoiceService) FinalizeRemision(ctx context.Context, companyID, remisi
 
 	// 4. Update remision to finalized
 	now := time.Now()
-	tipoDte := "04"
+	tipoDte := codigots.DocTypeNotaRemision
 
 	updateQuery := `
         UPDATE invoices
@@ -373,79 +373,6 @@ func (s *InvoiceService) FinalizeRemision(ctx context.Context, companyID, remisi
 
 	log.Printf("[INFO] FinalizeRemision: Successfully finalized remision %s (numero_control=%s)",
 		remisionID, numeroControl)
-
-	return finalizedRemision, nil
-}
-func (s *InvoiceService) _FinalizeRemision(ctx context.Context, companyID, remisionID, userID string) (*models.Invoice, error) {
-	// Begin transaction
-	tx, err := database.DB.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to begin transaction: %w", err)
-	}
-	defer tx.Rollback()
-
-	// 1. Get remision and verify it's a draft
-	fmt.Println("we are updating invoice")
-	remision, err := s.getInvoiceForUpdate(ctx, tx, companyID, remisionID)
-	if err != nil {
-		return nil, err
-	}
-
-	if remision.Status != "draft" {
-		return nil, ErrInvoiceNotDraft
-	}
-
-	// 2. Verify it's actually a remision
-	if !remision.IsRemision() {
-		return nil, fmt.Errorf("document is not a remision (Type 04)")
-	}
-
-	// 3. Generate DTE identifiers for Type 04
-	numeroControl, err := s.generateNumeroControl(ctx, tx, remision.EstablishmentID, remision.PointOfSaleID, remision.PointOfSaleID, "04")
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate numero control: %w", err)
-	}
-
-	// 4. Update remision to finalized
-	now := time.Now()
-	tipoDte := "04"
-
-	updateQuery := `
-        UPDATE invoices
-        SET status = 'finalized',
-            dte_numero_control = $1,
-            dte_type = $2,
-            dte_status = 'not_submitted',
-            finalized_at = $3,
-            created_by = $4
-        WHERE id = $5 AND company_id = $6
-    `
-
-	_, err = tx.ExecContext(ctx, updateQuery,
-		numeroControl,
-		tipoDte,
-		now,
-		userID,
-		remisionID,
-		companyID,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update remision: %w", err)
-	}
-
-	// 5. Note: Remisiones do NOT deduct inventory
-	// Inventory is deducted when the actual sale invoice is created later
-
-	// 6. Commit transaction
-	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	// 7. Get and return the finalized remision
-	finalizedRemision, err := s.GetInvoice(ctx, companyID, remisionID)
-	if err != nil {
-		return nil, err
-	}
 
 	return finalizedRemision, nil
 }
