@@ -282,7 +282,7 @@ func (b *Builder) buildReceptorRemision(client *ClientData) *Receptor {
 			ncrStr := fmt.Sprintf("%d", *client.NCR)
 			nrc = &ncrStr
 		} else {
-			// ⭐ NRC is REQUIRED by schema - provide default if missing
+			// NRC is REQUIRED by schema - provide default if missing
 			defaultNRC := "0"
 			nrc = &defaultNRC
 		}
@@ -291,7 +291,7 @@ func (b *Builder) buildReceptorRemision(client *ClientData) *Receptor {
 		tipoDocumento = &td
 		duiStr := fmt.Sprintf("%08d-%d", *client.DUI/10, *client.DUI%10)
 		numDocumento = &duiStr
-		// ⭐ DUI clients also need NRC
+		// DUI clients also need NRC
 		defaultNRC := "0"
 		nrc = &defaultNRC
 	}
@@ -303,14 +303,14 @@ func (b *Builder) buildReceptorRemision(client *ClientData) *Receptor {
 		direccion = &dir
 	}
 
-	// ⭐ Ensure all required fields are present
-	nombreComercial := client.BusinessName
-	if client.CommercialName != nil && *client.CommercialName != "" {
-		nombreComercial = *client.CommercialName
+	// Ensure nombreComercial is set
+	nombreComercial := ""
+	if client.BusinessName != nil {
+		nombreComercial = *client.BusinessName
 	}
 
-	// ⭐ CodActividad and DescActividad are REQUIRED
-	codActividad := "00000" // Default if missing
+	// CodActividad and DescActividad are REQUIRED
+	codActividad := "00000"
 	descActividad := "Sin actividad registrada"
 	if client.CodActividad != nil {
 		codActividad = *client.CodActividad
@@ -319,32 +319,37 @@ func (b *Builder) buildReceptorRemision(client *ClientData) *Receptor {
 		descActividad = *client.DescActividad
 	}
 
-	// ⭐ Telefono and Correo are REQUIRED
-	telefono := "0000-0000" // Default if missing
+	// Telefono and Correo are REQUIRED
+	telefono := "0000-0000"
 	if client.Telefono != nil {
 		telefono = *client.Telefono
 	}
 
-	correo := "sincorreo@example.com" // Default if missing
+	correo := "sincorreo@example.com"
 	if client.Correo != nil {
 		correo = *client.Correo
 	}
 
-	// ⭐ BienTitulo is REQUIRED: "1" = bienes, "2" = servicios
-	bienTitulo := "1" // Default to "bienes" (goods)
+	// BienTitulo is REQUIRED: "1" = bienes, "2" = servicios
+	bienTitulo := "1"
+
+	var nombre *string
+	if client.BusinessName != nil {
+		nombre = client.BusinessName
+	}
 
 	receptor := &Receptor{
 		TipoDocumento:   tipoDocumento,
 		NumDocumento:    numDocumento,
-		NRC:             nrc, // ⭐ Now always set
-		Nombre:          client.BusinessName,
-		CodActividad:    &codActividad,    // ⭐ Now always set
-		DescActividad:   &descActividad,   // ⭐ Now always set
-		NombreComercial: &nombreComercial, // ⭐ Now always set
+		NRC:             nrc,
+		Nombre:          nombre,
+		CodActividad:    &codActividad,
+		DescActividad:   &descActividad,
+		NombreComercial: &nombreComercial,
 		Direccion:       direccion,
-		Telefono:        &telefono,   // ⭐ Now always set
-		Correo:          &correo,     // ⭐ Now always set
-		BienTitulo:      &bienTitulo, // ⭐ Added - REQUIRED
+		Telefono:        &telefono,
+		Correo:          &correo,
+		BienTitulo:      &bienTitulo, // ⭐ Now added to struct
 	}
 
 	return receptor
