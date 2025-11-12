@@ -133,9 +133,11 @@ func (b *Builder) BuildNotaRemision(ctx context.Context, invoice *models.Invoice
 		if err != nil {
 			return nil, fmt.Errorf("load client: %w", err)
 		}
-		receptor = b.buildReceptorRemision(client)
+		receptor, err = b.buildReceptorRemision(client)
+		if err != nil {
+			return nil, fmt.Errorf("build receptor: %w", err)
+		}
 	}
-
 	// Load related documents if any
 	var documentoRelacionado *[]DocumentoRelacionado
 	relatedDocs, err := b.loadRelatedDocuments(ctx, invoice.ID)
@@ -283,7 +285,7 @@ func (b *Builder) buildNotaRemisionExtension(invoice *models.Invoice) *NotaRemis
 // BUILD RECEPTOR FOR REMISION
 // ============================================
 
-func (b *Builder) buildReceptorRemision(client *ClientData) *ReceptorRemision {
+func (b *Builder) buildReceptorRemision(client *ClientData) (*ReceptorRemision, error) {
 	// Document identification
 	var tipoDocumento *string
 	var numDocumento *string
@@ -293,16 +295,29 @@ func (b *Builder) buildReceptorRemision(client *ClientData) *ReceptorRemision {
 		tipoDocumento = &td
 		nitStr := fmt.Sprintf("%014d", *client.NIT)
 		numDocumento = &nitStr
+
+		// ⭐ VALIDATE: NIT clients MUST have NCR
+		if client.NCR == nil || *client.NCR == 0 {
+			return nil, fmt.Errorf("client with NIT %d is missing required NCR (registro tributario)", *client.NIT)
+		}
 	} else if client.DUI != nil {
 		td := DocTypeDUI
 		tipoDocumento = &td
 		duiStr := fmt.Sprintf("%08d-%d", *client.DUI/10, *client.DUI%10)
 		numDocumento = &duiStr
+	} else {
+		return nil, fmt.Errorf("client %s has no NIT or DUI", client.ID)
 	}
 
 	// Get data using ClientData methods
 	nrc := client.GetNRC()
 	direccion := client.GetValidatedDireccion()
+
+	// ⭐ VALIDATE: Direccion is required
+	if direccion == nil {
+		return nil, fmt.Errorf("client %s is missing required address (department/municipality)", client.ID)
+	}
+
 	codActividad := client.GetCodActividad()
 	descActividad := client.GetDescActividad()
 	telefono := client.GetTelefono()
@@ -317,10 +332,10 @@ func (b *Builder) buildReceptorRemision(client *ClientData) *ReceptorRemision {
 	// Default to goods
 	bienTitulo := "1"
 
-	return &ReceptorRemision{ // Changed from &Receptor
+	return &ReceptorRemision{
 		TipoDocumento:   tipoDocumento,
 		NumDocumento:    numDocumento,
-		NRC:             nrc, // Will always be in JSON (null if nil)
+		NRC:             nrc,
 		Nombre:          client.BusinessName,
 		CodActividad:    &codActividad,
 		DescActividad:   &descActividad,
@@ -329,7 +344,7 @@ func (b *Builder) buildReceptorRemision(client *ClientData) *ReceptorRemision {
 		Telefono:        &telefono,
 		Correo:          &correo,
 		BienTitulo:      &bienTitulo,
-	}
+	}, nil
 }
 
 // ============================================

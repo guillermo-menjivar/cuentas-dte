@@ -415,7 +415,8 @@ func (c *ClientData) GetDescActividad() string {
 	if c.DescActividad != nil && *c.DescActividad != "" {
 		return *c.DescActividad
 	}
-	return codigos.GetEconomicActivityName(codigos.ActEcon10005)
+	activity, _ := codigos.GetEconomicActivityName(codigos.ActEcon10005)
+	return activity
 }
 
 // GetValidatedDireccion returns direccion with validated municipality code
