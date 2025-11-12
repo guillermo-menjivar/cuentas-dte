@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"cuentas/internal/dte"
@@ -190,41 +191,56 @@ func (h *RemisionHandler) FinalizeRemision(c *gin.Context) {
 		return
 	}
 
+	log.Printf("[INFO] FinalizeRemision Handler: Starting finalization for remision_id=%s, company_id=%s", remisionID, companyID)
+
 	// Verify it's a remision
 	existingRemision, err := h.invoiceService.GetInvoice(c.Request.Context(), companyID, remisionID)
 	if err != nil {
 		if err == services.ErrInvoiceNotFound {
+			log.Printf("[ERROR] FinalizeRemision Handler: Remision %s not found", remisionID)
 			c.JSON(http.StatusNotFound, gin.H{"error": "remision not found"})
 			return
 		}
-		fmt.Println("we received an error at the handler level... for remision")
+		log.Printf("[ERROR] FinalizeRemision Handler: Failed to get remision %s: %v", remisionID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	if !existingRemision.IsRemision() {
+	log.Printf("[DEBUG] FinalizeRemision Handler: Loaded remision - InvoiceType=%s, RemisionType=%v, DteType=%v",
+		existingRemision.InvoiceType, existingRemision.RemisionType, existingRemision.DteType)
+
+	// Check RemisionType field instead of IsRemision() (which checks DteType that's NULL until finalized)
+	if existingRemision.RemisionType == nil || *existingRemision.RemisionType == "" {
+		log.Printf("[ERROR] FinalizeRemision Handler: Document %s is not a remision - RemisionType is nil/empty", remisionID)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "document is not a remision"})
 		return
 	}
+
+	log.Printf("[INFO] FinalizeRemision Handler: Validation passed - RemisionType=%s", *existingRemision.RemisionType)
 
 	// TODO: Get user ID from auth context when auth is implemented
 	userID := "00000000-0000-0000-0000-000000000000" // Placeholder
 
 	// Finalize remision (generates DTE identifiers)
+	log.Printf("[DEBUG] FinalizeRemision Handler: Calling service to finalize remision")
 	remision, err := h.invoiceService.FinalizeRemision(c.Request.Context(), companyID, remisionID, userID)
 	if err != nil {
 		if err == services.ErrInvoiceNotFound {
+			log.Printf("[ERROR] FinalizeRemision Handler: Remision not found during finalization")
 			c.JSON(http.StatusNotFound, gin.H{"error": "remision not found"})
 			return
 		}
 		if err == services.ErrInvoiceNotDraft {
+			log.Printf("[ERROR] FinalizeRemision Handler: Remision %s is not in draft status", remisionID)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "only draft remisiones can be finalized"})
 			return
 		}
+		log.Printf("[ERROR] FinalizeRemision Handler: Failed to finalize remision %s: %v", remisionID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	log.Printf("[INFO] FinalizeRemision Handler: Remision finalized successfully - NumeroControl=%s", *remision.DteNumeroControl)
 	fmt.Printf("\n=== Remision Finalized ===\n")
 	fmt.Printf("ID: %s\n", remision.ID)
 	fmt.Printf("Número Control: %s\n", *remision.DteNumeroControl)
@@ -233,19 +249,21 @@ func (h *RemisionHandler) FinalizeRemision(c *gin.Context) {
 	// ===== DTE PROCESSING (BUILD, SIGN, SUBMIT) =====
 	dteServiceInterface, exists := c.Get("dteService")
 	if !exists {
+		log.Printf("[WARN] FinalizeRemision Handler: DTE service not available in context")
 		fmt.Println("⚠️  Warning: DTE service not available in context")
 		c.JSON(http.StatusOK, remision)
 		return
 	}
 
 	dteService := dteServiceInterface.(*dte.DTEService)
-
+	log.Printf("[INFO] FinalizeRemision Handler: Starting DTE processing (build, sign, submit)")
 	fmt.Println("\n=== Starting DTE Processing for Remision (Type 04) ===")
 
 	// Process remision DTE (build, sign, submit to Hacienda)
 	signedDTE, err := dteService.ProcessRemision(c.Request.Context(), remision)
 	if err != nil {
 		// Log the error but don't fail the remision finalization
+		log.Printf("[ERROR] FinalizeRemision Handler: DTE processing failed for %s: %v", remisionID, err)
 		fmt.Printf("❌ DTE processing failed: %v\n", err)
 
 		// Update remision status to indicate DTE issue
@@ -261,6 +279,8 @@ func (h *RemisionHandler) FinalizeRemision(c *gin.Context) {
 	}
 
 	// Successfully processed
+	log.Printf("[INFO] FinalizeRemision Handler: DTE processed successfully - Estado=%s, CodigoGeneracion=%s",
+		signedDTE.Estado, signedDTE.CodigoGeneracion)
 	fmt.Printf("✅ DTE signed and submitted successfully for remision %s\n", remision.ID)
 	fmt.Printf("Estado: %s\n", signedDTE.Estado)
 	fmt.Printf("Código de Generación: %s\n", signedDTE.CodigoGeneracion)
@@ -268,7 +288,6 @@ func (h *RemisionHandler) FinalizeRemision(c *gin.Context) {
 	if signedDTE.SelloRecibido != "" {
 		fmt.Printf("Sello Recibido: %s\n", signedDTE.SelloRecibido)
 	}
-
 	if signedDTE.FhProcesamiento != "" {
 		fmt.Printf("Fecha Procesamiento: %s\n", signedDTE.FhProcesamiento)
 	}
