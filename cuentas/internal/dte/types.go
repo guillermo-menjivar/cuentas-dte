@@ -3,6 +3,8 @@ package dte
 
 import (
 	"cuentas/internal/codigos"
+	"fmt"
+	"log"
 	"regexp"
 	"strings"
 )
@@ -357,4 +359,75 @@ type CuerpoDocumentoNota struct {
 	Tributos        []string `json:"tributos"`
 	Psv             float64  `json:"psv,omitempty"`
 	NoGravado       float64  `json:"noGravado,omitempty"`
+}
+
+// GetNRC returns the NRC for receptor, handling NIT vs DUI logic
+func (c *ClientData) GetNRC() *string {
+	// DUI clients: NRC should be null
+	if c.DUI != nil {
+		return nil
+	}
+
+	// NIT clients: return NCR if present, otherwise "00" minimum
+	if c.NIT != nil {
+		if c.NCR != nil && *c.NCR > 0 {
+			ncrStr := fmt.Sprintf("%d", *c.NCR)
+			return &ncrStr
+		}
+		defaultNRC := "00"
+		return &defaultNRC
+	}
+
+	return nil
+}
+
+// GetTelefono returns telefono with fallback
+func (c *ClientData) GetTelefono() string {
+	if c.Telefono != nil && *c.Telefono != "" {
+		return *c.Telefono
+	}
+	return "0000-0000"
+}
+
+// GetCorreo returns correo with fallback
+func (c *ClientData) GetCorreo() string {
+	if c.Correo != nil && *c.Correo != "" {
+		return *c.Correo
+	}
+	return "sincorreo@example.com"
+}
+
+// GetCodActividad returns activity code with fallback
+func (c *ClientData) GetCodActividad() string {
+	if c.CodActividad != nil && *c.CodActividad != "" {
+		return *c.CodActividad
+	}
+	return "00000"
+}
+
+// GetDescActividad returns activity description with fallback
+func (c *ClientData) GetDescActividad() string {
+	if c.DescActividad != nil && *c.DescActividad != "" {
+		return *c.DescActividad
+	}
+	return "Actividad general"
+}
+
+// GetValidatedDireccion returns direccion with validated municipality code
+func (c *ClientData) GetValidatedDireccion() *Direccion {
+	if c.DepartmentCode == "" || c.MunicipalityCode == "" {
+		return nil
+	}
+
+	munCode, valid := c.GetMunicipalityCode()
+	if !valid {
+		log.Printf("[WARN] Invalid municipality for client %s, using 01", c.ID)
+		munCode = "01"
+	}
+
+	return &Direccion{
+		Departamento: c.DepartmentCode,
+		Municipio:    munCode,
+		Complemento:  c.FullAddress,
+	}
 }
