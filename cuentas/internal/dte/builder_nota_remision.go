@@ -20,7 +20,6 @@ type NotaRemisionDTE struct {
 	DocumentoRelacionado *[]DocumentoRelacionado    `json:"documentoRelacionado"`
 	Emisor               Emisor                     `json:"emisor"`
 	Receptor             *Receptor                  `json:"receptor"` // Can be null for internal transfers
-	OtrosDocumentos      *[]OtroDocumento           `json:"otrosDocumentos"`
 	VentaTercero         *VentaTercero              `json:"ventaTercero"`
 	CuerpoDocumento      []NotaRemisionCuerpoItem   `json:"cuerpoDocumento"`
 	Resumen              NotaRemisionResumen        `json:"resumen"`
@@ -58,7 +57,6 @@ type NotaRemisionCuerpoItem struct {
 	VentaExenta  float64   `json:"ventaExenta"`  // Typically 0
 	VentaGravada float64   `json:"ventaGravada"` // Typically 0
 	Tributos     *[]string `json:"tributos"`     // Usually null
-	NoGravado    float64   `json:"noGravado"`    // Typically 0
 }
 
 // NotaRemisionResumen - simpler than invoices (no IVA)
@@ -85,7 +83,6 @@ type NotaRemisionExtension struct {
 	NombRecibe    *string `json:"nombRecibe"`    // Recipient name
 	DocuRecibe    *string `json:"docuRecibe"`    // Recipient DUI
 	Observaciones *string `json:"observaciones"` // Notes
-	PlacaVehiculo *string `json:"placaVehiculo"` // Vehicle plate
 }
 
 // ============================================
@@ -139,7 +136,6 @@ func (b *Builder) BuildNotaRemision(ctx context.Context, invoice *models.Invoice
 		DocumentoRelacionado: documentoRelacionado,
 		Emisor:               b.buildEmisor(company, establishment),
 		Receptor:             receptor, // Can be null
-		OtrosDocumentos:      nil,
 		VentaTercero:         nil,
 		CuerpoDocumento:      b.buildNotaRemisionCuerpoDocumento(invoice),
 		Resumen:              b.buildNotaRemisionResumen(invoice),
@@ -196,20 +192,27 @@ func (b *Builder) buildNotaRemisionCuerpoDocumento(invoice *models.Invoice) []No
 		// Parse unit of measure
 		uniMedida := b.parseUniMedida(lineItem.UnitOfMeasure)
 
+		// ⭐ numeroDocumento can be null for remision
+		var numeroDocumento *string = nil
+
+		// ⭐ codTributo can be null for remision
+		var codTributo *string = nil
+
 		items[i] = NotaRemisionCuerpoItem{
-			NumItem:      lineItem.LineNumber,
-			TipoItem:     b.parseTipoItem(lineItem.ItemTipoItem),
-			Cantidad:     lineItem.Quantity,
-			Codigo:       &lineItem.ItemSku,
-			UniMedida:    uniMedida,
-			Descripcion:  lineItem.ItemName,
-			PrecioUni:    0, // Remision: no sale price
-			MontoDescu:   0,
-			VentaNoSuj:   0, // Remision: just tracking movement
-			VentaExenta:  0,
-			VentaGravada: 0,
-			Tributos:     nil, // No taxes for remision
-			NoGravado:    0,
+			NumItem:         lineItem.LineNumber,
+			TipoItem:        b.parseTipoItem(lineItem.ItemTipoItem),
+			NumeroDocumento: numeroDocumento, // ⭐ Added - can be null
+			Codigo:          &lineItem.ItemSku,
+			CodTributo:      codTributo, // ⭐ Added - can be null
+			Descripcion:     lineItem.ItemName,
+			Cantidad:        lineItem.Quantity,
+			UniMedida:       uniMedida,
+			PrecioUni:       0, // Remision: no sale price
+			MontoDescu:      0,
+			VentaNoSuj:      0,
+			VentaExenta:     0,
+			VentaGravada:    0,
+			Tributos:        nil, // No taxes for remision
 		}
 	}
 
@@ -244,7 +247,7 @@ func (b *Builder) buildNotaRemisionResumen(invoice *models.Invoice) NotaRemision
 
 func (b *Builder) buildNotaRemisionExtension(invoice *models.Invoice) *NotaRemisionExtension {
 	// Only include extension if we have delivery info
-	if invoice.DeliveryPerson == nil && invoice.VehiclePlate == nil && invoice.DeliveryNotes == nil {
+	if invoice.DeliveryPerson == nil && invoice.DeliveryNotes == nil {
 		return nil
 	}
 
@@ -254,7 +257,6 @@ func (b *Builder) buildNotaRemisionExtension(invoice *models.Invoice) *NotaRemis
 		NombRecibe:    nil, // Could add recipient name if needed
 		DocuRecibe:    nil, // Could add recipient DUI if needed
 		Observaciones: invoice.DeliveryNotes,
-		PlacaVehiculo: invoice.VehiclePlate,
 	}
 }
 
@@ -276,12 +278,19 @@ func (b *Builder) buildReceptorRemision(client *ClientData) *Receptor {
 		if client.NCR != nil {
 			ncrStr := fmt.Sprintf("%d", *client.NCR)
 			nrc = &ncrStr
+		} else {
+			// ⭐ NRC is REQUIRED by schema - provide default if missing
+			defaultNRC := "0"
+			nrc = &defaultNRC
 		}
 	} else if client.DUI != nil {
 		td := DocTypeDUI
 		tipoDocumento = &td
 		duiStr := fmt.Sprintf("%08d-%d", *client.DUI/10, *client.DUI%10)
 		numDocumento = &duiStr
+		// ⭐ DUI clients also need NRC
+		defaultNRC := "0"
+		nrc = &defaultNRC
 	}
 
 	// Build direccion
@@ -291,20 +300,48 @@ func (b *Builder) buildReceptorRemision(client *ClientData) *Receptor {
 		direccion = &dir
 	}
 
-	receptor := &Receptor{
-		TipoDocumento: tipoDocumento,
-		NumDocumento:  numDocumento,
-		NRC:           nrc,
-		Nombre:        client.BusinessName,
-		Direccion:     direccion,
-		Telefono:      client.Telefono,
-		Correo:        client.Correo,
+	// ⭐ Ensure all required fields are present
+	nombreComercial := client.BusinessName
+	if client.CommercialName != nil && *client.CommercialName != "" {
+		nombreComercial = *client.CommercialName
 	}
 
-	// Set activity if available
+	// ⭐ CodActividad and DescActividad are REQUIRED
+	codActividad := "00000" // Default if missing
+	descActividad := "Sin actividad registrada"
 	if client.CodActividad != nil {
-		receptor.CodActividad = client.CodActividad
-		receptor.DescActividad = client.DescActividad
+		codActividad = *client.CodActividad
+	}
+	if client.DescActividad != nil {
+		descActividad = *client.DescActividad
+	}
+
+	// ⭐ Telefono and Correo are REQUIRED
+	telefono := "0000-0000" // Default if missing
+	if client.Telefono != nil {
+		telefono = *client.Telefono
+	}
+
+	correo := "sincorreo@example.com" // Default if missing
+	if client.Correo != nil {
+		correo = *client.Correo
+	}
+
+	// ⭐ BienTitulo is REQUIRED: "1" = bienes, "2" = servicios
+	bienTitulo := "1" // Default to "bienes" (goods)
+
+	receptor := &Receptor{
+		TipoDocumento:   tipoDocumento,
+		NumDocumento:    numDocumento,
+		NRC:             nrc, // ⭐ Now always set
+		Nombre:          client.BusinessName,
+		CodActividad:    &codActividad,    // ⭐ Now always set
+		DescActividad:   &descActividad,   // ⭐ Now always set
+		NombreComercial: &nombreComercial, // ⭐ Now always set
+		Direccion:       direccion,
+		Telefono:        &telefono,   // ⭐ Now always set
+		Correo:          &correo,     // ⭐ Now always set
+		BienTitulo:      &bienTitulo, // ⭐ Added - REQUIRED
 	}
 
 	return receptor
