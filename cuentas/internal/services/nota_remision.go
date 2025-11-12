@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"cuentas/internal/codigos"
 	"cuentas/internal/database"
 	"cuentas/internal/models"
 )
@@ -322,7 +323,7 @@ func (s *InvoiceService) FinalizeRemision(ctx context.Context, companyID, remisi
 
 	// 4. Update remision to finalized
 	now := time.Now()
-	tipoDte := codigots.DocTypeNotaRemision
+	tipoDte := codigos.DocTypeNotaRemision
 
 	updateQuery := `
         UPDATE invoices
