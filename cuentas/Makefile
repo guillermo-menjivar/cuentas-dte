@@ -87,18 +87,12 @@ db-connect:
 
 .PHONY: refresh
 refresh:
-	@echo "🔄 Refreshing cuentas application..."
+	@echo "🔄 Refreshing cuentas application (keeping Vault data)..."
 	@echo "1. Rebuilding cuentas container..."
 	docker-compose build cuentas
-	@echo "2. Stopping cuentas container..."
-	docker-compose stop cuentas
-	@echo "3. Reinitializing Vault secrets..."
-	docker-compose up -d vault-init
-	@echo "4. Waiting for vault-init to complete..."
-	@sleep 5
-	@echo "5. Starting cuentas container..."
+	@echo "2. Restarting cuentas container..."
 	docker-compose up -d cuentas
-	@echo "6. Showing logs..."
+	@echo "3. Showing logs..."
 	docker-compose logs -f cuentas
 
 .PHONY: refresh-full
