@@ -241,6 +241,8 @@ func (b *Builder) buildNotaRemisionCuerpoDocumento(invoice *models.Invoice) []No
 // ============================================
 
 func (b *Builder) buildNotaRemisionResumen(invoice *models.Invoice) NotaRemisionResumen {
+	porcentajeDescuento := 0.0
+
 	return NotaRemisionResumen{
 		TotalNoSuj:          0,
 		TotalExenta:         0,
@@ -249,7 +251,7 @@ func (b *Builder) buildNotaRemisionResumen(invoice *models.Invoice) NotaRemision
 		DescuNoSuj:          0,
 		DescuExenta:         0,
 		DescuGravada:        0,
-		PorcentajeDescuento: nil,
+		PorcentajeDescuento: &porcentajeDescuento,
 		TotalDescu:          0,
 		Tributos:            nil,
 		SubTotal:            0,

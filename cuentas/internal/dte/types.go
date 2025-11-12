@@ -362,20 +362,23 @@ type CuerpoDocumentoNota struct {
 }
 
 // GetNRC returns the NRC for receptor, handling NIT vs DUI logic
+// GetNRC returns the NRC for receptor, handling NIT vs DUI logic
 func (c *ClientData) GetNRC() *string {
-	// DUI clients: NRC should be null
+	// DUI clients: NRC must be null
 	if c.DUI != nil {
 		return nil
 	}
 
-	// NIT clients: return NCR if present, otherwise "00" minimum
+	// NIT clients: return NCR if present, otherwise error - NRC is required!
 	if c.NIT != nil {
 		if c.NCR != nil && *c.NCR > 0 {
 			ncrStr := fmt.Sprintf("%d", *c.NCR)
 			return &ncrStr
 		}
-		defaultNRC := "00"
-		return &defaultNRC
+		// For NIT without NCR, this is a DATA QUALITY ISSUE
+		// Return nil and log error - this client data is incomplete
+		log.Printf("[ERROR] NIT client missing NCR: client_id=%s, nit=%d", c.ID, *c.NIT)
+		return nil
 	}
 
 	return nil
