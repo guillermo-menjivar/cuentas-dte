@@ -127,7 +127,7 @@ func (b *Builder) BuildNotaRemision(ctx context.Context, invoice *models.Invoice
 	}
 
 	// Load receptor if present (can be null for internal transfers)
-	var receptor *Receptor
+	var receptor *ReceptorRemision
 	if invoice.ClientID != "" {
 		client, err := b.loadClient(ctx, invoice.ClientID)
 		if err != nil {
