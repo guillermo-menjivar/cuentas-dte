@@ -268,91 +268,52 @@ func (b *Builder) buildNotaRemisionExtension(invoice *models.Invoice) *NotaRemis
 // ============================================
 
 func (b *Builder) buildReceptorRemision(client *ClientData) *Receptor {
-	// Determine document type and number
+	// Document identification
 	var tipoDocumento *string
 	var numDocumento *string
-	var nrc *string
 
 	if client.NIT != nil {
 		td := DocTypeNIT
 		tipoDocumento = &td
 		nitStr := fmt.Sprintf("%014d", *client.NIT)
 		numDocumento = &nitStr
-		if client.NCR != nil {
-			ncrStr := fmt.Sprintf("%d", *client.NCR)
-			nrc = &ncrStr
-		} else {
-			// NRC is REQUIRED by schema - provide default if missing
-			defaultNRC := "0"
-			nrc = &defaultNRC
-		}
 	} else if client.DUI != nil {
 		td := DocTypeDUI
 		tipoDocumento = &td
 		duiStr := fmt.Sprintf("%08d-%d", *client.DUI/10, *client.DUI%10)
 		numDocumento = &duiStr
-		// DUI clients also need NRC
-		defaultNRC := "0"
-		nrc = &defaultNRC
 	}
 
-	// Build direccion
-	var direccion *Direccion
-	if client.DepartmentCode != "" && client.MunicipalityCode != "" {
-		dir := b.buildReceptorDireccion(client)
-		direccion = &dir
-	}
+	// Get data using ClientData methods
+	nrc := client.GetNRC()
+	direccion := client.GetValidatedDireccion()
+	codActividad := client.GetCodActividad()
+	descActividad := client.GetDescActividad()
+	telefono := client.GetTelefono()
+	correo := client.GetCorreo()
 
-	// Ensure nombreComercial is set
+	// Business name
 	nombreComercial := ""
 	if client.BusinessName != nil {
 		nombreComercial = *client.BusinessName
 	}
 
-	// CodActividad and DescActividad are REQUIRED
-	codActividad := "00000"
-	descActividad := "Sin actividad registrada"
-	if client.CodActividad != nil {
-		codActividad = *client.CodActividad
-	}
-	if client.DescActividad != nil {
-		descActividad = *client.DescActividad
-	}
-
-	// Telefono and Correo are REQUIRED
-	telefono := "0000-0000"
-	if client.Telefono != nil {
-		telefono = *client.Telefono
-	}
-
-	correo := "sincorreo@example.com"
-	if client.Correo != nil {
-		correo = *client.Correo
-	}
-
-	// BienTitulo is REQUIRED: "1" = bienes, "2" = servicios
+	// Default to goods
 	bienTitulo := "1"
 
-	var nombre *string
-	if client.BusinessName != nil {
-		nombre = client.BusinessName
-	}
-
-	receptor := &Receptor{
+	return &Receptor{
 		TipoDocumento:   tipoDocumento,
 		NumDocumento:    numDocumento,
 		NRC:             nrc,
-		Nombre:          nombre,
+		Nombre:          client.BusinessName,
 		CodActividad:    &codActividad,
 		DescActividad:   &descActividad,
 		NombreComercial: &nombreComercial,
 		Direccion:       direccion,
 		Telefono:        &telefono,
 		Correo:          &correo,
-		BienTitulo:      &bienTitulo, // ⭐ Now added to struct
+		BienTitulo:      &bienTitulo,
 	}
-
-	return receptor
 }
 
 // ============================================
