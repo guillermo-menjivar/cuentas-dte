@@ -7,14 +7,14 @@ HC_PASSWORD="MF7HwttFuZ.*3RY"
 
 echo "🔐 Restoring passwords to Vault..."
 
-# Store firmador password
-docker exec cuentas-vault vault kv put \
+# Store firmador password (with VAULT_ADDR and VAULT_TOKEN env vars)
+docker exec -e VAULT_ADDR=http://127.0.0.1:8200 -e VAULT_TOKEN=vault-root-token cuentas-vault vault kv put \
   secret/companies/${COMPANY_ID}_firmador/password \
   password="${FIRMADOR_PASSWORD}"
 echo "✅ Firmador password stored"
 
 # Store Hacienda password
-docker exec cuentas-vault vault kv put \
+docker exec -e VAULT_ADDR=http://127.0.0.1:8200 -e VAULT_TOKEN=vault-root-token cuentas-vault vault kv put \
   secret/companies/${COMPANY_ID}_hacienda/password \
   password="${HC_PASSWORD}"
 echo "✅ Hacienda password stored"
@@ -24,5 +24,5 @@ echo "🎉 Done! Passwords restored to Vault"
 # Verify
 echo ""
 echo "🔍 Verifying stored passwords..."
-docker exec cuentas-vault vault kv get secret/companies/${COMPANY_ID}_firmador/password
-docker exec cuentas-vault vault kv get secret/companies/${COMPANY_ID}_hacienda/password
+docker exec -e VAULT_ADDR=http://127.0.0.1:8200 -e VAULT_TOKEN=vault-root-token cuentas-vault vault kv get secret/companies/${COMPANY_ID}_firmador/password
+docker exec -e VAULT_ADDR=http://127.0.0.1:8200 -e VAULT_TOKEN=vault-root-token cuentas-vault vault kv get secret/companies/${COMPANY_ID}_hacienda/password
