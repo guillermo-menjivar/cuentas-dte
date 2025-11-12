@@ -8,15 +8,21 @@ HC_PASSWORD="MF7HwttFuZ.*3RY"
 echo "🔐 Restoring passwords to Vault..."
 
 # Store firmador password
-docker exec -it cuentas-vault vault kv put \
+docker exec cuentas-vault vault kv put \
   secret/companies/${COMPANY_ID}_firmador/password \
   password="${FIRMADOR_PASSWORD}"
 echo "✅ Firmador password stored"
 
 # Store Hacienda password
-docker exec -it cuentas-vault vault kv put \
+docker exec cuentas-vault vault kv put \
   secret/companies/${COMPANY_ID}_hacienda/password \
   password="${HC_PASSWORD}"
 echo "✅ Hacienda password stored"
 
 echo "🎉 Done! Passwords restored to Vault"
+
+# Verify
+echo ""
+echo "🔍 Verifying stored passwords..."
+docker exec cuentas-vault vault kv get secret/companies/${COMPANY_ID}_firmador/password
+docker exec cuentas-vault vault kv get secret/companies/${COMPANY_ID}_hacienda/password
