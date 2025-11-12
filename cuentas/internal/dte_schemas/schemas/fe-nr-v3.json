@@ -347,7 +347,7 @@
               "then": {
                 "properties": {
                   "municipio": {
-                    "pattern": "^0[1-9]|1[0-3]$"
+                    "pattern": "^0[1-9]|1[0-5]$"
                   }
                 }
               }
