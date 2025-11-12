@@ -407,7 +407,7 @@ func (c *ClientData) GetCodActividad() string {
 	if c.CodActividad != nil && *c.CodActividad != "" {
 		return *c.CodActividad
 	}
-	return "00000"
+	return codigos.ActEcon10005
 }
 
 // GetDescActividad returns activity description with fallback
@@ -415,7 +415,7 @@ func (c *ClientData) GetDescActividad() string {
 	if c.DescActividad != nil && *c.DescActividad != "" {
 		return *c.DescActividad
 	}
-	return "Actividad general"
+	return codigos.GetEconomicActivityName(codigos.ActEcon10005)
 }
 
 // GetValidatedDireccion returns direccion with validated municipality code
