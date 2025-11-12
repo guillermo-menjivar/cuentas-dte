@@ -52,7 +52,7 @@ func (s *CompanyService) CreateCompany(ctx context.Context, req *models.CreateCo
 	}
 
 	// Store password in Vault FIRST
-	vaultRef, err := s.vaultService.StoreCompanyPassword(companyID, req.HCPassword)
+	vaultRef, err := s.vaultService.StoreCompanyPassword(companyID+"_hacienda", req.HCPassword)
 	if err != nil {
 		return nil, fmt.Errorf("failed to store password in vault: %v", err)
 	}
