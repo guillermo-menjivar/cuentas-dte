@@ -17,7 +17,7 @@ import (
 )
 
 // CreateRemision creates a new remision (Type 04 - goods movement document)
-func (s *InvoiceService) getInvoiceHeader(ctx context.Context, companyID, invoiceID string) (*models.Invoice, error) {
+func (s *InvoiceService) __getInvoiceHeader(ctx context.Context, companyID, invoiceID string) (*models.Invoice, error) {
 	query := `
         SELECT
             id, company_id, establishment_id, point_of_sale_id, client_id,
