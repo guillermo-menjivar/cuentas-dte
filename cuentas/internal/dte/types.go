@@ -194,7 +194,7 @@ type Receptor struct {
 	NIT             *string    `json:"nit,omitempty"`
 	TipoDocumento   *string    `json:"tipoDocumento,omitempty"` // ⚠️ Factura only - omit for CCF
 	NumDocumento    *string    `json:"numDocumento,omitempty"`  // ⚠️ Factura only - omit for CCF
-	NRC             *string    `json:"nrc,omitempty"`
+	NRC             *string    `json:"nrc"`
 	Nombre          *string    `json:"nombre,omitempty"`
 	NombreComercial *string    `json:"nombreComercial,omitempty"` // ⚠️ CCF only - omit for Factura
 	CodActividad    *string    `json:"codActividad,omitempty"`    // ⚠️ CCF only - omit for Factura

@@ -195,6 +195,84 @@ func (b *Builder) buildReceptor(invoiceType string, client *ClientData) *Recepto
 			telefono = *client.Telefono
 		}
 
+		// ⭐ Type 01 requires codActividad/descActividad for EVERYONE (NIT and DUI)
+		codActividad := "10005" // Default
+		if client.CodActividad != nil && *client.CodActividad != "" {
+			codActividad = *client.CodActividad
+		}
+
+		descActividad := "Otros"
+		if client.DescActividad != nil && *client.DescActividad != "" {
+			descActividad = *client.DescActividad
+		} else {
+			desc, _ := codigos.GetEconomicActivityName(codActividad)
+			if desc != "" {
+				descActividad = desc
+			}
+		}
+
+		receptor := &Receptor{
+			TipoDocumento: tipoDocumento,
+			NumDocumento:  numDocumento,
+			NRC:           nil, // Default to nil (will be set below for NIT)
+			Nombre:        client.BusinessName,
+			CodActividad:  &codActividad,  // ⭐ REQUIRED for both NIT and DUI
+			DescActividad: &descActividad, // ⭐ REQUIRED for both NIT and DUI
+			Direccion:     direccion,
+			Telefono:      &telefono,
+			Correo:        &correo,
+		}
+
+		// ⭐ Only set NRC if client has NIT
+		if client.NIT != nil && client.NCR != nil && *client.NCR > 0 {
+			nrcStr := fmt.Sprintf("%d", *client.NCR)
+			receptor.NRC = &nrcStr
+		}
+
+		return receptor
+	}
+}
+
+func (b *Builder) _xbuildReceptor(invoiceType string, client *ClientData) *Receptor {
+	switch invoiceType {
+	case codigos.PersonTypeJuridica:
+		fmt.Println("building receptor CCF")
+		return b.buildCCFReceptor(client)
+	default:
+		// Type 01 - Consumidor Final
+		var tipoDocumento *string
+		var numDocumento *string
+
+		if client.NIT != nil {
+			td := DocTypeNIT
+			tipoDocumento = &td
+			nitStr := fmt.Sprintf("%014d", *client.NIT)
+			numDocumento = &nitStr
+		} else if client.DUI != nil {
+			td := DocTypeDUI
+			tipoDocumento = &td
+			duiStr := fmt.Sprintf("%08d-%d", *client.DUI/10, *client.DUI%10)
+			numDocumento = &duiStr
+		}
+
+		// Build direccion
+		var direccion *Direccion
+		if client.DepartmentCode != "" && client.MunicipalityCode != "" {
+			dir := b.buildReceptorDireccion(client)
+			direccion = &dir
+		}
+
+		// Get contact info with defaults
+		correo := "sincorreo@example.com"
+		if client.Correo != nil && *client.Correo != "" {
+			correo = *client.Correo
+		}
+
+		telefono := "0000-0000"
+		if client.Telefono != nil && *client.Telefono != "" {
+			telefono = *client.Telefono
+		}
+
 		receptor := &Receptor{
 			TipoDocumento: tipoDocumento,
 			NumDocumento:  numDocumento,
