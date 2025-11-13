@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -209,6 +210,87 @@ func (s *InvoiceService) processLineItemsRemision(ctx context.Context, tx *sql.T
 
 // insertRemision inserts a remision with nullable client and payment fields
 func (s *InvoiceService) insertRemision(ctx context.Context, tx *sql.Tx, invoice *models.Invoice) (string, error) {
+	id := strings.ToUpper(uuid.New().String())
+
+	query := `
+        INSERT INTO invoices (
+            id, company_id, establishment_id, point_of_sale_id, client_id,
+            invoice_number, invoice_type,
+            remision_type, destination_establishment_id,
+            delivery_person, vehicle_plate, delivery_notes,
+            custom_fields,
+            client_name, client_legal_name, client_nit, client_ncr, client_dui,
+            client_address, client_tipo_contribuyente, client_tipo_persona,
+            subtotal, total_discount, total_taxes, total,
+            currency,
+            amount_paid, balance_due,
+            dte_codigo_generacion,
+            status, notes, created_at
+        ) VALUES (
+            $1, $2, $3, $4, $5,
+            $6, $7,
+            $8, $9,
+            $10, $11, $12,
+            $13,
+            $14, $15, $16, $17, $18,
+            $19, $20, $21,
+            $22, $23, $24, $25,
+            $26,
+            $27, $28,
+            $29,
+            $30, $31, $32
+        ) RETURNING id
+    `
+
+	// Handle NULL client_id for internal transfers
+	var clientID interface{}
+	if invoice.ClientID == "" {
+		clientID = nil
+	} else {
+		clientID = invoice.ClientID
+	}
+
+	var destEstablishmentID interface{}
+	if invoice.DestinationEstablishmentID == nil {
+		destEstablishmentID = nil
+	} else {
+		destEstablishmentID = *invoice.DestinationEstablishmentID
+	}
+
+	// ⭐ NEW: Convert custom_fields to JSON
+	var customFieldsJSON interface{}
+	if len(invoice.CustomFields) > 0 {
+		customFieldsBytes, err := json.Marshal(invoice.CustomFields)
+		if err != nil {
+			return "", fmt.Errorf("failed to marshal custom fields: %w", err)
+		}
+		customFieldsJSON = customFieldsBytes
+	} else {
+		customFieldsJSON = nil
+	}
+
+	_, err := tx.ExecContext(ctx, query,
+		id, invoice.CompanyID, invoice.EstablishmentID, invoice.PointOfSaleID, clientID, // $1-$5
+		invoice.InvoiceNumber, invoice.InvoiceType, // $6-$7
+		invoice.RemisionType, destEstablishmentID, // $8-$9
+		invoice.DeliveryPerson, invoice.VehiclePlate, invoice.DeliveryNotes, // $10-$12
+		customFieldsJSON,                                                                                     // $13 ⭐ NEW
+		invoice.ClientName, invoice.ClientLegalName, invoice.ClientNit, invoice.ClientNcr, invoice.ClientDui, // $14-$18
+		invoice.ClientAddress, invoice.ClientTipoContribuyente, invoice.ClientTipoPersona, // $19-$21
+		invoice.Subtotal, invoice.TotalDiscount, invoice.TotalTaxes, invoice.Total, // $22-$25
+		invoice.Currency,                       // $26
+		invoice.AmountPaid, invoice.BalanceDue, // $27-$28
+		id,                                               // dte_codigo_generacion = invoice ID                                          // $29
+		invoice.Status, invoice.Notes, invoice.CreatedAt, // $30-$32
+	)
+
+	if err != nil {
+		return "", err
+	}
+
+	return id, nil
+}
+func (s *InvoiceService) _xxinsertRemision(ctx context.Context, tx *sql.Tx, invoice *models.Invoice) (string, error) {
 	id := strings.ToUpper(uuid.New().String())
 
 	query := `
