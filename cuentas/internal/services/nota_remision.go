@@ -215,7 +215,8 @@ func (s *InvoiceService) insertRemision(ctx context.Context, tx *sql.Tx, invoice
         INSERT INTO invoices (
             id, company_id, establishment_id, point_of_sale_id, client_id,
             invoice_number, invoice_type,
-            remision_type, delivery_person, vehicle_plate, delivery_notes,
+            remision_type, destination_establishment_id,
+            delivery_person, vehicle_plate, delivery_notes,
             client_name, client_legal_name, client_nit, client_ncr, client_dui,
             client_address, client_tipo_contribuyente, client_tipo_persona,
             subtotal, total_discount, total_taxes, total,
@@ -233,7 +234,7 @@ func (s *InvoiceService) insertRemision(ctx context.Context, tx *sql.Tx, invoice
             $24,
             $25, $26,
             $27,
-            $28, $29, $30
+            $28, $29, $30, $31
         ) RETURNING id
     `
 
@@ -245,10 +246,16 @@ func (s *InvoiceService) insertRemision(ctx context.Context, tx *sql.Tx, invoice
 		clientID = invoice.ClientID
 	}
 
+	var destEstablishmentID interface{}
+	if invoice.DestinationEstablishmentID == nil {
+		destEstablishmentID = nil
+	} else {
+		destEstablishmentID = *invoice.DestinationEstablishmentID
+	}
 	_, err := tx.ExecContext(ctx, query,
 		id, invoice.CompanyID, invoice.EstablishmentID, invoice.PointOfSaleID, clientID, // Use interface{} for NULL
 		invoice.InvoiceNumber, invoice.InvoiceType,
-		invoice.RemisionType, invoice.DeliveryPerson, invoice.VehiclePlate, invoice.DeliveryNotes,
+		invoice.RemisionType, destEstablishmentID, invoice.DeliveryPerson, invoice.VehiclePlate, invoice.DeliveryNotes,
 		invoice.ClientName, invoice.ClientLegalName, invoice.ClientNit, invoice.ClientNcr, invoice.ClientDui,
 		invoice.ClientAddress, invoice.ClientTipoContribuyente, invoice.ClientTipoPersona,
 		invoice.Subtotal, invoice.TotalDiscount, invoice.TotalTaxes, invoice.Total,
@@ -469,4 +476,22 @@ func (s *InvoiceService) GetRemisionLinkedInvoices(ctx context.Context, companyI
 	}
 
 	return invoices, rows.Err()
+}
+
+func (s *InvoiceService) validateEstablishment(ctx context.Context, tx *sql.Tx, companyID, establishmentID string) error {
+	query := `
+        SELECT id FROM establishments 
+        WHERE id = $1 AND company_id = $2 AND active = true
+    `
+
+	var id string
+	err := tx.QueryRowContext(ctx, query, establishmentID, companyID).Scan(&id)
+	if err == sql.ErrNoRows {
+		return fmt.Errorf("establishment not found or inactive")
+	}
+	if err != nil {
+		return fmt.Errorf("failed to validate establishment: %w", err)
+	}
+
+	return nil
 }
