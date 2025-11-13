@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 
+	"cuentas/internal/codigos"
 	"cuentas/internal/dte_schemas"
 	"cuentas/internal/models"
 )
@@ -503,7 +504,7 @@ func (b *Builder) buildInternalReceptorRemision(company *CompanyData, destinatio
 	nitStr := company.NIT
 	nrcStr := fmt.Sprintf("%d", company.NCR)
 	td := DocTypeNIT
-	bienTitulo := "1"
+	bienTitulo := codigos.GoodsTitleTraslado
 
 	// ⭐ CRITICAL: Use destination establishment's address (not source!)
 	direccion := b.buildEmisorDireccion(destinationEstablishment)
