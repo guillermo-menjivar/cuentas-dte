@@ -47,6 +47,12 @@ func (r *RelatedDocumentInput) Validate() error {
 	return nil
 }
 
+type ApendiceField struct {
+	Campo    string `json:"campo"`    // Field category (e.g., "Datos del documento")
+	Etiqueta string `json:"etiqueta"` // Label (e.g., "Chofer", "N° Documento")
+	Valor    string `json:"valor"`    // Value (e.g., "Juan Pérez", "DOC-12345")
+}
+
 // CreateRemisionRequest represents the request to create a remision (Type 04)
 type CreateRemisionRequest struct {
 	// Required fields
@@ -63,6 +69,9 @@ type CreateRemisionRequest struct {
 	DeliveryNotes    *string                `json:"delivery_notes,omitempty"`    // Transport notes
 	Notes            *string                `json:"notes,omitempty"`             // General notes
 	RelatedDocuments []RelatedDocumentInput `json:"related_documents,omitempty"` // References to invoices
+
+	// ⭐ NEW: Custom appendix fields for the DTE
+	CustomFields []ApendiceField `json:"custom_fields,omitempty"`
 }
 
 // Validate validates the create remision request
