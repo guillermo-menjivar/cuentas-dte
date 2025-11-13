@@ -103,83 +103,6 @@ type NotaRemisionExtension struct {
 }
 
 // ============================================
-// BUILD NOTA DE REMISIÓN (TYPE 04)
-// ============================================
-
-// BuildNotaRemision builds a Type 04 DTE JSON
-func (b *Builder) BuildNotaRemision(ctx context.Context, invoice *models.Invoice) ([]byte, error) {
-	log.Printf("[BuildNotaRemision] Starting build for remision ID: %s", invoice.ID)
-
-	// Validate this is a remision
-	if !invoice.IsRemision() {
-		return nil, fmt.Errorf("invoice is not a remision (Type 04)")
-	}
-
-	// Load all required data
-	company, err := b.loadCompany(ctx, invoice.CompanyID)
-	if err != nil {
-		return nil, fmt.Errorf("load company: %w", err)
-	}
-
-	establishment, err := b.loadEstablishmentAndPOS(ctx, invoice.EstablishmentID, invoice.PointOfSaleID)
-	if err != nil {
-		return nil, fmt.Errorf("load establishment: %w", err)
-	}
-
-	// Load receptor if present (can be null for internal transfers)
-	var receptor *ReceptorRemision
-	if invoice.ClientID != "" {
-		client, err := b.loadClient(ctx, invoice.ClientID)
-		if err != nil {
-			return nil, fmt.Errorf("load client: %w", err)
-		}
-		receptor, err = b.buildReceptorRemision(client)
-		if err != nil {
-			return nil, fmt.Errorf("build receptor: %w", err)
-		}
-	}
-	// Load related documents if any
-	var documentoRelacionado *[]DocumentoRelacionado
-	relatedDocs, err := b.loadRelatedDocuments(ctx, invoice.ID)
-	if err != nil {
-		return nil, fmt.Errorf("load related documents: %w", err)
-	}
-	if len(relatedDocs) > 0 {
-		docs := b.buildDocumentosRelacionadosRemision(relatedDocs)
-		documentoRelacionado = &docs
-	}
-
-	// Build DTE structure
-	dte := &NotaRemisionDTE{
-		Identificacion:       b.buildNotaRemisionIdentificacion(invoice, company),
-		DocumentoRelacionado: documentoRelacionado,
-		Emisor:               b.buildEmisor(company, establishment),
-		Receptor:             receptor, // Can be null
-		VentaTercero:         nil,
-		CuerpoDocumento:      b.buildNotaRemisionCuerpoDocumento(invoice),
-		Resumen:              b.buildNotaRemisionResumen(invoice),
-		Extension:            b.buildNotaRemisionExtension(invoice),
-		Apendice:             nil,
-	}
-
-	// Marshal to JSON
-	jsonBytes, err := json.Marshal(dte)
-	if err != nil {
-		return nil, fmt.Errorf("marshal JSON: %w", err)
-	}
-
-	// ✅ Validate JSON against schema
-	log.Printf("[BuildNotaRemision] Validating DTE against schema...")
-	if err := dte_schemas.Validate("04", jsonBytes); err != nil {
-		log.Printf("WARNING: [BuildNotaRemision] ❌ Schema validation failed: %v", err)
-		//return nil, fmt.Errorf("schema validation failed: %w", err)
-	}
-	log.Printf("[BuildNotaRemision] ✅ Schema validation passed")
-
-	return jsonBytes, nil
-}
-
-// ============================================
 // BUILD IDENTIFICACION (Type 04)
 // ============================================
 
@@ -409,4 +332,100 @@ func (b *Builder) loadRelatedDocuments(ctx context.Context, invoiceID string) ([
 	}
 
 	return docs, nil
+}
+
+// ============================================
+// BUILD NOTA DE REMISIÓN (TYPE 04)
+// ============================================
+
+func (b *Builder) BuildNotaRemision(ctx context.Context, invoice *models.Invoice) ([]byte, error) {
+	log.Printf("[BuildNotaRemision] Starting build for remision ID: %s", invoice.ID)
+	// Validate this is a remision
+	if !invoice.IsRemision() {
+		return nil, fmt.Errorf("invoice is not a remision (Type 04)")
+	}
+	// Load all required data
+	company, err := b.loadCompany(ctx, invoice.CompanyID)
+	if err != nil {
+		return nil, fmt.Errorf("load company: %w", err)
+	}
+	establishment, err := b.loadEstablishmentAndPOS(ctx, invoice.EstablishmentID, invoice.PointOfSaleID)
+	if err != nil {
+		return nil, fmt.Errorf("load establishment: %w", err)
+	}
+	// Load receptor if present (can be null for internal transfers)
+	var receptor *ReceptorRemision
+	if invoice.ClientID != "" {
+		client, err := b.loadClient(ctx, invoice.ClientID)
+		if err != nil {
+			return nil, fmt.Errorf("load client: %w", err)
+		}
+		receptor, err = b.buildReceptorRemision(client)
+		if err != nil {
+			return nil, fmt.Errorf("build receptor: %w", err)
+		}
+	} else {
+		// ⭐ INTERNAL TRANSFER: Use company as receptor
+		log.Println("[BuildNotaRemision] Internal transfer - using company as receptor")
+		receptor = b.buildInternalReceptor(company, establishment)
+	}
+	// Load related documents if any
+	var documentoRelacionado *[]DocumentoRelacionado
+	relatedDocs, err := b.loadRelatedDocuments(ctx, invoice.ID)
+	if err != nil {
+		return nil, fmt.Errorf("load related documents: %w", err)
+	}
+	if len(relatedDocs) > 0 {
+		docs := b.buildDocumentosRelacionadosRemision(relatedDocs)
+		documentoRelacionado = &docs
+	}
+	// Build DTE structure
+	dte := &NotaRemisionDTE{
+		Identificacion:       b.buildNotaRemisionIdentificacion(invoice, company),
+		DocumentoRelacionado: documentoRelacionado,
+		Emisor:               b.buildEmisor(company, establishment),
+		Receptor:             receptor, // ⭐ Never null now
+		VentaTercero:         nil,
+		CuerpoDocumento:      b.buildNotaRemisionCuerpoDocumento(invoice),
+		Resumen:              b.buildNotaRemisionResumen(invoice),
+		Extension:            b.buildNotaRemisionExtension(invoice),
+		Apendice:             nil,
+	}
+	// Marshal to JSON
+	jsonBytes, err := json.Marshal(dte)
+	if err != nil {
+		return nil, fmt.Errorf("marshal JSON: %w", err)
+	}
+	// ✅ Validate JSON against schema
+	log.Printf("[BuildNotaRemision] Validating DTE against schema...")
+	if err := dte_schemas.Validate("04", jsonBytes); err != nil {
+		log.Printf("WARNING: [BuildNotaRemision] ❌ Schema validation failed: %v", err)
+		//return nil, fmt.Errorf("schema validation failed: %w", err)
+	}
+	log.Printf("[BuildNotaRemision] ✅ Schema validation passed")
+	return jsonBytes, nil
+}
+
+func (b *Builder) buildInternalReceptor(company *CompanyData, establishment *EstablishmentData) *ReceptorRemision {
+	// For internal transfers, use the company's own info as receptor
+	nitStr := company.NIT
+	nrcStr := fmt.Sprintf("%d", company.NCR)
+	td := DocTypeNIT
+	bienTitulo := "1"
+
+	direccion := b.buildEmisorDireccion(establishment)
+
+	return &ReceptorRemision{
+		TipoDocumento:   &td,
+		NumDocumento:    &nitStr,
+		NRC:             &nrcStr,
+		Nombre:          &company.Name,
+		CodActividad:    &company.CodActividad,
+		DescActividad:   &company.DescActividad,
+		NombreComercial: &company.NombreComercial,
+		Direccion:       &direccion,
+		Telefono:        &establishment.Telefono,
+		Correo:          &company.Email,
+		BienTitulo:      &bienTitulo,
+	}
 }

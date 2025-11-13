@@ -364,10 +364,6 @@ type CuerpoDocumentoNota struct {
 // GetNRC returns the NRC for receptor, handling NIT vs DUI logic
 // GetNRC returns the NRC for receptor, handling NIT vs DUI logic
 func (c *ClientData) GetNRC() *string {
-	// DUI clients: NRC must be null
-	if c.DUI != nil {
-		return nil
-	}
 
 	// NIT clients: return NCR if present, otherwise error - NRC is required!
 	if c.NIT != nil {
@@ -380,8 +376,15 @@ func (c *ClientData) GetNRC() *string {
 		log.Printf("[ERROR] NIT client missing NCR: client_id=%s, nit=%d", c.ID, *c.NIT)
 		return nil
 	}
+
 	fmt.Println("This is the NCR", c.NCR)
 	fmt.Println("!!!())()()()")
+
+	// we set this a second check because some clients have both a DUI and a NIT - we favor NIT
+	// DUI clients: NRC must be null
+	if c.DUI != nil {
+		return nil
+	}
 
 	return nil
 }
@@ -436,4 +439,26 @@ func (c *ClientData) GetValidatedDireccion() *Direccion {
 		Municipio:    munCode,
 		Complemento:  c.FullAddress,
 	}
+}
+
+func (c *ClientData) GetTipoDocumento() string {
+	// Prioritize NIT over DUI
+	if c.NIT != nil {
+		return DocTypeNIT
+	}
+	if c.DUI != nil {
+		return DocTypeDUI
+	}
+	return ""
+}
+
+func (c *ClientData) GetNumDocumento() string {
+	// Prioritize NIT over DUI
+	if c.NIT != nil {
+		return fmt.Sprintf("%014d", *c.NIT)
+	}
+	if c.DUI != nil {
+		return fmt.Sprintf("%08d-%d", *c.DUI/10, *c.DUI%10)
+	}
+	return ""
 }
