@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"cuentas/internal/models"
@@ -339,6 +340,7 @@ func handleError(c *gin.Context, err error) {
 	case models.ErrInvalidLongitude:
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	default:
+		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal server error"})
 	}
 }
