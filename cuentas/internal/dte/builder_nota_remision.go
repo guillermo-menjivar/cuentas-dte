@@ -338,7 +338,7 @@ func (b *Builder) loadRelatedDocuments(ctx context.Context, invoiceID string) ([
 // BUILD NOTA DE REMISIÓN (TYPE 04)
 // ============================================
 
-func (b *Builder) BuildNotaRemision(ctx context.Context, invoice *models.Invoice) ([]byte, error) {
+func (b *Builder) _xBuildNotaRemision(ctx context.Context, invoice *models.Invoice) ([]byte, error) {
 	log.Printf("[BuildNotaRemision] Starting build for remision ID: %s", invoice.ID)
 	// Validate this is a remision
 	if !invoice.IsRemision() {
@@ -406,6 +406,123 @@ func (b *Builder) BuildNotaRemision(ctx context.Context, invoice *models.Invoice
 	return jsonBytes, nil
 }
 
+func (b *Builder) BuildNotaRemision(ctx context.Context, invoice *models.Invoice) ([]byte, error) {
+	log.Printf("[BuildNotaRemision] Starting build for remision ID: %s", invoice.ID)
+
+	// Validate this is a remision
+	if !invoice.IsRemision() {
+		return nil, fmt.Errorf("invoice is not a remision (Type 04)")
+	}
+
+	// Load all required data
+	company, err := b.loadCompany(ctx, invoice.CompanyID)
+	if err != nil {
+		return nil, fmt.Errorf("load company: %w", err)
+	}
+
+	// Load SOURCE establishment
+	establishment, err := b.loadEstablishmentAndPOS(ctx, invoice.EstablishmentID, invoice.PointOfSaleID)
+	if err != nil {
+		return nil, fmt.Errorf("load establishment: %w", err)
+	}
+
+	// ⭐ NEW: Build receptor based on remision type
+	var receptor *ReceptorRemision
+
+	if invoice.ClientID != "" {
+		// External client remision
+		log.Println("[BuildNotaRemision] External remision - using client as receptor")
+		client, err := b.loadClient(ctx, invoice.ClientID)
+		if err != nil {
+			return nil, fmt.Errorf("load client: %w", err)
+		}
+		receptor, err = b.buildReceptorRemision(client)
+		if err != nil {
+			return nil, fmt.Errorf("build receptor: %w", err)
+		}
+
+	} else if invoice.DestinationEstablishmentID != nil && *invoice.DestinationEstablishmentID != "" {
+		// ⭐ NEW: Internal transfer - use destination establishment
+		log.Printf("[BuildNotaRemision] Internal transfer - using destination establishment as receptor (ID: %s)", *invoice.DestinationEstablishmentID)
+
+		destEstablishment, err := b.loadEstablishment(ctx, *invoice.DestinationEstablishmentID)
+		if err != nil {
+			return nil, fmt.Errorf("load destination establishment: %w", err)
+		}
+
+		receptor = b.buildInternalReceptorRemision(company, destEstablishment)
+
+	} else {
+		return nil, fmt.Errorf("remision must have either client_id or destination_establishment_id")
+	}
+
+	// Load related documents if any
+	var documentoRelacionado *[]DocumentoRelacionado
+	relatedDocs, err := b.loadRelatedDocuments(ctx, invoice.ID)
+	if err != nil {
+		return nil, fmt.Errorf("load related documents: %w", err)
+	}
+	if len(relatedDocs) > 0 {
+		docs := b.buildDocumentosRelacionadosRemision(relatedDocs)
+		documentoRelacionado = &docs
+	}
+
+	// Build DTE structure
+	dte := &NotaRemisionDTE{
+		Identificacion:       b.buildNotaRemisionIdentificacion(invoice, company),
+		DocumentoRelacionado: documentoRelacionado,
+		Emisor:               b.buildEmisor(company, establishment), // ⭐ Source establishment
+		Receptor:             receptor,                              // ⭐ Destination establishment or external client
+		VentaTercero:         nil,
+		CuerpoDocumento:      b.buildNotaRemisionCuerpoDocumento(invoice),
+		Resumen:              b.buildNotaRemisionResumen(invoice),
+		Extension:            b.buildNotaRemisionExtension(invoice),
+		Apendice:             nil,
+	}
+
+	// Marshal to JSON
+	jsonBytes, err := json.Marshal(dte)
+	if err != nil {
+		return nil, fmt.Errorf("marshal JSON: %w", err)
+	}
+
+	// ✅ Validate JSON against schema
+	log.Printf("[BuildNotaRemision] Validating DTE against schema...")
+	if err := dte_schemas.Validate("04", jsonBytes); err != nil {
+		log.Printf("WARNING: [BuildNotaRemision] ❌ Schema validation failed: %v", err)
+		//return nil, fmt.Errorf("schema validation failed: %w", err)
+	}
+	log.Printf("[BuildNotaRemision] ✅ Schema validation passed")
+
+	return jsonBytes, nil
+}
+
+// buildInternalReceptorRemision builds receptor for internal transfers using destination establishment
+func (b *Builder) buildInternalReceptorRemision(company *CompanyData, destinationEstablishment *EstablishmentData) *ReceptorRemision {
+	// For internal transfers, use company info with DESTINATION establishment address
+	nitStr := company.NIT
+	nrcStr := fmt.Sprintf("%d", company.NCR)
+	td := DocTypeNIT
+	bienTitulo := "1"
+
+	// ⭐ CRITICAL: Use destination establishment's address (not source!)
+	direccion := b.buildEmisorDireccion(destinationEstablishment)
+
+	return &ReceptorRemision{
+		TipoDocumento:   &td,
+		NumDocumento:    &nitStr,
+		NRC:             &nrcStr,
+		Nombre:          &company.Name,
+		CodActividad:    &company.CodActividad,
+		DescActividad:   &company.DescActividad,
+		NombreComercial: &company.NombreComercial,
+		Direccion:       &direccion,                         // ⭐ Different address from emisor!
+		Telefono:        &destinationEstablishment.Telefono, // ⭐ Destination phone
+		Correo:          &company.Email,
+		BienTitulo:      &bienTitulo,
+	}
+}
+
 func (b *Builder) buildInternalReceptor(company *CompanyData, establishment *EstablishmentData) *ReceptorRemision {
 	// For internal transfers, use the company's own info as receptor
 	nitStr := company.NIT
@@ -428,4 +545,30 @@ func (b *Builder) buildInternalReceptor(company *CompanyData, establishment *Est
 		Correo:          &company.Email,
 		BienTitulo:      &bienTitulo,
 	}
+}
+
+func (b *Builder) loadEstablishment(ctx context.Context, establishmentID string) (*EstablishmentData, error) {
+	query := `
+        SELECT 
+            id, tipo_establecimiento, cod_establecimiento,
+            departamento, municipio, complemento_direccion, telefono
+        FROM establishments
+        WHERE id = $1
+    `
+
+	var est EstablishmentData
+	err := b.db.QueryRowContext(ctx, query, establishmentID).Scan(
+		&est.ID,
+		&est.TipoEstablecimiento,
+		&est.CodEstablecimiento,
+		&est.Departamento,
+		&est.Municipio,
+		&est.ComplementoDireccion,
+		&est.Telefono,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("query establishment: %w", err)
+	}
+
+	return &est, nil
 }

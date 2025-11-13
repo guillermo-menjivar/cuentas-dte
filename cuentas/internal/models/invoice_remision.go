@@ -105,20 +105,20 @@ func (r *CreateRemisionRequest) Validate() error {
 		}
 	}
 
-	if req.RemisionType == "inter_branch_transfer" {
+	if r.RemisionType == "inter_branch_transfer" {
 		// Internal transfer: MUST have destination establishment, NO client
-		if req.DestinationEstablishmentID == nil || *req.DestinationEstablishmentID == "" {
+		if r.DestinationEstablishmentID == nil || *r.DestinationEstablishmentID == "" {
 			return fmt.Errorf("inter_branch_transfer requires destination_establishment_id")
 		}
-		if req.ClientID != nil && *req.ClientID != "" {
+		if r.ClientID != nil && *r.ClientID != "" {
 			return fmt.Errorf("inter_branch_transfer cannot have client_id")
 		}
 	} else {
 		// External remision: MUST have client, NO destination establishment
-		if req.ClientID == nil || *req.ClientID == "" {
-			return fmt.Errorf("%s requires client_id", req.RemisionType)
+		if r.ClientID == nil || *r.ClientID == "" {
+			return fmt.Errorf("%s requires client_id", r.RemisionType)
 		}
-		if req.DestinationEstablishmentID != nil && *req.DestinationEstablishmentID != "" {
+		if r.DestinationEstablishmentID != nil && *r.DestinationEstablishmentID != "" {
 			return fmt.Errorf("only inter_branch_transfer can have destination_establishment_id")
 		}
 	}
