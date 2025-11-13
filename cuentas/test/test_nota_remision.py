@@ -131,7 +131,8 @@ class RemisionTester:
         self,
         remision_type: str,
         client: Optional[Dict],
-        establishment: Dict,
+        source_establishment: Dict,
+        dest_establishment: Optional[Dict],  # ⭐ NEW
         pos: Dict,
         items: List[Dict],
         related_docs: List[Dict] = None,
@@ -152,20 +153,30 @@ class RemisionTester:
 
         # Build payload
         payload = {
-            "establishment_id": establishment["id"],
+            "establishment_id": source_establishment["id"],
             "point_of_sale_id": pos["id"],
             "remision_type": remision_type,
             "line_items": line_items,
         }
 
-        # Add client if not internal transfer
-        if remision_type != "inter_branch_transfer" and client:
+        # ⭐ NEW: Add destination establishment for internal transfers
+        if remision_type == "inter_branch_transfer":
+            if dest_establishment is None:
+                raise ValueError(
+                    "dest_establishment required for inter_branch_transfer"
+                )
+            payload["destination_establishment_id"] = dest_establishment["id"]
+            payload["notes"] = (
+                f"Traslado de {source_establishment['nombre']} a {dest_establishment['nombre']}"
+            )
+        else:
+            # External remision - add client
+            if client is None:
+                raise ValueError(f"client required for {remision_type}")
             payload["client_id"] = client["id"]
             payload["notes"] = (
                 f"Remisión {remision_type} para {client['business_name']}"
             )
-        else:
-            payload["notes"] = "Traslado interno entre sucursales"
 
         # Add delivery info
         if remision_type in ["pre_invoice_delivery", "route_sales"]:
@@ -293,19 +304,32 @@ class RemisionTester:
         self, establishments_with_pos: List[Dict], items: List[Dict]
     ):
         """
-        TEST 1: Internal Transfer (No Client)
+        TEST 1: Internal Transfer (Between Establishments)
         - Create remision with remision_type = "inter_branch_transfer"
-        - No client_id (internal transfer)
+        - Source: One establishment
+        - Destination: Another establishment (same company)
         - Finalize and submit to Hacienda
         """
         print("\n" + "=" * 70)
-        print("TEST 1: Internal Transfer (No External Client)")
+        print("TEST 1: Internal Transfer (Between Establishments)")
         print("=" * 70)
 
-        # Select establishment and items
-        est_with_pos = random.choice(establishments_with_pos)
-        establishment = est_with_pos["establishment"]
-        pos = random.choice(est_with_pos["points_of_sale"])
+        # ⭐ Need at least 2 establishments for internal transfer
+        if len(establishments_with_pos) < 2:
+            self.log_result(
+                "Internal Transfer",
+                False,
+                "Need at least 2 establishments for internal transfer",
+            )
+            return
+
+        # Select source and destination establishments
+        source_est_with_pos = establishments_with_pos[0]
+        dest_est_with_pos = establishments_with_pos[1]
+
+        source_establishment = source_est_with_pos["establishment"]
+        dest_establishment = dest_est_with_pos["establishment"]
+        pos = source_est_with_pos["points_of_sale"][0]  # Use POS from source
 
         # Get items with stock
         items_with_stock = [
@@ -322,14 +346,16 @@ class RemisionTester:
         selected_items = random.sample(items_with_stock, 2)
 
         print(f"   Creating internal transfer remision...")
-        print(f"   Establishment: {establishment['nombre']}")
+        print(f"   Source: {source_establishment['nombre']}")
+        print(f"   Destination: {dest_establishment['nombre']}")
         print(f"   Items: {len(selected_items)}")
 
-        # Create remision (no client)
+        # Create remision (no client, with destination establishment)
         remision = self.create_remision(
             remision_type="inter_branch_transfer",
             client=None,  # No external client
-            establishment=establishment,
+            source_establishment=source_establishment,
+            dest_establishment=dest_establishment,  # ⭐ NEW
             pos=pos,
             items=selected_items,
         )
@@ -345,7 +371,11 @@ class RemisionTester:
             "Create Internal Transfer",
             True,
             "Remision created",
-            {"ID": remision_id, "ClientID": remision.get("client_id", "NULL")},
+            {
+                "ID": remision_id,
+                "Source": source_establishment["nombre"],
+                "Destination": dest_establishment["nombre"],
+            },
         )
 
         # Finalize and submit
@@ -409,7 +439,8 @@ class RemisionTester:
         remision = self.create_remision(
             remision_type="pre_invoice_delivery",
             client=client,
-            establishment=establishment,
+            source_establishment=establishment,
+            dest_establishment=None,  # ⭐ Not internal transfer
             pos=pos,
             items=selected_items,
         )
@@ -488,7 +519,8 @@ class RemisionTester:
         remision = self.create_remision(
             remision_type="route_sales",
             client=client,
-            establishment=establishment,
+            source_establishment=establishment,
+            dest_establishment=None,  # ⭐ Not internal transfer
             pos=pos,
             items=selected_items,
         )
@@ -646,7 +678,7 @@ class RemisionTester:
             print("   1. Check Hacienda portal for Type 04 DTEs")
             print("   2. Verify commit_log entries (tipo_dte = '04')")
             print("   3. Check remision_invoice_links table")
-            print("   4. Verify receptor field is NULL for internal transfers")
+            print("   4. Verify destination_establishment_id for internal transfers")
             print("   5. Confirm inventory was NOT deducted\n")
         else:
             print(f"\n⚠️  Some tests failed. Check details above.\n")
