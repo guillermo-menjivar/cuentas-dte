@@ -106,10 +106,11 @@ type Invoice struct {
 	ExportDocuments   []InvoiceExportDocument  `json:"export_documents,omitempty"`
 
 	// Remision-specific fields (Type 04 only)
-	RemisionType   *string `json:"remision_type,omitempty"`
-	DeliveryPerson *string `json:"delivery_person,omitempty"`
-	VehiclePlate   *string `json:"vehicle_plate,omitempty"`
-	DeliveryNotes  *string `json:"delivery_notes,omitempty"`
+	RemisionType               *string `json:"remision_type,omitempty"`
+	DeliveryPerson             *string `json:"delivery_person,omitempty"`
+	VehiclePlate               *string `json:"vehicle_plate,omitempty"`
+	DeliveryNotes              *string `json:"delivery_notes,omitempty"`
+	DestinationEstablishmentID *string `json:"destination_establishment_id,omitempty"`
 }
 
 // CreateInvoiceRequest represents the request to create an invoice

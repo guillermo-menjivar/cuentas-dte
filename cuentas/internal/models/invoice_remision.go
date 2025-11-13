@@ -50,10 +50,11 @@ func (r *RelatedDocumentInput) Validate() error {
 // CreateRemisionRequest represents the request to create a remision (Type 04)
 type CreateRemisionRequest struct {
 	// Required fields
-	EstablishmentID string                         `json:"establishment_id" binding:"required"`
-	PointOfSaleID   string                         `json:"point_of_sale_id" binding:"required"`
-	LineItems       []CreateInvoiceLineItemRequest `json:"line_items" binding:"required,min=1"`
-	RemisionType    string                         `json:"remision_type" binding:"required"`
+	EstablishmentID            string                         `json:"establishment_id" binding:"required"`
+	PointOfSaleID              string                         `json:"point_of_sale_id" binding:"required"`
+	LineItems                  []CreateInvoiceLineItemRequest `json:"line_items" binding:"required,min=1"`
+	RemisionType               string                         `json:"remision_type" binding:"required"`
+	DestinationEstablishmentID *string                        `json:"destination_establishment_id,omitempty"`
 
 	// Optional fields
 	ClientID         *string                `json:"client_id,omitempty"`         // Null for internal transfers
@@ -101,6 +102,24 @@ func (r *CreateRemisionRequest) Validate() error {
 	for i, doc := range r.RelatedDocuments {
 		if err := doc.Validate(); err != nil {
 			return fmt.Errorf("related document %d: %w", i+1, err)
+		}
+	}
+
+	if req.RemisionType == "inter_branch_transfer" {
+		// Internal transfer: MUST have destination establishment, NO client
+		if req.DestinationEstablishmentID == nil || *req.DestinationEstablishmentID == "" {
+			return fmt.Errorf("inter_branch_transfer requires destination_establishment_id")
+		}
+		if req.ClientID != nil && *req.ClientID != "" {
+			return fmt.Errorf("inter_branch_transfer cannot have client_id")
+		}
+	} else {
+		// External remision: MUST have client, NO destination establishment
+		if req.ClientID == nil || *req.ClientID == "" {
+			return fmt.Errorf("%s requires client_id", req.RemisionType)
+		}
+		if req.DestinationEstablishmentID != nil && *req.DestinationEstablishmentID != "" {
+			return fmt.Errorf("only inter_branch_transfer can have destination_establishment_id")
 		}
 	}
 

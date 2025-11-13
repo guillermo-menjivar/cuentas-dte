@@ -34,6 +34,17 @@ func (s *InvoiceService) CreateRemision(ctx context.Context, companyID string, r
 		return nil, err
 	}
 
+	if req.DestinationEstablishmentID != nil && *req.DestinationEstablishmentID != "" {
+		if err := s.validateEstablishment(ctx, tx, companyID, *req.DestinationEstablishmentID); err != nil {
+			return nil, fmt.Errorf("invalid destination establishment: %w", err)
+		}
+
+		// Validate source != destination
+		if req.EstablishmentID == *req.DestinationEstablishmentID {
+			return nil, fmt.Errorf("source and destination establishments cannot be the same")
+		}
+	}
+
 	// 2. Snapshot client data (if receptor provided - can be null for internal transfers)
 	var client *ClientSnapshot
 	if req.ClientID != nil && *req.ClientID != "" {
@@ -61,20 +72,21 @@ func (s *InvoiceService) CreateRemision(ctx context.Context, companyID string, r
 
 	// 6. Create remision record
 	remision := &models.Invoice{
-		CompanyID:       companyID,
-		EstablishmentID: req.EstablishmentID,
-		PointOfSaleID:   req.PointOfSaleID,
-		InvoiceNumber:   invoiceNumber,
-		InvoiceType:     "sale",
-		RemisionType:    &req.RemisionType,
-		DeliveryPerson:  req.DeliveryPerson,
-		VehiclePlate:    req.VehiclePlate,
-		DeliveryNotes:   req.DeliveryNotes,
-		Subtotal:        subtotal,
-		TotalDiscount:   totalDiscount,
-		TotalTaxes:      totalTaxes,
-		Total:           total,
-		Currency:        "USD",
+		CompanyID:                  companyID,
+		EstablishmentID:            req.EstablishmentID,
+		PointOfSaleID:              req.PointOfSaleID,
+		InvoiceNumber:              invoiceNumber,
+		InvoiceType:                "sale",
+		RemisionType:               &req.RemisionType,
+		DestinationEstablishmentID: req.DestinationEstablishmentID,
+		DeliveryPerson:             req.DeliveryPerson,
+		VehiclePlate:               req.VehiclePlate,
+		DeliveryNotes:              req.DeliveryNotes,
+		Subtotal:                   subtotal,
+		TotalDiscount:              totalDiscount,
+		TotalTaxes:                 totalTaxes,
+		Total:                      total,
+		Currency:                   "USD",
 		// Payment fields are NULL for remisiones (not a sale)
 		AmountPaid: 0,
 		BalanceDue: 0,
