@@ -735,8 +735,91 @@ func (s *InvoiceService) insertInvoice(ctx context.Context, tx *sql.Tx, invoice 
 	return id, nil
 }
 
-// Update getInvoiceHeader to include establishment_id
+// Update getInvoiceHeader to include destination_establishment_id
 func (s *InvoiceService) getInvoiceHeader(ctx context.Context, companyID, invoiceID string) (*models.Invoice, error) {
+	query := `
+        SELECT
+            id, company_id, establishment_id, point_of_sale_id, client_id,
+            invoice_number, invoice_type,
+            remision_type, destination_establishment_id,
+            delivery_person, vehicle_plate, delivery_notes,
+            references_invoice_id, void_reason,
+            client_name, client_legal_name, client_nit, client_ncr, client_dui,
+            client_address, client_tipo_contribuyente, client_tipo_persona,
+            subtotal, total_discount, total_taxes, total,
+            currency,
+            payment_terms, payment_method, payment_status, amount_paid, balance_due, due_date,
+            status,
+            dte_numero_control, dte_status, dte_hacienda_response, dte_submitted_at, dte_type,
+            created_at, finalized_at, voided_at,
+            created_by, voided_by, notes,
+            contact_email, contact_whatsapp
+        FROM invoices
+        WHERE id = $1 AND company_id = $2
+    `
+	invoice := &models.Invoice{}
+
+	// Use sql.NullString for nullable fields (remisiones can have NULLs)
+	var clientID, paymentTerms, paymentMethod, paymentStatus sql.NullString
+	var remisionType, destinationEstablishmentID, deliveryPerson, vehiclePlate, deliveryNotes sql.NullString
+
+	err := database.DB.QueryRowContext(ctx, query, invoiceID, companyID).Scan(
+		&invoice.ID, &invoice.CompanyID, &invoice.EstablishmentID, &invoice.PointOfSaleID, &clientID,
+		&invoice.InvoiceNumber, &invoice.InvoiceType,
+		&remisionType, &destinationEstablishmentID, // ⭐ ADDED
+		&deliveryPerson, &vehiclePlate, &deliveryNotes,
+		&invoice.ReferencesInvoiceID, &invoice.VoidReason,
+		&invoice.ClientName, &invoice.ClientLegalName, &invoice.ClientNit, &invoice.ClientNcr, &invoice.ClientDui,
+		&invoice.ClientAddress, &invoice.ClientTipoContribuyente, &invoice.ClientTipoPersona,
+		&invoice.Subtotal, &invoice.TotalDiscount, &invoice.TotalTaxes, &invoice.Total,
+		&invoice.Currency,
+		&paymentTerms, &paymentMethod, &paymentStatus, &invoice.AmountPaid, &invoice.BalanceDue, &invoice.DueDate,
+		&invoice.Status,
+		&invoice.DteNumeroControl, &invoice.DteStatus, &invoice.DteHaciendaResponse, &invoice.DteSubmittedAt, &invoice.DteType,
+		&invoice.CreatedAt, &invoice.FinalizedAt, &invoice.VoidedAt,
+		&invoice.CreatedBy, &invoice.VoidedBy, &invoice.Notes,
+		&invoice.ContactEmail, &invoice.ContactWhatsapp,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, ErrInvoiceNotFound
+	}
+	if err != nil {
+		log.Printf("[ERROR] getInvoiceHeader: Failed to scan invoice %s: %v", invoiceID, err)
+		return nil, fmt.Errorf("failed to query invoice: %w", err)
+	}
+
+	// Convert sql.NullString to string (empty string if NULL)
+	invoice.ClientID = clientID.String
+	invoice.PaymentTerms = paymentTerms.String
+	invoice.PaymentMethod = paymentMethod.String
+	invoice.PaymentStatus = paymentStatus.String
+
+	// Convert remision fields
+	if remisionType.Valid {
+		invoice.RemisionType = &remisionType.String
+	}
+	if destinationEstablishmentID.Valid { // ⭐ ADDED
+		invoice.DestinationEstablishmentID = &destinationEstablishmentID.String
+	}
+	if deliveryPerson.Valid {
+		invoice.DeliveryPerson = &deliveryPerson.String
+	}
+	if vehiclePlate.Valid {
+		invoice.VehiclePlate = &vehiclePlate.String
+	}
+	if deliveryNotes.Valid {
+		invoice.DeliveryNotes = &deliveryNotes.String
+	}
+
+	log.Printf("[DEBUG] getInvoiceHeader: Successfully loaded invoice %s (type=%s, client_id=%s, remision_type=%v, destination_est=%v)",
+		invoiceID, invoice.InvoiceType, invoice.ClientID, invoice.RemisionType, invoice.DestinationEstablishmentID)
+
+	return invoice, nil
+}
+
+// Update getInvoiceHeader to include establishment_id
+func (s *InvoiceService) _getInvoiceHeader(ctx context.Context, companyID, invoiceID string) (*models.Invoice, error) {
 	query := `
         SELECT
             id, company_id, establishment_id, point_of_sale_id, client_id,
