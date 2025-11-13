@@ -111,6 +111,10 @@ type Invoice struct {
 	VehiclePlate               *string `json:"vehicle_plate,omitempty"`
 	DeliveryNotes              *string `json:"delivery_notes,omitempty"`
 	DestinationEstablishmentID *string `json:"destination_establishment_id,omitempty"`
+
+	// Custom fields for apendice
+
+	CustomFields []ApendiceField `json:"custom_fields,omitempty"`
 }
 
 // CreateInvoiceRequest represents the request to create an invoice
