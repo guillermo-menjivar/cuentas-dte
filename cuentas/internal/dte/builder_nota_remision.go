@@ -191,11 +191,8 @@ func (b *Builder) buildNotaRemisionResumen(invoice *models.Invoice) NotaRemision
 // ============================================
 
 func (b *Builder) buildNotaRemisionExtension(invoice *models.Invoice) *NotaRemisionExtension {
-	// Only include extension if we have delivery info
-	if invoice.DeliveryPerson == nil && invoice.DeliveryNotes == nil {
-		return nil
-	}
-
+	// ⭐ CHANGED: Always include extension structure (even if all fields are nil)
+	// This matches production DTEs from real accounting systems
 	return &NotaRemisionExtension{
 		NombEntrega:   invoice.DeliveryPerson,
 		DocuEntrega:   nil, // Could add DUI field to model if needed
@@ -478,7 +475,7 @@ func (b *Builder) BuildNotaRemision(ctx context.Context, invoice *models.Invoice
 		CuerpoDocumento:      b.buildNotaRemisionCuerpoDocumento(invoice),
 		Resumen:              b.buildNotaRemisionResumen(invoice),
 		Extension:            b.buildNotaRemisionExtension(invoice),
-		Apendice:             nil,
+		Apendice:             b.buildApendice(invoice),
 	}
 
 	// Marshal to JSON
@@ -572,4 +569,22 @@ func (b *Builder) loadEstablishment(ctx context.Context, establishmentID string)
 	}
 
 	return &est, nil
+}
+
+// buildApendice builds the apendice section from custom fields
+func (b *Builder) buildApendice(invoice *Invoice) []ApendiceField {
+	if len(invoice.CustomFields) == 0 {
+		return nil
+	}
+
+	apendice := make([]ApendiceField, len(invoice.CustomFields))
+	for i, field := range invoice.CustomFields {
+		apendice[i] = ApendiceField{
+			Campo:    field.Campo,
+			Etiqueta: field.Etiqueta,
+			Valor:    field.Valor,
+		}
+	}
+
+	return apendice
 }
