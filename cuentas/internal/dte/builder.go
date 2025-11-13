@@ -155,8 +155,85 @@ func (b *Builder) buildEmisor(company *CompanyData, establishment *Establishment
 // ============================================
 // BUILD RECEPTOR
 // ============================================
-
 func (b *Builder) buildReceptor(invoiceType string, client *ClientData) *Receptor {
+	switch invoiceType {
+	case codigos.PersonTypeJuridica:
+		fmt.Println("building receptor CCF")
+		return b.buildCCFReceptor(client)
+	default:
+		// Type 01 - Consumidor Final
+		var tipoDocumento *string
+		var numDocumento *string
+
+		if client.NIT != nil {
+			td := DocTypeNIT
+			tipoDocumento = &td
+			nitStr := fmt.Sprintf("%014d", *client.NIT)
+			numDocumento = &nitStr
+		} else if client.DUI != nil {
+			td := DocTypeDUI
+			tipoDocumento = &td
+			duiStr := fmt.Sprintf("%08d-%d", *client.DUI/10, *client.DUI%10)
+			numDocumento = &duiStr
+		}
+
+		// Build direccion
+		var direccion *Direccion
+		if client.DepartmentCode != "" && client.MunicipalityCode != "" {
+			dir := b.buildReceptorDireccion(client)
+			direccion = &dir
+		}
+
+		// Get contact info with defaults
+		correo := "sincorreo@example.com"
+		if client.Correo != nil && *client.Correo != "" {
+			correo = *client.Correo
+		}
+
+		telefono := "0000-0000"
+		if client.Telefono != nil && *client.Telefono != "" {
+			telefono = *client.Telefono
+		}
+
+		receptor := &Receptor{
+			TipoDocumento: tipoDocumento,
+			NumDocumento:  numDocumento,
+			Nombre:        client.BusinessName,
+			Direccion:     direccion,
+			Telefono:      &telefono,
+			Correo:        &correo,
+		}
+
+		// ⭐ ONLY add business fields if client has NIT (business)
+		if client.NIT != nil {
+			// This is a business with NIT - include NRC and activity
+			if client.NCR != nil {
+				ncrStr := fmt.Sprintf("%d", *client.NCR)
+				receptor.NRC = &ncrStr
+			}
+
+			codActividad := "10005" // Default
+			if client.CodActividad != nil {
+				codActividad = *client.CodActividad
+			}
+			receptor.CodActividad = &codActividad
+
+			descActividad := "Otros"
+			if client.DescActividad != nil {
+				descActividad = *client.DescActividad
+			} else {
+				desc, _ := codigos.GetEconomicActivityName(codActividad)
+				descActividad = desc
+			}
+			receptor.DescActividad = &descActividad
+		}
+		// ⭐ For DUI clients, DON'T include NRC, CodActividad, DescActividad
+
+		return receptor
+	}
+}
+
+func (b *Builder) ___buildReceptor(invoiceType string, client *ClientData) *Receptor {
 	switch invoiceType {
 	case codigos.PersonTypeJuridica:
 		fmt.Println("building receptor CCF")
