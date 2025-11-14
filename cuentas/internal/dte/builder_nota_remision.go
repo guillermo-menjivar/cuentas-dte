@@ -171,7 +171,7 @@ func (b *Builder) buildNotaRemisionCuerpoDocumento(invoice *models.Invoice) []No
 			VentaNoSuj:      0,
 			VentaExenta:     0,
 			VentaGravada:    ventaGravada, // ⭐ Use actual taxable amount
-			Tributos:        tributos,     // ⭐ Include tax codes if applicable
+			Tributos:        &tributos,    // ⭐ Include tax codes if applicable
 		}
 	}
 	return items
@@ -189,9 +189,9 @@ func (b *Builder) buildNotaRemisionResumen(invoice *models.Invoice) NotaRemision
 	montoTotal := invoice.Total
 
 	// Build tributos array if there are taxes
-	var tributos []NotaRemisionTributo
+	var tributos []Tributo
 	if invoice.TotalTaxes > 0 {
-		tributos = []NotaRemisionTributo{
+		tributos = []Tributo{
 			{
 				Codigo:      "20",
 				Descripcion: "Impuestos al Valor Agregado 13%",
@@ -201,7 +201,7 @@ func (b *Builder) buildNotaRemisionResumen(invoice *models.Invoice) NotaRemision
 	}
 
 	// ⭐ Convert total to words
-	totalLetras := b.convertToWords(montoTotal, "USD")
+	totalLetras := b.numberToWords(montoTotal)
 
 	porcentajeDescuento := 0.0
 	if invoice.TotalDiscount > 0 && invoice.Subtotal > 0 {
@@ -218,7 +218,7 @@ func (b *Builder) buildNotaRemisionResumen(invoice *models.Invoice) NotaRemision
 		DescuGravada:        0,
 		PorcentajeDescuento: &porcentajeDescuento,
 		TotalDescu:          totalDescu,  // ⭐ Use actual discount
-		Tributos:            tributos,    // ⭐ Include taxes if applicable
+		Tributos:            &tributos,   // ⭐ Include taxes if applicable
 		SubTotal:            subTotal,    // ⭐ Use actual subtotal
 		MontoTotalOperacion: montoTotal,  // ⭐ Use actual total
 		TotalLetras:         totalLetras, // ⭐ Convert to words
