@@ -260,6 +260,87 @@ func (s *InvoiceService) CreateRemision(ctx context.Context, companyID string, r
 // processLineItemsRemision processes line items for remision (typically $0 amounts)
 func (s *InvoiceService) processLineItemsRemision(ctx context.Context, tx *sql.Tx, companyID string, reqItems []models.CreateInvoiceLineItemRequest) ([]models.InvoiceLineItem, float64, float64, float64, error) {
 	var lineItems []models.InvoiceLineItem
+	var subtotal float64
+	var totalDiscount float64
+	var totalTaxes float64
+
+	for _, reqItem := range reqItems {
+		// 1. Snapshot inventory item
+		item, err := s.snapshotInventoryItem(ctx, tx, companyID, reqItem.ItemID)
+		if err != nil {
+			return nil, 0, 0, 0, err
+		}
+
+		// ⭐ 2. For remision: Use actual prices to track value of goods being transferred
+		unitPrice := item.Price
+		quantity := reqItem.Quantity
+
+		// Calculate line subtotal
+		lineSubtotal := round(unitPrice * quantity)
+
+		// Apply discount if provided
+		discountPercentage := reqItem.DiscountPercentage
+		discountAmount := 0.0
+		if discountPercentage > 0 {
+			discountAmount = round(lineSubtotal * discountPercentage / 100)
+		}
+
+		// Calculate taxable amount (after discount)
+		taxableAmount := round(lineSubtotal - discountAmount)
+
+		// ⭐ Calculate taxes based on item tax rate
+		lineTaxTotal := 0.0
+		var taxes []models.InvoiceLineItemTax
+
+		if item.TaxRate > 0 {
+			taxAmount := round(taxableAmount * item.TaxRate / 100)
+			lineTaxTotal = taxAmount
+
+			taxes = append(taxes, models.InvoiceLineItemTax{
+				TaxName:   "IVA",
+				TaxRate:   item.TaxRate,
+				TaxAmount: taxAmount,
+				CreatedAt: time.Now(),
+			})
+		}
+
+		// Calculate line total
+		lineTotal := round(taxableAmount + lineTaxTotal)
+
+		// ⭐ 3. Create line item with actual values
+		lineItem := models.InvoiceLineItem{
+			ItemID:             &reqItem.ItemID,
+			ItemSku:            item.SKU,
+			ItemName:           item.Name,
+			ItemDescription:    item.Description,
+			ItemTipoItem:       item.TipoItem,
+			UnitOfMeasure:      item.UnitOfMeasure,
+			UnitPrice:          unitPrice, // ⭐ Use actual price
+			Quantity:           quantity,
+			LineSubtotal:       lineSubtotal, // ⭐ Calculated subtotal
+			DiscountPercentage: discountPercentage,
+			DiscountAmount:     discountAmount, // ⭐ Calculated discount
+			TaxableAmount:      taxableAmount,  // ⭐ Amount subject to tax
+			TotalTaxes:         lineTaxTotal,   // ⭐ Total taxes
+			LineTotal:          lineTotal,      // ⭐ Final line total
+			Taxes:              taxes,          // ⭐ Tax breakdown
+			CreatedAt:          time.Now(),
+		}
+
+		lineItems = append(lineItems, lineItem)
+
+		// ⭐ Accumulate totals
+		subtotal += lineSubtotal
+		totalDiscount += discountAmount
+		totalTaxes += lineTaxTotal
+	}
+
+	// ⭐ Return actual totals
+	return lineItems, round(subtotal), round(totalDiscount), round(totalTaxes), nil
+}
+
+func (s *InvoiceService) _g_processLineItemsRemision(ctx context.Context, tx *sql.Tx, companyID string, reqItems []models.CreateInvoiceLineItemRequest) ([]models.InvoiceLineItem, float64, float64, float64, error) {
+	var lineItems []models.InvoiceLineItem
 
 	for _, reqItem := range reqItems {
 		// 1. Snapshot inventory item
