@@ -1,0 +1,122 @@
+{
+  "identificacion": {
+    "version": 3,
+    "ambiente": "01",
+    "tipoDte": "04",
+    "numeroControl": "DTE-04-M001P001-000000000000590",
+    "codigoGeneracion": "FE95B544-46D9-4007-96F9-C2D8ED19F57D",
+    "tipoModelo": 1,
+    "tipoOperacion": 1,
+    "tipoContingencia": null,
+    "motivoContin": null,
+    "fecEmi": "2025-11-13",
+    "horEmi": "07:59:28",
+    "tipoMoneda": "USD"
+  },
+  "documentoRelacionado": null,
+  "emisor": {
+    "nit": "06142202071024",
+    "nrc": "1776278",
+    "nombre": "MONSA IMPORTADORA, S.A. DE C.V.",
+    "codActividad": "46371",
+    "descActividad": "Venta al por mayor de frutas, hortalizas (verduras), legumbres y tuberculos",
+    "nombreComercial": "MONSA IMPORTADORA, S.A. DE C.V.",
+    "tipoEstablecimiento": "02",
+    "direccion": {
+      "departamento": "06",
+      "municipio": "23",
+      "complemento": "Calle la Rumba. Bo. Cisneros No. 404 La Garita, San Salvador."
+    },
+    "telefono": "22767179",
+    "codEstableMH": "M001",
+    "codEstable": "M001",
+    "codPuntoVentaMH": "P001",
+    "codPuntoVenta": "P001",
+    "correo": "mimportadoradte@gmail.com"
+  },
+  "receptor": {
+    "tipoDocumento": "36",
+    "numDocumento": "06142202071024",
+    "nrc": null,
+    "nombre": "MONSA IMPORTADORA, S.A. DE C.V.",
+    "codActividad": "46371",
+    "descActividad": "Venta al por mayor de frutas, hortalizas (verduras), legumbres y tubérculos",
+    "nombreComercial": null,
+    "direccion": {
+      "departamento": "06",
+      "municipio": "14",
+      "complemento": "CALLE LA RUMBA # 404, BARRIO CISNEROS"
+    },
+    "telefono": "22767179",
+    "correo": "mimportadoradte@gmail.com",
+    "bienTitulo": "04"
+  },
+  "ventaTercero": null,
+  "cuerpoDocumento": [
+    {
+      "numItem": 1,
+      "tipoItem": 1,
+      "numeroDocumento": null,
+      "cantidad": 441.0,
+      "codigo": "AGUACATES03",
+      "codTributo": null,
+      "uniMedida": 59,
+      "descripcion": "441 CAJAS DE AGUACATE MEDIANO",
+      "precioUni": 19.0,
+      "montoDescu": 0.0,
+      "ventaNoSuj": 0.0,
+      "ventaExenta": 0.0,
+      "ventaGravada": 8379.0,
+      "tributos": [
+        "20"
+      ]
+    }
+  ],
+  "resumen": {
+    "totalNoSuj": 0.0,
+    "totalExenta": 0.0,
+    "totalGravada": 8379.0,
+    "subTotalVentas": 8379.0,
+    "descuNoSuj": 0.0,
+    "descuExenta": 0.0,
+    "descuGravada": 0.0,
+    "porcentajeDescuento": 0.0,
+    "totalDescu": 0.0,
+    "subTotal": 8379.0,
+    "tributos": [
+      {
+        "codigo": "20",
+        "descripcion": "Impuestos al Valor Agregado 13%",
+        "valor": 1089.27
+      }
+    ],
+    "montoTotalOperacion": 9468.27,
+    "totalLetras": "NUEVE MIL CUATROCIENTOS SESENTA Y OCHO 27 /100"
+  },
+  "extension": {
+    "nombEntrega": null,
+    "docuEntrega": null,
+    "nombRecibe": null,
+    "docuRecibe": null,
+    "observaciones": null
+  },
+  "apendice": [
+    {
+      "campo": "Datos del vendedor",
+      "etiqueta": "Nombre",
+      "valor": " -  "
+    },
+    {
+      "campo": "Datos del documento",
+      "etiqueta": "N° Documento",
+      "valor": "04 - DOC0000013622"
+    },
+    {
+      "campo": "Datos del documento",
+      "etiqueta": "Observaciones",
+      "valor": "441 CAJAS DE AGUACATE MEDIANO CHOFER: WILFREDO ALVARADO CAMION: FUSO"
+    }
+  ],
+  "selloRecibido": "2025B0A106D1834748889C331C4375CBA135PZVZ",
+  "firmaElectronica": "eyJhbGciOiJSUzUxMiJ9.ewogICJpZGVudGlmaWNhY2lvbiIgOiB7CiAgICAidmVyc2lvbiIgOiAzLAogICAgImFtYmllbnRlIiA6ICIwMSIsCiAgICAidGlwb0R0ZSIgOiAiMDQiLAogICAgIm51bWVyb0NvbnRyb2wiIDogIkRURS0wNC1NMDAxUDAwMS0wMDAwMDAwMDAwMDA1OTAiLAogICAgImNvZGlnb0dlbmVyYWNpb24iIDogIkZFOTVCNTQ0LTQ2RDktNDAwNy05NkY5LUMyRDhFRDE5RjU3RCIsCiAgICAidGlwb01vZGVsbyIgOiAxLAogICAgInRpcG9PcGVyYWNpb24iIDogMSwKICAgICJ0aXBvQ29udGluZ2VuY2lhIiA6IG51bGwsCiAgICAibW90aXZvQ29udGluIiA6IG51bGwsCiAgICAiZmVjRW1pIiA6ICIyMDI1LTExLTEzIiwKICAgICJob3JFbWkiIDogIjA3OjU5OjI4IiwKICAgICJ0aXBvTW9uZWRhIiA6ICJVU0QiCiAgfSwKICAiZG9jdW1lbnRvUmVsYWNpb25hZG8iIDogbnVsbCwKICAiZW1pc29yIiA6IHsKICAgICJuaXQiIDogIjA2MTQyMjAyMDcxMDI0IiwKICAgICJucmMiIDogIjE3NzYyNzgiLAogICAgIm5vbWJyZSIgOiAiTU9OU0EgSU1QT1JUQURPUkEsIFMuQS4gREUgQy5WLiIsCiAgICAiY29kQWN0aXZpZGFkIiA6ICI0NjM3MSIsCiAgICAiZGVzY0FjdGl2aWRhZCIgOiAiVmVudGEgYWwgcG9yIG1heW9yIGRlIGZydXRhcywgaG9ydGFsaXphcyAodmVyZHVyYXMpLCBsZWd1bWJyZXMgeSB0dWJlcmN1bG9zIiwKICAgICJub21icmVDb21lcmNpYWwiIDogIk1PTlNBIElNUE9SVEFET1JBLCBTLkEuIERFIEMuVi4iLAogICAgInRpcG9Fc3RhYmxlY2ltaWVudG8iIDogIjAyIiwKICAgICJkaXJlY2Npb24iIDogewogICAgICAiZGVwYXJ0YW1lbnRvIiA6ICIwNiIsCiAgICAgICJtdW5pY2lwaW8iIDogIjIzIiwKICAgICAgImNvbXBsZW1lbnRvIiA6ICJDYWxsZSBsYSBSdW1iYS4gQm8uIENpc25lcm9zIE5vLiA0MDQgTGEgR2FyaXRhLCBTYW4gU2FsdmFkb3IuIgogICAgfSwKICAgICJ0ZWxlZm9ubyIgOiAiMjI3NjcxNzkiLAogICAgImNvZEVzdGFibGVNSCIgOiAiTTAwMSIsCiAgICAiY29kRXN0YWJsZSIgOiAiTTAwMSIsCiAgICAiY29kUHVudG9WZW50YU1IIiA6ICJQMDAxIiwKICAgICJjb2RQdW50b1ZlbnRhIiA6ICJQMDAxIiwKICAgICJjb3JyZW8iIDogIm1pbXBvcnRhZG9yYWR0ZUBnbWFpbC5jb20iCiAgfSwKICAicmVjZXB0b3IiIDogewogICAgInRpcG9Eb2N1bWVudG8iIDogIjM2IiwKICAgICJudW1Eb2N1bWVudG8iIDogIjA2MTQyMjAyMDcxMDI0IiwKICAgICJucmMiIDogbnVsbCwKICAgICJub21icmUiIDogIk1PTlNBIElNUE9SVEFET1JBLCBTLkEuIERFIEMuVi4iLAogICAgImNvZEFjdGl2aWRhZCIgOiAiNDYzNzEiLAogICAgImRlc2NBY3RpdmlkYWQiIDogIlZlbnRhIGFsIHBvciBtYXlvciBkZSBmcnV0YXMsIGhvcnRhbGl6YXMgKHZlcmR1cmFzKSwgbGVndW1icmVzIHkgdHViw6lyY3Vsb3MiLAogICAgIm5vbWJyZUNvbWVyY2lhbCIgOiBudWxsLAogICAgImRpcmVjY2lvbiIgOiB7CiAgICAgICJkZXBhcnRhbWVudG8iIDogIjA2IiwKICAgICAgIm11bmljaXBpbyIgOiAiMTQiLAogICAgICAiY29tcGxlbWVudG8iIDogIkNBTExFIExBIFJVTUJBICMgNDA0LCBCQVJSSU8gQ0lTTkVST1MiCiAgICB9LAogICAgInRlbGVmb25vIiA6ICIyMjc2NzE3OSIsCiAgICAiY29ycmVvIiA6ICJtaW1wb3J0YWRvcmFkdGVAZ21haWwuY29tIiwKICAgICJiaWVuVGl0dWxvIiA6ICIwNCIKICB9LAogICJ2ZW50YVRlcmNlcm8iIDogbnVsbCwKICAiY3VlcnBvRG9jdW1lbnRvIiA6IFsgewogICAgIm51bUl0ZW0iIDogMSwKICAgICJ0aXBvSXRlbSIgOiAxLAogICAgIm51bWVyb0RvY3VtZW50byIgOiBudWxsLAogICAgImNhbnRpZGFkIiA6IDQ0MSwKICAgICJjb2RpZ28iIDogIkFHVUFDQVRFUzAzIiwKICAgICJjb2RUcmlidXRvIiA6IG51bGwsCiAgICAidW5pTWVkaWRhIiA6IDU5LAogICAgImRlc2NyaXBjaW9uIiA6ICI0NDEgQ0FKQVMgREUgQUdVQUNBVEUgTUVESUFOTyIsCiAgICAicHJlY2lvVW5pIiA6IDE5LAogICAgIm1vbnRvRGVzY3UiIDogMCwKICAgICJ2ZW50YU5vU3VqIiA6IDAsCiAgICAidmVudGFFeGVudGEiIDogMCwKICAgICJ2ZW50YUdyYXZhZGEiIDogODM3OSwKICAgICJ0cmlidXRvcyIgOiBbICIyMCIgXQogIH0gXSwKICAicmVzdW1lbiIgOiB7CiAgICAidG90YWxOb1N1aiIgOiAwLAogICAgInRvdGFsRXhlbnRhIiA6IDAsCiAgICAidG90YWxHcmF2YWRhIiA6IDgzNzksCiAgICAic3ViVG90YWxWZW50YXMiIDogODM3OSwKICAgICJkZXNjdU5vU3VqIiA6IDAsCiAgICAiZGVzY3VFeGVudGEiIDogMCwKICAgICJkZXNjdUdyYXZhZGEiIDogMCwKICAgICJwb3JjZW50YWplRGVzY3VlbnRvIiA6IDAsCiAgICAidG90YWxEZXNjdSIgOiAwLAogICAgInN1YlRvdGFsIiA6IDgzNzksCiAgICAidHJpYnV0b3MiIDogWyB7CiAgICAgICJjb2RpZ28iIDogIjIwIiwKICAgICAgImRlc2NyaXBjaW9uIiA6ICJJbXB1ZXN0b3MgYWwgVmFsb3IgQWdyZWdhZG8gMTMlIiwKICAgICAgInZhbG9yIiA6IDEwODkuMjcKICAgIH0gXSwKICAgICJtb250b1RvdGFsT3BlcmFjaW9uIiA6IDk0NjguMjcsCiAgICAidG90YWxMZXRyYXMiIDogIk5VRVZFIE1JTCBDVUFUUk9DSUVOVE9TIFNFU0VOVEEgWSBPQ0hPIDI3IC8xMDAiCiAgfSwKICAiZXh0ZW5zaW9uIiA6IHsKICAgICJub21iRW50cmVnYSIgOiBudWxsLAogICAgImRvY3VFbnRyZWdhIiA6IG51bGwsCiAgICAibm9tYlJlY2liZSIgOiBudWxsLAogICAgImRvY3VSZWNpYmUiIDogbnVsbCwKICAgICJvYnNlcnZhY2lvbmVzIiA6IG51bGwKICB9LAogICJhcGVuZGljZSIgOiBbIHsKICAgICJjYW1wbyIgOiAiRGF0b3MgZGVsIHZlbmRlZG9yIiwKICAgICJldGlxdWV0YSIgOiAiTm9tYnJlIiwKICAgICJ2YWxvciIgOiAiIC0gICIKICB9LCB7CiAgICAiY2FtcG8iIDogIkRhdG9zIGRlbCBkb2N1bWVudG8iLAogICAgImV0aXF1ZXRhIiA6ICJOwrAgRG9jdW1lbnRvIiwKICAgICJ2YWxvciIgOiAiMDQgLSBET0MwMDAwMDEzNjIyIgogIH0sIHsKICAgICJjYW1wbyIgOiAiRGF0b3MgZGVsIGRvY3VtZW50byIsCiAgICAiZXRpcXVldGEiIDogIk9ic2VydmFjaW9uZXMiLAogICAgInZhbG9yIiA6ICI0NDEgQ0FKQVMgREUgQUdVQUNBVEUgTUVESUFOTyBDSE9GRVI6IFdJTEZSRURPIEFMVkFSQURPIENBTUlPTjogRlVTTyIKICB9IF0KfQ.ZrcyfeRICGrXDpz4hgd6OkYlqNodB9KPKSbLmSKblFuH8Ye7Sxmzu4CHgdNYLTp06l13vLX-5C0Uwav33xI_I1E9AuQG55cVT51eimHux-XzewWW02Mi0N9fagcZcYVgXU1qtfaxgGQv_LuOOUh3Im9zAQgqtkV9umL-bnk2Z1N8LjrDWXj1RJgI9hImBcqK-GUEogezsP93x_R_DdZHCWFyBem_8secwWnjZGtWPVmuZU6_zFjbzNTvy98ZxjTB6JF6_l0Ut7NkYIewbbEJXagXiDehN0zLG_ju3KVWOsCb1vsLi7bKdtDogu5SU3dYIrmY3waMRp0zuxU5_sG0fg"
+}
