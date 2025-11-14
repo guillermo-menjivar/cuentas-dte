@@ -111,7 +111,7 @@ func (s *InvoiceService) __getInvoiceHeader(ctx context.Context, companyID, invo
 
 	return invoice, nil
 }
-func (s *InvoiceService) __xxCreateRemision(ctx context.Context, companyID string, req *models.CreateRemisionRequest) (*models.Invoice, error) {
+func (s *InvoiceService) CreateRemision(ctx context.Context, companyID string, req *models.CreateRemisionRequest) (*models.Invoice, error) {
 	// Validate request
 	if err := req.Validate(); err != nil {
 		return nil, err
