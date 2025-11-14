@@ -148,14 +148,10 @@ func (b *Builder) buildNotaRemisionCuerpoDocumento(invoice *models.Invoice) []No
 		precioUni := lineItem.UnitPrice
 		ventaGravada := lineItem.TaxableAmount
 
-		// ⭐ Determine if item has taxes (tributos)
-		var tributos []string
+		// ⭐ For remisiones, codTributo and tributos are ALWAYS null
+		// Remisiones track goods movement, not taxable sales
+		var tributos *[]string = nil
 		var codTributo *string = nil
-		if lineItem.TotalTaxes > 0 {
-			tributos = []string{"20"} // IVA 13%
-			ivaCod := "20"
-			codTributo = &ivaCod
-		}
 
 		items[i] = NotaRemisionCuerpoItem{
 			NumItem:         lineItem.LineNumber,
@@ -171,7 +167,7 @@ func (b *Builder) buildNotaRemisionCuerpoDocumento(invoice *models.Invoice) []No
 			VentaNoSuj:      0,
 			VentaExenta:     0,
 			VentaGravada:    ventaGravada, // ⭐ Use actual taxable amount
-			Tributos:        &tributos,    // ⭐ Include tax codes if applicable
+			Tributos:        tributos,     // ⭐ Include tax codes if applicable
 		}
 	}
 	return items
@@ -186,19 +182,11 @@ func (b *Builder) buildNotaRemisionResumen(invoice *models.Invoice) NotaRemision
 	totalGravada := invoice.Subtotal
 	totalDescu := invoice.TotalDiscount
 	subTotal := invoice.Subtotal
-	montoTotal := invoice.Total
+	// ⭐ For remisiones with tributos=null, montoTotalOperacion = subtotal (no taxes)
+	montoTotal := invoice.Subtotal
 
 	// Build tributos array if there are taxes
-	var tributos []Tributo
-	if invoice.TotalTaxes > 0 {
-		tributos = []Tributo{
-			{
-				Codigo:      "20",
-				Descripcion: "Impuestos al Valor Agregado 13%",
-				Valor:       invoice.TotalTaxes,
-			},
-		}
-	}
+	var tributos []Tributo = nil
 
 	// ⭐ Convert total to words
 	totalLetras := b.numberToWords(montoTotal)
@@ -220,7 +208,7 @@ func (b *Builder) buildNotaRemisionResumen(invoice *models.Invoice) NotaRemision
 		TotalDescu:          totalDescu,  // ⭐ Use actual discount
 		Tributos:            &tributos,   // ⭐ Include taxes if applicable
 		SubTotal:            subTotal,    // ⭐ Use actual subtotal
-		MontoTotalOperacion: montoTotal,  // ⭐ Use actual total
+		MontoTotalOperacion: montoTotal,  // ⭐ Use actual subtotal (no tributo)
 		TotalLetras:         totalLetras, // ⭐ Convert to words
 	}
 }

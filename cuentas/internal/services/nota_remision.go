@@ -271,8 +271,8 @@ func (s *InvoiceService) processLineItemsRemision(ctx context.Context, tx *sql.T
 			return nil, 0, 0, 0, err
 		}
 
-		// ⭐ 2. For remision: Use actual prices to track value of goods being transferred
-		unitPrice := item.Price
+		// ⭐ 2. Use actual unit price from inventory
+		unitPrice := item.UnitPrice // ⭐ Use existing field
 		quantity := reqItem.Quantity
 
 		// Calculate line subtotal
@@ -288,20 +288,10 @@ func (s *InvoiceService) processLineItemsRemision(ctx context.Context, tx *sql.T
 		// Calculate taxable amount (after discount)
 		taxableAmount := round(lineSubtotal - discountAmount)
 
-		// ⭐ Calculate taxes based on item tax rate
-		lineTaxTotal := 0.0
-		var taxes []models.InvoiceLineItemTax
-
-		if item.TaxRate > 0 {
-			taxAmount := round(taxableAmount * item.TaxRate / 100)
-			lineTaxTotal = taxAmount
-
-			taxes = append(taxes, models.InvoiceLineItemTax{
-				TaxName:   "IVA",
-				TaxRate:   item.TaxRate,
-				TaxAmount: taxAmount,
-				CreatedAt: time.Now(),
-			})
+		// ⭐ Get taxes using your existing function
+		taxes, lineTaxTotal, err := s.snapshotItemTaxes(ctx, tx, reqItem.ItemID, taxableAmount)
+		if err != nil {
+			return nil, 0, 0, 0, err
 		}
 
 		// Calculate line total
@@ -315,15 +305,15 @@ func (s *InvoiceService) processLineItemsRemision(ctx context.Context, tx *sql.T
 			ItemDescription:    item.Description,
 			ItemTipoItem:       item.TipoItem,
 			UnitOfMeasure:      item.UnitOfMeasure,
-			UnitPrice:          unitPrice, // ⭐ Use actual price
+			UnitPrice:          unitPrice, // ⭐ Actual price
 			Quantity:           quantity,
-			LineSubtotal:       lineSubtotal, // ⭐ Calculated subtotal
+			LineSubtotal:       lineSubtotal,
 			DiscountPercentage: discountPercentage,
-			DiscountAmount:     discountAmount, // ⭐ Calculated discount
-			TaxableAmount:      taxableAmount,  // ⭐ Amount subject to tax
-			TotalTaxes:         lineTaxTotal,   // ⭐ Total taxes
-			LineTotal:          lineTotal,      // ⭐ Final line total
-			Taxes:              taxes,          // ⭐ Tax breakdown
+			DiscountAmount:     discountAmount,
+			TaxableAmount:      taxableAmount,
+			TotalTaxes:         lineTaxTotal,
+			LineTotal:          lineTotal,
+			Taxes:              taxes, // ⭐ From snapshotItemTaxes
 			CreatedAt:          time.Now(),
 		}
 
