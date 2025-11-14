@@ -126,8 +126,8 @@ func (b *Builder) buildNotaRemisionIdentificacion(invoice *models.Invoice, compa
 		TipoOperacion:    1, // Normal
 		TipoContingencia: nil,
 		MotivoContin:     nil,
-		FecEmi:           localTime.CreatedAt.Format("2006-01-02"),
-		HorEmi:           localTime.CreatedAt.Format("15:04:05"),
+		FecEmi:           localTime.Format("2006-01-02"),
+		HorEmi:           localTime.Format("15:04:05"),
 		TipoMoneda:       "USD",
 	}
 }
@@ -135,10 +135,8 @@ func (b *Builder) buildNotaRemisionIdentificacion(invoice *models.Invoice, compa
 // ============================================
 // BUILD CUERPO DOCUMENTO (Type 04)
 // ============================================
-
 func (b *Builder) buildNotaRemisionCuerpoDocumento(invoice *models.Invoice) []NotaRemisionCuerpoItem {
 	items := make([]NotaRemisionCuerpoItem, len(invoice.LineItems))
-
 	for i, lineItem := range invoice.LineItems {
 		// Parse unit of measure
 		uniMedida := b.parseUniMedida(lineItem.UnitOfMeasure)
@@ -146,27 +144,36 @@ func (b *Builder) buildNotaRemisionCuerpoDocumento(invoice *models.Invoice) []No
 		// ⭐ numeroDocumento can be null for remision
 		var numeroDocumento *string = nil
 
-		// ⭐ codTributo can be null for remision
+		// ⭐ For remisiones, include unit price and calculate values
+		precioUni := lineItem.UnitPrice
+		ventaGravada := lineItem.TaxableAmount
+
+		// ⭐ Determine if item has taxes (tributos)
+		var tributos []string
 		var codTributo *string = nil
+		if lineItem.TotalTaxes > 0 {
+			tributos = []string{"20"} // IVA 13%
+			ivaCod := "20"
+			codTributo = &ivaCod
+		}
 
 		items[i] = NotaRemisionCuerpoItem{
 			NumItem:         lineItem.LineNumber,
 			TipoItem:        b.parseTipoItem(lineItem.ItemTipoItem),
-			NumeroDocumento: numeroDocumento, // ⭐ Added - can be null
+			NumeroDocumento: numeroDocumento,
 			Codigo:          &lineItem.ItemSku,
-			CodTributo:      codTributo, // ⭐ Added - can be null
+			CodTributo:      codTributo,
 			Descripcion:     lineItem.ItemName,
 			Cantidad:        lineItem.Quantity,
 			UniMedida:       uniMedida,
-			PrecioUni:       0, // Remision: no sale price
-			MontoDescu:      0,
+			PrecioUni:       precioUni,               // ⭐ Use actual price
+			MontoDescu:      lineItem.DiscountAmount, // ⭐ Use actual discount
 			VentaNoSuj:      0,
 			VentaExenta:     0,
-			VentaGravada:    0,
-			Tributos:        nil, // No taxes for remision
+			VentaGravada:    ventaGravada, // ⭐ Use actual taxable amount
+			Tributos:        tributos,     // ⭐ Include tax codes if applicable
 		}
 	}
-
 	return items
 }
 
@@ -175,22 +182,46 @@ func (b *Builder) buildNotaRemisionCuerpoDocumento(invoice *models.Invoice) []No
 // ============================================
 
 func (b *Builder) buildNotaRemisionResumen(invoice *models.Invoice) NotaRemisionResumen {
+	// ⭐ Calculate totals from invoice
+	totalGravada := invoice.Subtotal
+	totalDescu := invoice.TotalDiscount
+	subTotal := invoice.Subtotal
+	montoTotal := invoice.Total
+
+	// Build tributos array if there are taxes
+	var tributos []NotaRemisionTributo
+	if invoice.TotalTaxes > 0 {
+		tributos = []NotaRemisionTributo{
+			{
+				Codigo:      "20",
+				Descripcion: "Impuestos al Valor Agregado 13%",
+				Valor:       invoice.TotalTaxes,
+			},
+		}
+	}
+
+	// ⭐ Convert total to words
+	totalLetras := b.convertToWords(montoTotal, "USD")
+
 	porcentajeDescuento := 0.0
+	if invoice.TotalDiscount > 0 && invoice.Subtotal > 0 {
+		porcentajeDescuento = (invoice.TotalDiscount / invoice.Subtotal) * 100
+	}
 
 	return NotaRemisionResumen{
 		TotalNoSuj:          0,
 		TotalExenta:         0,
-		TotalGravada:        0,
-		SubTotalVentas:      0,
+		TotalGravada:        totalGravada, // ⭐ Use actual total
+		SubTotalVentas:      subTotal,     // ⭐ Use actual subtotal
 		DescuNoSuj:          0,
 		DescuExenta:         0,
 		DescuGravada:        0,
 		PorcentajeDescuento: &porcentajeDescuento,
-		TotalDescu:          0,
-		Tributos:            nil,
-		SubTotal:            0,
-		MontoTotalOperacion: 0,
-		TotalLetras:         "CERO DÓLARES",
+		TotalDescu:          totalDescu,  // ⭐ Use actual discount
+		Tributos:            tributos,    // ⭐ Include taxes if applicable
+		SubTotal:            subTotal,    // ⭐ Use actual subtotal
+		MontoTotalOperacion: montoTotal,  // ⭐ Use actual total
+		TotalLetras:         totalLetras, // ⭐ Convert to words
 	}
 }
 
