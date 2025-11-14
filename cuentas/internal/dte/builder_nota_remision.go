@@ -25,7 +25,7 @@ type NotaRemisionDTE struct {
 	CuerpoDocumento      []NotaRemisionCuerpoItem   `json:"cuerpoDocumento"`
 	Resumen              NotaRemisionResumen        `json:"resumen"`
 	Extension            *NotaRemisionExtension     `json:"extension"`
-	Apendice             *[]models.ApendiceField    `json:"apendice"`
+	Apendice             *[]Apendice                `json:"apendice"`
 }
 
 // NotaRemisionIdentificacion - Type 04 uses version 3
@@ -572,14 +572,14 @@ func (b *Builder) loadEstablishment(ctx context.Context, establishmentID string)
 }
 
 // buildApendice builds the apendice section from custom fields
-func (b *Builder) buildApendice(invoice *models.Invoice) *[]models.ApendiceField {
+func (b *Builder) buildApendice(invoice *models.Invoice) *[]Apendice {
 	if len(invoice.CustomFields) == 0 {
 		return nil
 	}
 
-	apendice := make([]models.ApendiceField, len(invoice.CustomFields))
+	apendice := make([]Apendice, len(invoice.CustomFields))
 	for i, field := range invoice.CustomFields {
-		apendice[i] = models.ApendiceField{
+		apendice[i] = Apendice{
 			Campo:    field.Campo,
 			Etiqueta: field.Etiqueta,
 			Valor:    field.Valor,

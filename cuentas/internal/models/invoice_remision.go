@@ -86,6 +86,20 @@ func (r *CreateRemisionRequest) Validate() error {
 		return fmt.Errorf("point_of_sale_id is required")
 	}
 
+	fmt.Println("these are the ApendiceField")
+	fmt.Println("========================================")
+	fmt.Printf("📋 Custom Fields Count: %d\n", len(r.CustomFields))
+	if len(r.CustomFields) > 0 {
+		fmt.Println("📝 Custom Fields (Apendice):")
+		for i, field := range r.CustomFields {
+			fmt.Printf("   [%d] Campo: '%s' | Etiqueta: '%s' | Valor: '%s'\n",
+				i+1, field.Campo, field.Etiqueta, field.Valor)
+		}
+	} else {
+		fmt.Println("⚠️  No custom fields provided")
+	}
+	fmt.Println("========================================")
+
 	// Validate remision_type
 	validTypes := []string{"pre_invoice_delivery", "inter_branch_transfer", "route_sales", "other"}
 	if !contains(validTypes, r.RemisionType) {

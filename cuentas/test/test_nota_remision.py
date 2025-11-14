@@ -132,6 +132,140 @@ class RemisionTester:
         remision_type: str,
         client: Optional[Dict],
         source_establishment: Dict,
+        dest_establishment: Optional[Dict],
+        pos: Dict,
+        items: List[Dict],
+        related_docs: List[Dict] = None,
+    ) -> Optional[Dict]:
+        """Create a draft remision"""
+        url = f"{self.base_url}/v1/remisiones"
+
+        # Build line items
+        line_items = []
+        for item in items:
+            quantity = random.randint(5, 20)
+            line_items.append(
+                {
+                    "item_id": item["id"],
+                    "quantity": quantity,
+                }
+            )
+
+        # Build payload
+        payload = {
+            "establishment_id": source_establishment["id"],
+            "point_of_sale_id": pos["id"],
+            "remision_type": remision_type,
+            "line_items": line_items,
+        }
+
+        # ⭐ NEW: Add custom fields for apendice
+        custom_fields = []
+
+        # Add delivery person info if present
+        delivery_person = None
+        vehicle_plate = None
+
+        if remision_type == "inter_branch_transfer":
+            if dest_establishment is None:
+                raise ValueError(
+                    "dest_establishment required for inter_branch_transfer"
+                )
+            payload["destination_establishment_id"] = dest_establishment["id"]
+            payload["notes"] = (
+                f"Traslado de {source_establishment['nombre']} a {dest_establishment['nombre']}"
+            )
+
+            # ⭐ Custom fields for internal transfer
+            delivery_person = "Carlos Rodriguez"
+            vehicle_plate = f"P{random.randint(100000, 999999)}"
+
+            custom_fields = [
+                {
+                    "campo": "Datos del transporte",
+                    "etiqueta": "Chofer",
+                    "valor": delivery_person,
+                },
+                {
+                    "campo": "Datos del transporte",
+                    "etiqueta": "Vehículo",
+                    "valor": f"Placa: {vehicle_plate}",
+                },
+                {
+                    "campo": "Datos del documento",
+                    "etiqueta": "N° Documento Interno",
+                    "valor": f"TRANS-{datetime.now().strftime('%Y%m%d')}-{random.randint(1000, 9999)}",
+                },
+            ]
+        else:
+            # External remision - add client
+            if client is None:
+                raise ValueError(f"client required for {remision_type}")
+            payload["client_id"] = client["id"]
+            payload["notes"] = (
+                f"Remisión {remision_type} para {client['business_name']}"
+            )
+
+            # ⭐ Custom fields for external delivery
+            delivery_person = "Juan Pérez"
+            vehicle_plate = "P123456"
+
+            custom_fields = [
+                {
+                    "campo": "Datos del cliente",
+                    "etiqueta": "Contacto",
+                    "valor": client.get("business_name", "N/A"),
+                },
+                {
+                    "campo": "Datos del transporte",
+                    "etiqueta": "Chofer",
+                    "valor": delivery_person,
+                },
+                {
+                    "campo": "Datos del documento",
+                    "etiqueta": "Observaciones",
+                    "valor": f"Entrega programada - {remision_type}",
+                },
+            ]
+
+        # Add delivery info
+        if remision_type in ["pre_invoice_delivery", "route_sales"]:
+            payload["delivery_person"] = delivery_person or "Juan Pérez"
+            payload["vehicle_plate"] = vehicle_plate or "P123456"
+            payload["delivery_notes"] = f"Entrega {remision_type}"
+        elif remision_type == "inter_branch_transfer":
+            payload["delivery_person"] = delivery_person
+            payload["vehicle_plate"] = vehicle_plate
+            payload["delivery_notes"] = "Traslado interno - manejar con cuidado"
+
+        # ⭐ Add custom fields to payload
+        if custom_fields:
+            payload["custom_fields"] = custom_fields
+
+        # Add related documents if provided
+        if related_docs:
+            payload["related_documents"] = related_docs
+
+        try:
+            response = requests.post(url, headers=self.headers, json=payload)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            print(f"      ❌ Failed to create remision: {e}")
+            if hasattr(e, "response") and e.response is not None:
+                try:
+                    error_detail = e.response.json()
+                    print(f"         Error: {error_detail}")
+                except:
+                    print(f"         Error: {e.response.text}")
+            self.errors += 1
+            return None
+
+    def _create_remision(
+        self,
+        remision_type: str,
+        client: Optional[Dict],
+        source_establishment: Dict,
         dest_establishment: Optional[Dict],  # ⭐ NEW
         pos: Dict,
         items: List[Dict],

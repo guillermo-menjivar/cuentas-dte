@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"math"
@@ -736,6 +737,7 @@ func (s *InvoiceService) insertInvoice(ctx context.Context, tx *sql.Tx, invoice 
 }
 
 // Update getInvoiceHeader to include destination_establishment_id
+// Update getInvoiceHeader to include destination_establishment_id
 func (s *InvoiceService) getInvoiceHeader(ctx context.Context, companyID, invoiceID string) (*models.Invoice, error) {
 	query := `
         SELECT
@@ -743,6 +745,7 @@ func (s *InvoiceService) getInvoiceHeader(ctx context.Context, companyID, invoic
             invoice_number, invoice_type,
             remision_type, destination_establishment_id,
             delivery_person, vehicle_plate, delivery_notes,
+            custom_fields,
             references_invoice_id, void_reason,
             client_name, client_legal_name, client_nit, client_ncr, client_dui,
             client_address, client_tipo_contribuyente, client_tipo_persona,
@@ -762,12 +765,14 @@ func (s *InvoiceService) getInvoiceHeader(ctx context.Context, companyID, invoic
 	// Use sql.NullString for nullable fields (remisiones can have NULLs)
 	var clientID, paymentTerms, paymentMethod, paymentStatus sql.NullString
 	var remisionType, destinationEstablishmentID, deliveryPerson, vehiclePlate, deliveryNotes sql.NullString
+	var customFieldsJSON sql.NullString // ⭐ ADD THIS
 
 	err := database.DB.QueryRowContext(ctx, query, invoiceID, companyID).Scan(
 		&invoice.ID, &invoice.CompanyID, &invoice.EstablishmentID, &invoice.PointOfSaleID, &clientID,
 		&invoice.InvoiceNumber, &invoice.InvoiceType,
-		&remisionType, &destinationEstablishmentID, // ⭐ ADDED
+		&remisionType, &destinationEstablishmentID,
 		&deliveryPerson, &vehiclePlate, &deliveryNotes,
+		&customFieldsJSON, // ⭐ ADD THIS
 		&invoice.ReferencesInvoiceID, &invoice.VoidReason,
 		&invoice.ClientName, &invoice.ClientLegalName, &invoice.ClientNit, &invoice.ClientNcr, &invoice.ClientDui,
 		&invoice.ClientAddress, &invoice.ClientTipoContribuyente, &invoice.ClientTipoPersona,
@@ -799,7 +804,7 @@ func (s *InvoiceService) getInvoiceHeader(ctx context.Context, companyID, invoic
 	if remisionType.Valid {
 		invoice.RemisionType = &remisionType.String
 	}
-	if destinationEstablishmentID.Valid { // ⭐ ADDED
+	if destinationEstablishmentID.Valid {
 		invoice.DestinationEstablishmentID = &destinationEstablishmentID.String
 	}
 	if deliveryPerson.Valid {
@@ -812,87 +817,19 @@ func (s *InvoiceService) getInvoiceHeader(ctx context.Context, companyID, invoic
 		invoice.DeliveryNotes = &deliveryNotes.String
 	}
 
+	// ⭐ NEW: Parse custom_fields JSON
+	if customFieldsJSON.Valid && customFieldsJSON.String != "" {
+		var customFields []models.ApendiceField
+		if err := json.Unmarshal([]byte(customFieldsJSON.String), &customFields); err != nil {
+			log.Printf("[WARN] getInvoiceHeader: Failed to unmarshal custom_fields for invoice %s: %v", invoiceID, err)
+		} else {
+			invoice.CustomFields = customFields
+			log.Printf("[DEBUG] getInvoiceHeader: Loaded %d custom fields for invoice %s", len(customFields), invoiceID)
+		}
+	}
+
 	log.Printf("[DEBUG] getInvoiceHeader: Successfully loaded invoice %s (type=%s, client_id=%s, remision_type=%v, destination_est=%v)",
 		invoiceID, invoice.InvoiceType, invoice.ClientID, invoice.RemisionType, invoice.DestinationEstablishmentID)
-
-	return invoice, nil
-}
-
-// Update getInvoiceHeader to include establishment_id
-func (s *InvoiceService) _getInvoiceHeader(ctx context.Context, companyID, invoiceID string) (*models.Invoice, error) {
-	query := `
-        SELECT
-            id, company_id, establishment_id, point_of_sale_id, client_id,
-            invoice_number, invoice_type,
-            remision_type, delivery_person, vehicle_plate, delivery_notes,
-            references_invoice_id, void_reason,
-            client_name, client_legal_name, client_nit, client_ncr, client_dui,
-            client_address, client_tipo_contribuyente, client_tipo_persona,
-            subtotal, total_discount, total_taxes, total,
-            currency,
-            payment_terms, payment_method, payment_status, amount_paid, balance_due, due_date,
-            status,
-            dte_numero_control, dte_status, dte_hacienda_response, dte_submitted_at, dte_type,
-            created_at, finalized_at, voided_at,
-            created_by, voided_by, notes,
-            contact_email, contact_whatsapp
-        FROM invoices
-        WHERE id = $1 AND company_id = $2
-    `
-
-	invoice := &models.Invoice{}
-
-	// Use sql.NullString for nullable fields (remisiones can have NULLs)
-	var clientID, paymentTerms, paymentMethod, paymentStatus sql.NullString
-	var remisionType, deliveryPerson, vehiclePlate, deliveryNotes sql.NullString
-
-	err := database.DB.QueryRowContext(ctx, query, invoiceID, companyID).Scan(
-		&invoice.ID, &invoice.CompanyID, &invoice.EstablishmentID, &invoice.PointOfSaleID, &clientID,
-		&invoice.InvoiceNumber, &invoice.InvoiceType,
-		&remisionType, &deliveryPerson, &vehiclePlate, &deliveryNotes,
-		&invoice.ReferencesInvoiceID, &invoice.VoidReason,
-		&invoice.ClientName, &invoice.ClientLegalName, &invoice.ClientNit, &invoice.ClientNcr, &invoice.ClientDui,
-		&invoice.ClientAddress, &invoice.ClientTipoContribuyente, &invoice.ClientTipoPersona,
-		&invoice.Subtotal, &invoice.TotalDiscount, &invoice.TotalTaxes, &invoice.Total,
-		&invoice.Currency,
-		&paymentTerms, &paymentMethod, &paymentStatus, &invoice.AmountPaid, &invoice.BalanceDue, &invoice.DueDate,
-		&invoice.Status,
-		&invoice.DteNumeroControl, &invoice.DteStatus, &invoice.DteHaciendaResponse, &invoice.DteSubmittedAt, &invoice.DteType,
-		&invoice.CreatedAt, &invoice.FinalizedAt, &invoice.VoidedAt,
-		&invoice.CreatedBy, &invoice.VoidedBy, &invoice.Notes,
-		&invoice.ContactEmail, &invoice.ContactWhatsapp,
-	)
-
-	if err == sql.ErrNoRows {
-		return nil, ErrInvoiceNotFound
-	}
-	if err != nil {
-		log.Printf("[ERROR] getInvoiceHeader: Failed to scan invoice %s: %v", invoiceID, err)
-		return nil, fmt.Errorf("failed to query invoice: %w", err)
-	}
-
-	// Convert sql.NullString to string (empty string if NULL)
-	invoice.ClientID = clientID.String
-	invoice.PaymentTerms = paymentTerms.String
-	invoice.PaymentMethod = paymentMethod.String
-	invoice.PaymentStatus = paymentStatus.String
-
-	// Convert remision fields
-	if remisionType.Valid {
-		invoice.RemisionType = &remisionType.String
-	}
-	if deliveryPerson.Valid {
-		invoice.DeliveryPerson = &deliveryPerson.String
-	}
-	if vehiclePlate.Valid {
-		invoice.VehiclePlate = &vehiclePlate.String
-	}
-	if deliveryNotes.Valid {
-		invoice.DeliveryNotes = &deliveryNotes.String
-	}
-
-	log.Printf("[DEBUG] getInvoiceHeader: Successfully loaded invoice %s (type=%s, client_id=%s, remision_type=%v)",
-		invoiceID, invoice.InvoiceType, invoice.ClientID, invoice.RemisionType)
 
 	return invoice, nil
 }
@@ -1409,6 +1346,166 @@ func (s *InvoiceService) calculatePaymentStatus(amountPaid, total float64) strin
 }
 
 func (s *InvoiceService) getInvoiceForUpdate(ctx context.Context, tx *sql.Tx, companyID, invoiceID string) (*models.Invoice, error) {
+	log.Printf("[DEBUG] getInvoiceForUpdate: Loading invoice %s for update", invoiceID)
+
+	query := `
+        SELECT
+            id, company_id, establishment_id, point_of_sale_id, client_id,
+            invoice_number, invoice_type, status,
+            remision_type, delivery_person, vehicle_plate, delivery_notes,
+            custom_fields,
+            client_name, client_legal_name, client_nit, client_ncr, client_dui,
+            client_address, client_tipo_contribuyente, client_tipo_persona,
+            subtotal, total_discount, total_taxes, total,
+            currency, payment_terms, payment_method, payment_status,
+            amount_paid, balance_due, due_date,
+            created_at,
+            export_tipo_item_expor,
+            export_recinto_fiscal,
+            export_regimen,
+            export_incoterms_code,
+            export_incoterms_desc,
+            export_seguro,
+            export_flete,
+            export_observaciones,
+            export_receptor_cod_pais,
+            export_receptor_nombre_pais,
+            export_receptor_tipo_documento,
+            export_receptor_num_documento,
+            export_receptor_complemento
+        FROM invoices
+        WHERE id = $1 AND company_id = $2
+        FOR UPDATE
+    `
+
+	invoice := &models.Invoice{}
+
+	// Use sql.NullString for nullable fields
+	var clientID, paymentTerms, paymentMethod, paymentStatus sql.NullString
+	var remisionType, deliveryPerson, vehiclePlate, deliveryNotes sql.NullString
+	var customFieldsJSON sql.NullString // ⭐ ADD THIS
+
+	err := tx.QueryRowContext(ctx, query, invoiceID, companyID).Scan(
+		&invoice.ID, &invoice.CompanyID, &invoice.EstablishmentID, &invoice.PointOfSaleID, &clientID,
+		&invoice.InvoiceNumber, &invoice.InvoiceType, &invoice.Status,
+		&remisionType, &deliveryPerson, &vehiclePlate, &deliveryNotes,
+		&customFieldsJSON, // ⭐ ADD THIS
+		&invoice.ClientName, &invoice.ClientLegalName, &invoice.ClientNit, &invoice.ClientNcr, &invoice.ClientDui,
+		&invoice.ClientAddress, &invoice.ClientTipoContribuyente, &invoice.ClientTipoPersona,
+		&invoice.Subtotal, &invoice.TotalDiscount, &invoice.TotalTaxes, &invoice.Total,
+		&invoice.Currency, &paymentTerms, &paymentMethod, &paymentStatus,
+		&invoice.AmountPaid, &invoice.BalanceDue, &invoice.DueDate,
+		&invoice.CreatedAt,
+		&invoice.ExportTipoItemExpor,
+		&invoice.ExportRecintoFiscal,
+		&invoice.ExportRegimen,
+		&invoice.ExportIncotermsCode,
+		&invoice.ExportIncotermsDesc,
+		&invoice.ExportSeguro,
+		&invoice.ExportFlete,
+		&invoice.ExportObservaciones,
+		&invoice.ExportReceptorCodPais,
+		&invoice.ExportReceptorNombrePais,
+		&invoice.ExportReceptorTipoDocumento,
+		&invoice.ExportReceptorNumDocumento,
+		&invoice.ExportReceptorComplemento,
+	)
+
+	if err == sql.ErrNoRows {
+		log.Printf("[ERROR] getInvoiceForUpdate: Invoice %s not found", invoiceID)
+		return nil, ErrInvoiceNotFound
+	}
+	if err != nil {
+		log.Printf("[ERROR] getInvoiceForUpdate: Failed to query invoice %s: %v", invoiceID, err)
+		return nil, fmt.Errorf("failed to query invoice: %w", err)
+	}
+
+	// Convert sql.NullString to string (empty string if NULL)
+	invoice.ClientID = clientID.String
+	invoice.PaymentTerms = paymentTerms.String
+	invoice.PaymentMethod = paymentMethod.String
+	invoice.PaymentStatus = paymentStatus.String
+
+	// Convert remision fields
+	if remisionType.Valid {
+		invoice.RemisionType = &remisionType.String
+	}
+	if deliveryPerson.Valid {
+		invoice.DeliveryPerson = &deliveryPerson.String
+	}
+	if vehiclePlate.Valid {
+		invoice.VehiclePlate = &vehiclePlate.String
+	}
+	if deliveryNotes.Valid {
+		invoice.DeliveryNotes = &deliveryNotes.String
+	}
+
+	// ⭐ NEW: Parse custom_fields JSON
+	if customFieldsJSON.Valid && customFieldsJSON.String != "" {
+		var customFields []models.ApendiceField
+		if err := json.Unmarshal([]byte(customFieldsJSON.String), &customFields); err != nil {
+			log.Printf("[WARN] getInvoiceForUpdate: Failed to unmarshal custom_fields for invoice %s: %v", invoiceID, err)
+		} else {
+			invoice.CustomFields = customFields
+		}
+	}
+
+	log.Printf("[DEBUG] getInvoiceForUpdate: Loaded invoice %s (type=%s, remision_type=%v)",
+		invoiceID, invoice.InvoiceType, invoice.RemisionType)
+
+	// Load line items
+	log.Printf("[DEBUG] getInvoiceForUpdate: Loading line items for invoice %s", invoiceID)
+
+	lineItemsQuery := `
+        SELECT 
+            id, invoice_id, item_id, quantity, unit_price,
+            discount_percentage, discount_amount, taxable_amount,
+            total_taxes, line_total
+        FROM invoice_line_items
+        WHERE invoice_id = $1
+        ORDER BY id
+    `
+
+	rows, err := tx.QueryContext(ctx, lineItemsQuery, invoiceID)
+	if err != nil {
+		log.Printf("[ERROR] getInvoiceForUpdate: Failed to load line items: %v", err)
+		return nil, fmt.Errorf("failed to load line items: %w", err)
+	}
+	defer rows.Close()
+
+	invoice.LineItems = []models.InvoiceLineItem{}
+	for rows.Next() {
+		var lineItem models.InvoiceLineItem
+		err := rows.Scan(
+			&lineItem.ID,
+			&lineItem.InvoiceID,
+			&lineItem.ItemID,
+			&lineItem.Quantity,
+			&lineItem.UnitPrice,
+			&lineItem.DiscountPercentage,
+			&lineItem.DiscountAmount,
+			&lineItem.TaxableAmount,
+			&lineItem.TotalTaxes,
+			&lineItem.LineTotal,
+		)
+		if err != nil {
+			log.Printf("[ERROR] getInvoiceForUpdate: Failed to scan line item: %v", err)
+			return nil, fmt.Errorf("failed to scan line item: %w", err)
+		}
+		invoice.LineItems = append(invoice.LineItems, lineItem)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("[ERROR] getInvoiceForUpdate: Error iterating line items: %v", err)
+		return nil, fmt.Errorf("error iterating line items: %w", err)
+	}
+
+	log.Printf("[DEBUG] getInvoiceForUpdate: Loaded %d line items for invoice %s", len(invoice.LineItems), invoiceID)
+
+	return invoice, nil
+}
+
+func (s *InvoiceService) _ygetInvoiceForUpdate(ctx context.Context, tx *sql.Tx, companyID, invoiceID string) (*models.Invoice, error) {
 	log.Printf("[DEBUG] getInvoiceForUpdate: Loading invoice %s for update", invoiceID)
 
 	query := `

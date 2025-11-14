@@ -29,6 +29,12 @@ const (
 	InvoiceTypeCreditoFiscal   InvoiceType = "credito_fiscal"   // B2B - price excludes IVA
 )
 
+type Apendice struct {
+	Campo    string `json:"campo"`
+	Etiqueta string `json:"etiqueta"`
+	Valor    string `json:"valor"`
+}
+
 // ItemAmounts holds calculated monetary values for a single item
 type ItemAmounts struct {
 	PrecioUni    float64 // Unit price (with or without IVA depending on invoice type)
@@ -306,13 +312,6 @@ type Extension struct {
 	DocuRecibe    *string `json:"docuRecibe"`
 	Observaciones *string `json:"observaciones"`
 	PlacaVehiculo *string `json:"placaVehiculo"`
-}
-
-// Apendice represents appendix information
-type Apendice struct {
-	Campo    string `json:"campo"`
-	Etiqueta string `json:"etiqueta"`
-	Valor    string `json:"valor"`
 }
 
 type NotaDebitoElectronica struct {
