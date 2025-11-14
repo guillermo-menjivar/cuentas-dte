@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"cuentas/internal/codigos"
 	"cuentas/internal/dte_schemas"
@@ -108,6 +109,13 @@ type NotaRemisionExtension struct {
 // ============================================
 
 func (b *Builder) buildNotaRemisionIdentificacion(invoice *models.Invoice, company *CompanyData) NotaRemisionIdentificacion {
+	loc, err := time.LoadLocation("America/El_Salvador")
+	if err != nil {
+		// Fallback to manual UTC-6 if timezone data not available
+		loc = time.FixedZone("CST", -6*60*60)
+	}
+	localTime := invoice.CreatedAt.In(loc)
+
 	return NotaRemisionIdentificacion{
 		Version:          3, // Type 04 uses version 3
 		Ambiente:         company.DTEAmbiente,
@@ -118,8 +126,8 @@ func (b *Builder) buildNotaRemisionIdentificacion(invoice *models.Invoice, compa
 		TipoOperacion:    1, // Normal
 		TipoContingencia: nil,
 		MotivoContin:     nil,
-		FecEmi:           invoice.CreatedAt.Format("2006-01-02"),
-		HorEmi:           invoice.CreatedAt.Format("15:04:05"),
+		FecEmi:           localTime.CreatedAt.Format("2006-01-02"),
+		HorEmi:           localTime.CreatedAt.Format("15:04:05"),
 		TipoMoneda:       "USD",
 	}
 }
