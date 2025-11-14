@@ -171,6 +171,139 @@ func (s *DTEService) logRemisionToCommitLog(
 	signedDTE string,
 	response *hacienda.ReceptionResponse,
 ) error {
+	// ⭐ Load El Salvador timezone
+	loc, err := time.LoadLocation("America/El_Salvador")
+	if err != nil {
+		// Fallback to manual UTC-6 if timezone data not available
+		loc = time.FixedZone("CST", -6*60*60)
+	}
+
+	// Marshal full Hacienda response
+	haciendaResponseFull, err := json.Marshal(response)
+	if err != nil {
+		return fmt.Errorf("failed to marshal Hacienda response: %w", err)
+	}
+
+	// ⭐ Parse processing date and convert to El Salvador time
+	var fechaProcesamiento *time.Time
+	if response != nil && response.FhProcesamiento != "" {
+		t, err := time.Parse("02/01/2006 15:04:05", response.FhProcesamiento)
+		if err == nil {
+			// Convert to El Salvador timezone
+			tLocal := t.In(loc)
+			fechaProcesamiento = &tLocal
+		}
+	}
+
+	// ⭐ Use finalized_at as fecha_emision (convert to El Salvador time)
+	var fechaEmision time.Time
+	if remision.FinalizedAt != nil {
+		fechaEmision = remision.FinalizedAt.In(loc) // ⭐ Convert to local time
+	} else {
+		fechaEmision = time.Now().In(loc) // ⭐ Convert to local time
+	}
+
+	// Extract fiscal period
+	fiscalYear := fechaEmision.Year()
+	fiscalMonth := int(fechaEmision.Month())
+
+	// Generate DTE URL
+	dteURL := fmt.Sprintf(
+		"https://admin.factura.gob.sv/consultaPublica?ambiente=%s&codGen=%s&fechaEmi=%s",
+		ambiente,
+		codigoGeneracion,
+		fechaEmision.Format("2006-01-02"),
+	)
+
+	// For Type 04 (remision): amounts are typically 0
+	ivaAmount := 0.0
+
+	query := `
+        INSERT INTO dte_commit_log (
+            codigo_generacion, invoice_id, invoice_number, company_id, client_id,
+            establishment_id, point_of_sale_id,
+            subtotal, total_discount, total_taxes, iva_amount, total_amount, currency,
+            payment_method, payment_terms, references_invoice_id,
+            numero_control, tipo_dte, ambiente, fecha_emision,
+            fiscal_year, fiscal_month, dte_url,
+            dte_unsigned, dte_signed,
+            hacienda_estado, hacienda_sello_recibido, hacienda_fh_procesamiento,
+            hacienda_codigo_msg, hacienda_descripcion_msg, hacienda_observaciones,
+            hacienda_response_full, created_by
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33)
+    `
+
+	var estado, selloRecibido, codigoMsg, descripcionMsg *string
+	var observaciones []string
+	if response != nil {
+		estado = &response.Estado
+		if response.SelloRecibido != "" {
+			selloRecibido = &response.SelloRecibido
+		}
+		if response.CodigoMsg != "" {
+			codigoMsg = &response.CodigoMsg
+		}
+		if response.DescripcionMsg != "" {
+			descripcionMsg = &response.DescripcionMsg
+		}
+		observaciones = response.Observaciones
+	}
+
+	// Handle NULL client_id for internal transfers
+	var clientID *string
+	if remision.ClientID != "" {
+		clientID = &remision.ClientID
+	}
+
+	_, err = s.db.ExecContext(ctx, query,
+		codigoGeneracion,
+		remision.ID,
+		remision.InvoiceNumber,
+		remision.CompanyID,
+		clientID, // Can be NULL for internal transfers
+		remision.EstablishmentID,
+		remision.PointOfSaleID,
+		remision.Subtotal,
+		remision.TotalDiscount,
+		remision.TotalTaxes,
+		ivaAmount,
+		remision.Total,
+		remision.Currency,
+		remision.PaymentMethod, // NULL for remision
+		remision.PaymentTerms,  // NULL for remision
+		remision.ReferencesInvoiceID,
+		numeroControl,
+		tipoDte, // "04"
+		ambiente,
+		fechaEmision, // ⭐ Now in El Salvador time
+		fiscalYear,
+		fiscalMonth,
+		dteURL,
+		dteUnsigned,
+		signedDTE,
+		estado,
+		selloRecibido,
+		fechaProcesamiento, // ⭐ Now in El Salvador time
+		codigoMsg,
+		descripcionMsg,
+		pq.Array(observaciones),
+		haciendaResponseFull,
+		remision.CreatedBy,
+	)
+
+	return err
+}
+func (s *DTEService) __logRemisionToCommitLog(
+	ctx context.Context,
+	remision *models.Invoice,
+	tipoDte string,
+	ambiente string,
+	numeroControl string,
+	codigoGeneracion string,
+	dteUnsigned []byte,
+	signedDTE string,
+	response *hacienda.ReceptionResponse,
+) error {
 	// Marshal full Hacienda response
 	haciendaResponseFull, err := json.Marshal(response)
 	if err != nil {
