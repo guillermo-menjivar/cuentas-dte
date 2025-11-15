@@ -7,7 +7,7 @@ CREATE TABLE purchases (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     establishment_id UUID NOT NULL REFERENCES establishments(id),
-    point_of_sale_id UUID NOT NULL REFERENCES points_of_sale(id),
+    point_of_sale_id UUID NOT NULL REFERENCES point_of_sale(id),
     
     -- Purchase tracking
     purchase_number TEXT NOT NULL,
