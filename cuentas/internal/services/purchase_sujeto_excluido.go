@@ -601,3 +601,199 @@ func (s *PurchaseService) validatePointOfSale(ctx context.Context, tx *sql.Tx, c
 
 	return nil
 }
+
+// ============================================
+// FINALIZE PURCHASE
+// ============================================
+
+// FinalizePurchase finalizes a purchase and submits FSE DTE to Hacienda
+func (s *PurchaseService) FinalizePurchase(ctx context.Context, companyID, purchaseID, userID string) (*models.Purchase, error) {
+	// Begin transaction
+	tx, err := database.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	// 1. Get purchase and verify it's a draft (with row lock)
+	purchase, err := s.getPurchaseForUpdate(ctx, tx, companyID, purchaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	if purchase.Status != "draft" {
+		return nil, ErrPurchaseNotDraft
+	}
+
+	// 2. Verify it's an FSE
+	if !purchase.IsFSE() {
+		return nil, fmt.Errorf("only FSE purchases can be finalized currently")
+	}
+
+	// 3. Generate DTE numero control
+	numeroControl, err := s.generateNumeroControl(ctx, tx, purchase.EstablishmentID, purchase.PointOfSaleID, "14")
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate numero control: %w", err)
+	}
+
+	// 4. Update purchase to finalized
+	now := time.Now()
+	updateQuery := `
+        UPDATE purchases
+        SET status = 'finalized',
+            dte_numero_control = $1,
+            dte_type = '14',
+            dte_status = 'not_submitted',
+            finalized_at = $2,
+            created_by = $3
+        WHERE id = $4 AND company_id = $5
+    `
+
+	_, err = tx.ExecContext(ctx, updateQuery,
+		numeroControl,
+		now,
+		userID,
+		purchaseID,
+		companyID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update purchase: %w", err)
+	}
+
+	// 5. Commit transaction
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	// 6. Get and return the finalized purchase
+	finalizedPurchase, err := s.GetPurchaseByID(ctx, companyID, purchaseID)
+	if err != nil {
+		return nil, err
+	}
+
+	return finalizedPurchase, nil
+}
+
+// ============================================
+// GENERATE NUMERO CONTROL
+// ============================================
+
+// generateNumeroControl generates a numero control for purchase DTE
+func (s *PurchaseService) generateNumeroControl(ctx context.Context, tx *sql.Tx, establishmentID, posID, tipoDte string) (string, error) {
+	// Load establishment and POS codes
+	var codEstablecimiento, codPuntoVenta string
+	query := `
+        SELECT e.cod_establecimiento, p.cod_punto_venta
+        FROM establishments e
+        JOIN point_of_sale p ON p.establishment_id = e.id
+        WHERE e.id = $1 AND p.id = $2
+    `
+
+	err := tx.QueryRowContext(ctx, query, establishmentID, posID).Scan(&codEstablecimiento, &codPuntoVenta)
+	if err != nil {
+		return "", fmt.Errorf("failed to load establishment codes: %w", err)
+	}
+
+	// Get last sequence number for this establishment/POS/type combination
+	var lastSeq sql.NullInt64
+	seqQuery := `
+        SELECT MAX(CAST(SUBSTRING(dte_numero_control FROM 21 FOR 15) AS BIGINT))
+        FROM purchases
+        WHERE establishment_id = $1 
+          AND point_of_sale_id = $2
+          AND dte_type = $3
+          AND dte_numero_control IS NOT NULL
+    `
+
+	err = tx.QueryRowContext(ctx, seqQuery, establishmentID, posID, tipoDte).Scan(&lastSeq)
+	if err != nil && err != sql.ErrNoRows {
+		return "", fmt.Errorf("failed to query last sequence: %w", err)
+	}
+
+	// Increment sequence
+	nextSeq := int64(1)
+	if lastSeq.Valid {
+		nextSeq = lastSeq.Int64 + 1
+	}
+
+	// Format: DTE-{tipo}-{codEstable}{codPOS}-{sequence}
+	// Example: DTE-14-M001P001-000000000000001
+	numeroControl := fmt.Sprintf("DTE-%s-%s%s-%015d",
+		tipoDte,
+		codEstablecimiento,
+		codPuntoVenta,
+		nextSeq,
+	)
+
+	return numeroControl, nil
+}
+
+// ============================================
+// HELPER QUERIES
+// ============================================
+
+// getPurchaseForUpdate retrieves a purchase with row lock for update
+func (s *PurchaseService) getPurchaseForUpdate(ctx context.Context, tx *sql.Tx, companyID, purchaseID string) (*models.Purchase, error) {
+	query := `
+        SELECT
+            id, company_id, establishment_id, point_of_sale_id,
+            purchase_number, purchase_type, purchase_date,
+            supplier_id,
+            supplier_name, supplier_document_type, supplier_document_number,
+            supplier_nrc, supplier_activity_code, supplier_activity_desc,
+            supplier_address_dept, supplier_address_muni, supplier_address_complement,
+            supplier_phone, supplier_email,
+            subtotal, total_discount, discount_percentage,
+            total_taxes, iva_retained, income_tax_retained, total,
+            currency,
+            payment_condition, payment_method, payment_reference,
+            payment_term, payment_period, payment_status,
+            amount_paid, balance_due, due_date,
+            dte_numero_control, dte_status, dte_hacienda_response,
+            dte_sello_recibido, dte_submitted_at, dte_type,
+            status,
+            created_at, finalized_at, voided_at,
+            created_by, voided_by, notes
+        FROM purchases
+        WHERE id = $1 AND company_id = $2
+        FOR UPDATE
+    `
+
+	purchase := &models.Purchase{}
+	err := tx.QueryRowContext(ctx, query, purchaseID, companyID).Scan(
+		&purchase.ID, &purchase.CompanyID, &purchase.EstablishmentID, &purchase.PointOfSaleID,
+		&purchase.PurchaseNumber, &purchase.PurchaseType, &purchase.PurchaseDate,
+		&purchase.SupplierID,
+		&purchase.SupplierName, &purchase.SupplierDocumentType, &purchase.SupplierDocumentNumber,
+		&purchase.SupplierNRC, &purchase.SupplierActivityCode, &purchase.SupplierActivityDesc,
+		&purchase.SupplierAddressDept, &purchase.SupplierAddressMuni, &purchase.SupplierAddressComplement,
+		&purchase.SupplierPhone, &purchase.SupplierEmail,
+		&purchase.Subtotal, &purchase.TotalDiscount, &purchase.DiscountPercentage,
+		&purchase.TotalTaxes, &purchase.IVARetained, &purchase.IncomeTaxRetained, &purchase.Total,
+		&purchase.Currency,
+		&purchase.PaymentCondition, &purchase.PaymentMethod, &purchase.PaymentReference,
+		&purchase.PaymentTerm, &purchase.PaymentPeriod, &purchase.PaymentStatus,
+		&purchase.AmountPaid, &purchase.BalanceDue, &purchase.DueDate,
+		&purchase.DteNumeroControl, &purchase.DteStatus, &purchase.DteHaciendaResponse,
+		&purchase.DteSelloRecibido, &purchase.DteSubmittedAt, &purchase.DteType,
+		&purchase.Status,
+		&purchase.CreatedAt, &purchase.FinalizedAt, &purchase.VoidedAt,
+		&purchase.CreatedBy, &purchase.VoidedBy, &purchase.Notes,
+	)
+
+	if err == sql.ErrNoRows {
+		return nil, ErrPurchaseNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to query purchase: %w", err)
+	}
+
+	// Load line items
+	lineItems, err := s.getPurchaseLineItems(ctx, purchaseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load line items: %w", err)
+	}
+	purchase.LineItems = lineItems
+
+	return purchase, nil
+}
