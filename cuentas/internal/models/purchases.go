@@ -388,13 +388,3 @@ func (p *Purchase) IsPaid() bool {
 func (p *Purchase) IsFinalized() bool {
 	return p.Status == "finalized"
 }
-
-// Helper function (same as in invoice.go)
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}
