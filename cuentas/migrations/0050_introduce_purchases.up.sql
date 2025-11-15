@@ -161,7 +161,8 @@ CREATE INDEX idx_dte_commit_log_purchase ON dte_commit_log(purchase_id) WHERE pu
 ALTER TABLE dte_commit_log
 ADD CONSTRAINT dte_commit_log_doc_reference_check CHECK (
     (invoice_id IS NOT NULL AND purchase_id IS NULL) OR
-    (invoice_id IS NULL AND purchase_id IS NOT NULL)
+    (invoice_id IS NULL AND purchase_id IS NOT NULL) OR
+     (invoice_id IS NULL AND purchase_id IS NULL)
 );
 
 -- Add comments for documentation
