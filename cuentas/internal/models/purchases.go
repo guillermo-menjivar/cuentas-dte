@@ -44,9 +44,9 @@ type Purchase struct {
 	PointOfSaleID   string `json:"point_of_sale_id"`
 
 	// Purchase identification
-	PurchaseNumber string   `json:"purchase_number"`
-	PurchaseType   string   `json:"purchase_type"` // 'fse', 'regular', 'import', 'other'
-	PurchaseDate   DateOnly `json:"purchase_date"`
+	PurchaseNumber string    `json:"purchase_number"`
+	PurchaseType   string    `json:"purchase_type"` // 'fse', 'regular', 'import', 'other'
+	PurchaseDate   time.Time `json:"purchase_date"`
 
 	// Supplier reference (for regular purchases from registered suppliers)
 	SupplierID *string `json:"supplier_id,omitempty"`
