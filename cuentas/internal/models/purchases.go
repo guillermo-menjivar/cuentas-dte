@@ -7,35 +7,6 @@ import (
 	"time"
 )
 
-// DateOnly is a custom type for date-only fields (YYYY-MM-DD)
-type DateOnly struct {
-	time.Time
-}
-
-// UnmarshalJSON implements custom JSON unmarshaling for date-only format
-func (d *DateOnly) UnmarshalJSON(b []byte) error {
-	s := strings.Trim(string(b), "\"")
-	if s == "null" || s == "" {
-		return nil
-	}
-
-	t, err := time.Parse("2006-01-02", s)
-	if err != nil {
-		return err
-	}
-
-	d.Time = t
-	return nil
-}
-
-// MarshalJSON implements custom JSON marshaling for date-only format
-func (d DateOnly) MarshalJSON() ([]byte, error) {
-	if d.Time.IsZero() {
-		return []byte("null"), nil
-	}
-	return []byte("\"" + d.Time.Format("2006-01-02") + "\""), nil
-}
-
 // Purchase represents a purchase transaction (FSE, regular purchases, imports, etc.)
 type Purchase struct {
 	ID              string `json:"id"` // This is also the codigoGeneracion
@@ -197,7 +168,7 @@ type PaymentInfo struct {
 type CreateFSERequest struct {
 	EstablishmentID    string                     `json:"establishment_id" binding:"required"`
 	PointOfSaleID      string                     `json:"point_of_sale_id" binding:"required"`
-	PurchaseDate       DateOnly                   `json:"purchase_date" binding:"required"`
+	PurchaseDate       time.Time                  `json:"purchase_date" binding:"required"`
 	Supplier           SupplierInfo               `json:"supplier" binding:"required"`
 	LineItems          []CreateFSELineItemRequest `json:"line_items" binding:"required,min=1"`
 	Payment            PaymentInfo                `json:"payment" binding:"required"`
@@ -264,7 +235,7 @@ type CreateFSELineItemRequest struct {
 	Code           *string `json:"code,omitempty"`
 	Description    string  `json:"description" binding:"required"`
 	Quantity       float64 `json:"quantity" binding:"required"`
-	UnitOfMeasure  string  `json:"unit_of_measure" binding:"required"` // Hacienda unit code
+	UnitOfMeasure  string  `json:"unit_of_measure" binding:"required"` // Hacienda unit code as string
 	UnitPrice      float64 `json:"unit_price" binding:"required"`
 	DiscountAmount float64 `json:"discount_amount"`
 }
@@ -280,7 +251,7 @@ func (r *CreateFSELineItemRequest) Validate() error {
 	if r.Quantity <= 0 {
 		return fmt.Errorf("quantity must be greater than 0")
 	}
-	if r.UnitOfMeasure <= 0 {
+	if strings.TrimSpace(r.UnitOfMeasure) == "" {
 		return fmt.Errorf("unit_of_measure is required")
 	}
 	if r.UnitPrice < 0 {
