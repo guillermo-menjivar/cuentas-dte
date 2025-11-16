@@ -125,7 +125,7 @@ type PurchaseLineItem struct {
 	ItemDescription *string `json:"item_description,omitempty"`
 	ItemType        int     `json:"item_type"`                // 1=Bien, 2=Servicio, 3=Ambos
 	ItemTipoItem    *string `json:"item_tipo_item,omitempty"` // Maps to Hacienda tipo item codes
-	UnitOfMeasure   string  `json:"unit_of_measure"`          // Hacienda unit codes
+	UnitOfMeasure   int     `json:"unit_of_measure"`          // Hacienda unit codes
 
 	// Pricing
 	Quantity     float64 `json:"quantity"`
