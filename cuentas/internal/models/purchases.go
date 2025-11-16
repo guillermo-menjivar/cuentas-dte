@@ -7,6 +7,35 @@ import (
 	"time"
 )
 
+// DateOnly is a custom type for date-only fields (YYYY-MM-DD)
+type DateOnly struct {
+	time.Time
+}
+
+// UnmarshalJSON implements custom JSON unmarshaling for date-only format
+func (d *DateOnly) UnmarshalJSON(b []byte) error {
+	s := strings.Trim(string(b), "\"")
+	if s == "null" || s == "" {
+		return nil
+	}
+
+	t, err := time.Parse("2006-01-02", s)
+	if err != nil {
+		return err
+	}
+
+	d.Time = t
+	return nil
+}
+
+// MarshalJSON implements custom JSON marshaling for date-only format
+func (d DateOnly) MarshalJSON() ([]byte, error) {
+	if d.Time.IsZero() {
+		return []byte("null"), nil
+	}
+	return []byte("\"" + d.Time.Format("2006-01-02") + "\""), nil
+}
+
 // Purchase represents a purchase transaction (FSE, regular purchases, imports, etc.)
 type Purchase struct {
 	ID              string `json:"id"` // This is also the codigoGeneracion
@@ -15,9 +44,9 @@ type Purchase struct {
 	PointOfSaleID   string `json:"point_of_sale_id"`
 
 	// Purchase identification
-	PurchaseNumber string    `json:"purchase_number"`
-	PurchaseType   string    `json:"purchase_type"` // 'fse', 'regular', 'import', 'other'
-	PurchaseDate   time.Time `json:"purchase_date"`
+	PurchaseNumber string   `json:"purchase_number"`
+	PurchaseType   string   `json:"purchase_type"` // 'fse', 'regular', 'import', 'other'
+	PurchaseDate   DateOnly `json:"purchase_date"`
 
 	// Supplier reference (for regular purchases from registered suppliers)
 	SupplierID *string `json:"supplier_id,omitempty"`
