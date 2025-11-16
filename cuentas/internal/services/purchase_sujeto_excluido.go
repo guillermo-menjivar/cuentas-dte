@@ -90,7 +90,7 @@ func (s *PurchaseService) CreateFSE(ctx context.Context, companyID string, req *
 
 		PurchaseNumber: purchaseNumber,
 		PurchaseType:   "fse",
-		PurchaseDate:   req.PurchaseDate,
+		PurchaseDate:   req.PurchaseDate.Time,
 
 		// FSE: Embedded supplier info (no supplier_id)
 		SupplierID:                nil,
