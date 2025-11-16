@@ -125,7 +125,7 @@ type PurchaseLineItem struct {
 	ItemDescription *string `json:"item_description,omitempty"`
 	ItemType        int     `json:"item_type"`                // 1=Bien, 2=Servicio, 3=Ambos
 	ItemTipoItem    *string `json:"item_tipo_item,omitempty"` // Maps to Hacienda tipo item codes
-	UnitOfMeasure   int     `json:"unit_of_measure"`          // Hacienda unit codes
+	UnitOfMeasure   string  `json:"unit_of_measure"`          // Hacienda unit codes
 
 	// Pricing
 	Quantity     float64 `json:"quantity"`
@@ -264,7 +264,7 @@ type CreateFSELineItemRequest struct {
 	Code           *string `json:"code,omitempty"`
 	Description    string  `json:"description" binding:"required"`
 	Quantity       float64 `json:"quantity" binding:"required"`
-	UnitOfMeasure  int     `json:"unit_of_measure" binding:"required"` // Hacienda unit code
+	UnitOfMeasure  string  `json:"unit_of_measure" binding:"required"` // Hacienda unit code
 	UnitPrice      float64 `json:"unit_price" binding:"required"`
 	DiscountAmount float64 `json:"discount_amount"`
 }
