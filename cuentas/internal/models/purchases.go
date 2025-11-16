@@ -197,7 +197,7 @@ type PaymentInfo struct {
 type CreateFSERequest struct {
 	EstablishmentID    string                     `json:"establishment_id" binding:"required"`
 	PointOfSaleID      string                     `json:"point_of_sale_id" binding:"required"`
-	PurchaseDate       time.Time                  `json:"purchase_date" binding:"required"`
+	PurchaseDate       DateOnly                   `json:"purchase_date" binding:"required"`
 	Supplier           SupplierInfo               `json:"supplier" binding:"required"`
 	LineItems          []CreateFSELineItemRequest `json:"line_items" binding:"required,min=1"`
 	Payment            PaymentInfo                `json:"payment" binding:"required"`
