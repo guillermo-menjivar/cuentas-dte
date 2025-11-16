@@ -217,3 +217,6 @@ test_notas_credito:
 test_nota_remision:
 	./test_nota_remision.py $(COMPANY_ID)
 
+.PHONY: test_fse
+test_fse:
+	./test_fse.py $(COMPANY_ID)
