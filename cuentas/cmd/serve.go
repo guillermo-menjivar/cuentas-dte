@@ -372,6 +372,13 @@ func startServer() {
 			//notas.DELETE("/:id", notaHandler.DeleteNota)
 		}
 
+		purchaseService := services.NewPurchaseService()
+		purchaseHandler := handlers.NewPurchaseHandler(purchaseService)
+		v1.POST("/purchases/fse", purchaseHandler.CreateFSE)
+		v1.GET("/purchases", purchaseHandler.ListPurchases)
+		v1.GET("/purchases/:id", purchaseHandler.GetPurchase)
+		v1.POST("/purchases/:id/finalize", purchaseHandler.FinalizePurchase)
+
 		reconciliationService := services.NewDTEReconciliationService(
 			database.DB,
 			haciendaClient,
