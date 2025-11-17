@@ -139,7 +139,7 @@ type PurchaseLineItemTax struct {
 type SupplierInfo struct {
 	Name           string  `json:"name" binding:"required"`
 	DocumentType   string  `json:"document_type" binding:"required"` // '36', '13', '37', etc.
-	DocumentNumber string  `json:"document_number:omitempty"`
+	DocumentNumber *string `json:"document_number,omitempty"`
 	NRC            *string `json:"nrc,omitempty"`
 	ActivityCode   string  `json:"activity_code" binding:"required"`
 	ActivityDesc   string  `json:"activity_description" binding:"required"`
@@ -270,9 +270,6 @@ func (s *SupplierInfo) Validate() error {
 	}
 	if strings.TrimSpace(s.DocumentType) == "" {
 		return fmt.Errorf("supplier document_type is required")
-	}
-	if strings.TrimSpace(s.DocumentNumber) == "" {
-		return fmt.Errorf("supplier document_number is required")
 	}
 	if strings.TrimSpace(s.ActivityCode) == "" {
 		return fmt.Errorf("supplier activity_code is required")
