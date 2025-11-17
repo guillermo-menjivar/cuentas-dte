@@ -20,6 +20,21 @@ type FSE struct {
 	Apendice        *[]Apendice       `json:"apendice"`
 }
 
+type FSEEmisor struct {
+	NIT             string    `json:"nit"`
+	NRC             string    `json:"nrc"`
+	Nombre          string    `json:"nombre"`
+	CodActividad    string    `json:"codActividad"`
+	DescActividad   string    `json:"descActividad"`
+	Direccion       Direccion `json:"direccion"`
+	Telefono        string    `json:"telefono"`
+	Correo          string    `json:"correo"`
+	CodEstableMH    *string   `json:"codEstableMH"`
+	CodEstable      *string   `json:"codEstable"`
+	CodPuntoVentaMH *string   `json:"codPuntoVentaMH"`
+	CodPuntoVenta   *string   `json:"codPuntoVenta"`
+}
+
 // FSEIdentificacion - Type 14 uses version 1 (not 3!)
 type FSEIdentificacion struct {
 	Version          int     `json:"version"` // Always 1 for Type 14
