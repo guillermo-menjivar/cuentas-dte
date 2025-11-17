@@ -139,7 +139,7 @@ type PurchaseLineItemTax struct {
 type SupplierInfo struct {
 	Name           string  `json:"name" binding:"required"`
 	DocumentType   string  `json:"document_type" binding:"required"` // '36', '13', '37', etc.
-	DocumentNumber string  `json:"document_number" binding:"required"`
+	DocumentNumber string  `json:"document_number:omitempty"`
 	NRC            *string `json:"nrc,omitempty"`
 	ActivityCode   string  `json:"activity_code" binding:"required"`
 	ActivityDesc   string  `json:"activity_description" binding:"required"`
@@ -330,12 +330,6 @@ func (p *PaymentInfo) Validate() error {
 		}
 		if p.Period == nil || *p.Period <= 0 {
 			return fmt.Errorf("payment period is required for credit payments")
-		}
-
-		// Validate term
-		validTerms := []string{"01", "02", "03"}
-		if !contains(validTerms, *p.Term) {
-			return fmt.Errorf("invalid payment term: must be one of %v", validTerms)
 		}
 	}
 
