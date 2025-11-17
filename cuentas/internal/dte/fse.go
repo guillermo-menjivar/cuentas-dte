@@ -1,3 +1,4 @@
+// internal/dte/fse.go
 package dte
 
 import (
@@ -39,7 +40,7 @@ func (b *Builder) BuildFSE(ctx context.Context, purchase *models.Purchase) ([]by
 	// Build DTE structure
 	fse := &FSE{
 		Identificacion:  b.buildFSEIdentificacion(purchase, company),
-		Emisor:          b.buildEmisor(company, establishment),
+		Emisor:          b.buildFSEEmisor(company, establishment), // ⭐ Custom FSE emisor
 		SujetoExcluido:  b.buildSujetoExcluido(purchase),
 		CuerpoDocumento: b.buildFSECuerpoDocumento(purchase),
 		Resumen:         b.buildFSEResumen(purchase),
@@ -103,6 +104,25 @@ func (b *Builder) buildFSEIdentificacion(purchase *models.Purchase, company *Com
 // BUILD SUJETO EXCLUIDO (INFORMAL SUPPLIER)
 // ============================================
 
+// buildFSEEmisor builds emisor for FSE (excludes fields not allowed in Type 14)
+func (b *Builder) buildFSEEmisor(company *CompanyData, establishment *EstablishmentData) Emisor {
+	return Emisor{
+		NIT:           company.NIT,
+		NRC:           fmt.Sprintf("%d", company.NCR),
+		Nombre:        company.Name,
+		CodActividad:  company.CodActividad,
+		DescActividad: company.DescActividad,
+		// ⭐ FSE does NOT allow tipoEstablecimiento and nombreComercial
+		Direccion:       b.buildEmisorDireccion(establishment),
+		Telefono:        establishment.Telefono,
+		Correo:          company.Email,
+		CodEstableMH:    nil,
+		CodEstable:      &establishment.CodEstablecimiento,
+		CodPuntoVentaMH: nil,
+		CodPuntoVenta:   &establishment.CodPuntoVenta,
+	}
+}
+
 func (b *Builder) buildSujetoExcluido(purchase *models.Purchase) FSESujetoExcluido {
 	// Build direccion
 	direccion := Direccion{
@@ -111,9 +131,17 @@ func (b *Builder) buildSujetoExcluido(purchase *models.Purchase) FSESujetoExclui
 		Complemento:  *purchase.SupplierAddressComplement,
 	}
 
+	// ⭐ For type "37" (Otro), numDocumento can be omitted or set to a generic value
+	numDoc := purchase.SupplierDocumentNumber
+	if numDoc == nil || *numDoc == "" {
+		// If no document number, use a generic identifier
+		generic := "N/A"
+		numDoc = &generic
+	}
+
 	return FSESujetoExcluido{
 		TipoDocumento: purchase.SupplierDocumentType,
-		NumDocumento:  purchase.SupplierDocumentNumber,
+		NumDocumento:  numDoc, // ⭐ Always provide a value
 		Nombre:        *purchase.SupplierName,
 		CodActividad:  purchase.SupplierActivityCode,
 		DescActividad: purchase.SupplierActivityDesc,
@@ -170,31 +198,41 @@ func (b *Builder) buildFSEResumen(purchase *models.Purchase) FSEResumen {
 	// Convert total to words
 	totalLetras := b.numberToWords(totalPagar)
 
-	// Build pagos array
+	// Build pagos array with proper plazo mapping
 	var pagos *[]FSEPago
 	if purchase.PaymentCondition != nil && purchase.PaymentMethod != nil {
+		// ⭐ Map payment term to Hacienda format
+		var plazo *string
+		if purchase.PaymentTerm != nil {
+			mapped := b.mapPaymentTermToHacienda(*purchase.PaymentTerm)
+			plazo = &mapped
+		}
+
 		p := []FSEPago{
 			{
 				Codigo:     *purchase.PaymentMethod,
 				MontoPago:  totalPagar,
 				Referencia: purchase.PaymentReference,
-				Plazo:      purchase.PaymentTerm,
+				Plazo:      plazo, // ⭐ Use mapped value
 				Periodo:    purchase.PaymentPeriod,
 			},
 		}
 		pagos = &p
 	}
 
-	// Total discount pointer (can be null if 0)
+	// ⭐ totalDescu should always be a float, not null
 	var totalDescuPtr *float64
 	if totalDescu > 0 {
 		totalDescuPtr = &totalDescu
+	} else {
+		zero := 0.0
+		totalDescuPtr = &zero
 	}
 
 	return FSEResumen{
 		TotalCompra:        totalCompra,
 		Descu:              discountPercentage,
-		TotalDescu:         totalDescuPtr,
+		TotalDescu:         totalDescuPtr, // ⭐ Never null
 		SubTotal:           subTotal,
 		IvaRete1:           purchase.IVARetained,
 		ReteRenta:          purchase.IncomeTaxRetained,
@@ -209,6 +247,24 @@ func (b *Builder) buildFSEResumen(purchase *models.Purchase) FSEResumen {
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
+
+// mapPaymentTermToHacienda maps internal payment terms to Hacienda codes
+func (b *Builder) mapPaymentTermToHacienda(term string) string {
+	switch strings.ToLower(term) {
+	case "net_30", "net_60", "net_90", "days", "dias":
+		return "01" // Días
+	case "months", "meses":
+		return "02" // Meses
+	case "years", "anos", "años":
+		return "03" // Años
+	default:
+		// If it's already a Hacienda code, return as-is
+		if term == "01" || term == "02" || term == "03" {
+			return term
+		}
+		return "01" // Default to days
+	}
+}
 
 // parseUniMedidaFromString parses unit of measure string to int code
 func (b *Builder) parseUniMedidaFromString(unitOfMeasure string) int {
