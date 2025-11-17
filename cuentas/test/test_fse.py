@@ -202,7 +202,7 @@ class FSETester:
             "name": "Roberto Campos - Lavado de Vehículos",
             "description": "Car wash service - informal business",
             "document_type": "37",
-            "activity_code": "45200",  # Mantenimiento y reparación de vehículos
+            "activity_code": "45208",  # Mantenimiento y reparación de vehículos
             "activity_desc": "Mantenimiento y reparación de vehículos automotores",
             "department": "06",
             "municipality": "14",
