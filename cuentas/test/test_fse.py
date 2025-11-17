@@ -337,7 +337,7 @@ class FSETester:
 
         # Add payment term for credit
         if payment_condition == 2:
-            payload["payment"]["term"] = "net_30"
+            payload["payment"]["term"] = "02"  # Plazo (días)
             payload["payment"]["period"] = 30
 
         try:
@@ -463,89 +463,6 @@ class FSETester:
                 f"Submit FSE - {scenario_name}", False, "Finalization failed"
             )
 
-    def test_scenario_credit_purchase_with_retentions(
-        self, establishment: Dict, pos: Dict, supplier_scenario: Dict
-    ):
-        """
-        TEST: Credit Purchase with Tax Retentions
-        - Create FSE purchase (crédito)
-        - With IVA retention (1%)
-        - With income tax retention
-        - Finalize and submit to Hacienda
-        """
-        scenario_name = supplier_scenario["name"]
-        print("\n" + "=" * 70)
-        print(f"TEST: Credit Purchase + Retentions - {scenario_name}")
-        print("=" * 70)
-        print(f"📋 Scenario: {supplier_scenario['description']}")
-        print(f"💰 Payment: Crédito (30 días)")
-        print(f"🏦 Tax Retentions: IVA 1% + Income Tax")
-
-        # Calculate totals
-        subtotal = sum(
-            item["quantity"] * item["unit_price"] for item in supplier_scenario["items"]
-        )
-        iva_retention = round(subtotal * 0.01, 2)  # 1% IVA retention
-        income_tax_retention = round(subtotal * 0.10, 2)  # 10% income tax retention
-        total = subtotal - iva_retention - income_tax_retention
-
-        print(f"💵 Subtotal: ${subtotal:.2f}")
-        print(f"➖ IVA Retenido (1%): ${iva_retention:.2f}")
-        print(f"➖ Renta Retenida (10%): ${income_tax_retention:.2f}")
-        print(f"💵 Total a Pagar: ${total:.2f}\n")
-
-        # Create purchase
-        print(f"   Creating FSE purchase with retentions...")
-        purchase = self.create_fse_purchase(
-            establishment=establishment,
-            pos=pos,
-            supplier_scenario=supplier_scenario,
-            payment_condition=2,  # Crédito
-            iva_retention=iva_retention,
-            income_tax_retention=income_tax_retention,
-        )
-
-        if not purchase:
-            self.log_result(
-                f"Create FSE Credit - {scenario_name}", False, "Failed to create"
-            )
-            return
-
-        self.purchases_created += 1
-        purchase_id = purchase["id"]
-
-        self.log_result(
-            f"Create FSE Credit - {scenario_name}",
-            True,
-            "Purchase created with retentions",
-            {
-                "ID": purchase_id,
-                "Subtotal": f"${purchase['subtotal']:.2f}",
-                "IVA Retenido": f"${purchase['iva_retained']:.2f}",
-                "Renta Retenida": f"${purchase['income_tax_retained']:.2f}",
-                "Total": f"${purchase['total']:.2f}",
-            },
-        )
-
-        # Finalize
-        print(f"   Finalizing and submitting Type 14 DTE...")
-        result = self.finalize_purchase(purchase_id)
-
-        if result:
-            dte_status = result.get("dte_status")
-            dte_numero = result.get("dte_numero_control", "N/A")
-
-            self.log_result(
-                f"Submit FSE Credit - {scenario_name}",
-                dte_status == "PROCESADO",
-                f"Hacienda: {dte_status}",
-                {"NumeroControl": dte_numero, "PaymentTerm": "30 días"},
-            )
-        else:
-            self.log_result(
-                f"Submit FSE Credit - {scenario_name}", False, "Finalization failed"
-            )
-
     def run_tests(self):
         """Run all test scenarios"""
         print("=" * 70)
@@ -593,24 +510,13 @@ class FSETester:
         print(f"🏪 Point of Sale: {pos['nombre']}\n")
 
         # Run test scenarios
-        # Test 1-5: Cash purchases from different suppliers
+        # Test 1-8: Cash purchases from different suppliers (no retentions for informal suppliers)
         print("=" * 70)
-        print("SECTION 1: CASH PURCHASES (CONTADO)")
+        print("SECTION 1: CASH PURCHASES FROM INFORMAL SUPPLIERS")
         print("=" * 70)
 
-        for supplier in self.SUPPLIER_SCENARIOS[:5]:
+        for supplier in self.SUPPLIER_SCENARIOS:
             self.test_scenario_cash_purchase(establishment, pos, supplier)
-            time.sleep(2)
-
-        # Test 6-8: Credit purchases with retentions
-        print("\n" + "=" * 70)
-        print("SECTION 2: CREDIT PURCHASES WITH TAX RETENTIONS")
-        print("=" * 70)
-
-        for supplier in self.SUPPLIER_SCENARIOS[5:]:
-            self.test_scenario_credit_purchase_with_retentions(
-                establishment, pos, supplier
-            )
             time.sleep(2)
 
         # Print summary

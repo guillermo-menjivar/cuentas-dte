@@ -13,7 +13,7 @@ var (
 // FSE represents a complete FSE (Type 14) DTE
 type FSE struct {
 	Identificacion  FSEIdentificacion `json:"identificacion"`
-	Emisor          Emisor            `json:"emisor"`
+	Emisor          FSEEmisor         `json:"emisor"`
 	SujetoExcluido  FSESujetoExcluido `json:"sujetoExcluido"`
 	CuerpoDocumento []FSECuerpoItem   `json:"cuerpoDocumento"`
 	Resumen         FSEResumen        `json:"resumen"`

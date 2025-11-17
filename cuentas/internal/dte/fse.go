@@ -105,14 +105,13 @@ func (b *Builder) buildFSEIdentificacion(purchase *models.Purchase, company *Com
 // ============================================
 
 // buildFSEEmisor builds emisor for FSE (excludes fields not allowed in Type 14)
-func (b *Builder) buildFSEEmisor(company *CompanyData, establishment *EstablishmentData) Emisor {
-	return Emisor{
-		NIT:           company.NIT,
-		NRC:           fmt.Sprintf("%d", company.NCR),
-		Nombre:        company.Name,
-		CodActividad:  company.CodActividad,
-		DescActividad: company.DescActividad,
-		// ⭐ FSE does NOT allow tipoEstablecimiento and nombreComercial
+func (b *Builder) buildFSEEmisor(company *CompanyData, establishment *EstablishmentData) FSEEmisor {
+	return FSEEmisor{
+		NIT:             company.NIT,
+		NRC:             fmt.Sprintf("%d", company.NCR),
+		Nombre:          company.Name,
+		CodActividad:    company.CodActividad,
+		DescActividad:   company.DescActividad,
 		Direccion:       b.buildEmisorDireccion(establishment),
 		Telefono:        establishment.Telefono,
 		Correo:          company.Email,
