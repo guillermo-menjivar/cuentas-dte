@@ -96,7 +96,7 @@ func (s *PurchaseService) CreateFSE(ctx context.Context, companyID string, req *
 		SupplierID:                nil,
 		SupplierName:              &req.Supplier.Name,
 		SupplierDocumentType:      &req.Supplier.DocumentType,
-		SupplierDocumentNumber:    &req.Supplier.DocumentNumber,
+		SupplierDocumentNumber:    req.Supplier.DocumentNumber,
 		SupplierNRC:               req.Supplier.NRC,
 		SupplierActivityCode:      &req.Supplier.ActivityCode,
 		SupplierActivityDesc:      &req.Supplier.ActivityDesc,
