@@ -87,8 +87,7 @@ class FSETester:
         {
             "name": "Doña Carmen - Pupusera",
             "description": "Street vendor selling prepared pupusas",
-            "document_type": "13",  # DUI
-            "document_number": "03456789-0",
+            "document_type": "37",
             "activity_code": "56101",  # Actividades de restaurantes
             "activity_desc": "Actividades de restaurantes y de servicio móvil de comidas",
             "department": "06",
