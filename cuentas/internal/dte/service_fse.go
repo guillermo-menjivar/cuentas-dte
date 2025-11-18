@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -204,59 +205,99 @@ func (s *DTEService) logFSEToCommitLog(
 		return fmt.Errorf("failed to marshal response: %w", err)
 	}
 
+	// Extract observaciones array if present
+	var observaciones []string
+	if len(response.Observaciones) > 0 {
+		observaciones = response.Observaciones
+	}
+
+	// Parse fecha_emision from string "YYYY-MM-DD"
+	fechaEmision, err := time.Parse("2006-01-02", fse.Identificacion.FecEmi)
+	if err != nil {
+		return fmt.Errorf("failed to parse fecha_emision: %w", err)
+	}
+
 	query := `
         INSERT INTO dte_commit_log (
             codigo_generacion,
             purchase_id,
+            invoice_id,
+            invoice_number,
             company_id,
-            tipo_dte,
+            client_id,
+            establishment_id,
+            point_of_sale_id,
+            subtotal,
+            total_discount,
+            total_taxes,
+            iva_amount,
+            total_amount,
+            currency,
+            payment_method,
+            payment_terms,
             numero_control,
+            tipo_dte,
             ambiente,
-            version,
-            tipo_modelo,
-            tipo_operacion,
             fecha_emision,
-            hora_emision,
-            dte_json,
-            dte_firmado,
-            estado_hacienda,
-            sello_recibido,
-            fecha_procesamiento,
-            hacienda_response,
-            observaciones,
-            created_at
+            fiscal_year,
+            fiscal_month,
+            dte_url,
+            dte_unsigned,
+            dte_signed,
+            hacienda_estado,
+            hacienda_sello_recibido,
+            hacienda_fh_procesamiento,
+            hacienda_codigo_msg,
+            hacienda_descripcion_msg,
+            hacienda_observaciones,
+            hacienda_response_full,
+            submitted_at
         ) VALUES (
             $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-            $11, $12, $13, $14, $15, $16, $17, $18, NOW()
+            $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+            $21, $22, $23, $24, $25, $26, $27, $28, $29, $30,
+            $31, $32, NOW()
         )
     `
 
-	// Extract observaciones if present
-	var observaciones *string
-	if len(response.Observaciones) > 0 {
-		obs := strings.Join(response.Observaciones, "; ")
-		observaciones = &obs
-	}
-
 	_, err = s.db.ExecContext(ctx, query,
-		fse.Identificacion.CodigoGeneracion,
-		purchase.ID,
-		purchase.CompanyID,
-		fse.Identificacion.TipoDte,
-		fse.Identificacion.NumeroControl,
-		fse.Identificacion.Ambiente,
-		fse.Identificacion.Version,
-		fse.Identificacion.TipoModelo,
-		fse.Identificacion.TipoOperacion,
-		fse.Identificacion.FecEmi,
-		fse.Identificacion.HorEmi,
-		string(fseJSON),
-		signedDTE,
-		response.Estado,
-		response.SelloRecibido,
-		response.FhProcesamiento,
-		string(responseJSON),
-		observaciones,
+		fse.Identificacion.CodigoGeneracion, // $1
+		purchase.ID,                         // $2
+		nil,                                 // $3 invoice_id (NULL for purchases)
+		"",                                  // $4 invoice_number (empty for purchases)
+		purchase.CompanyID,                  // $5
+		nil,                                 // $6 client_id (NULL for FSE - informal supplier)
+		purchase.EstablishmentID,            // $7
+		purchase.PointOfSaleID,              // $8
+		purchase.Subtotal,                   // $9
+		purchase.TotalDiscount,              // $10
+		0.0,                                 // $11 total_taxes (FSE has no IVA)
+		0.0,                                 // $12 iva_amount (FSE has no IVA)
+		purchase.Total,                      // $13
+		purchase.Currency,                   // $14
+		*purchase.PaymentMethod,             // $15
+		func() string { // $16 payment_terms
+			if purchase.PaymentCondition != nil && *purchase.PaymentCondition == 1 {
+				return "cash"
+			}
+			return "credit"
+		}(),
+		fse.Identificacion.NumeroControl, // $17
+		fse.Identificacion.TipoDte,       // $18
+		fse.Identificacion.Ambiente,      // $19
+		fechaEmision,                     // $20
+		fechaEmision.Year(),              // $21 fiscal_year
+		int(fechaEmision.Month()),        // $22 fiscal_month
+		"",                               // $23 dte_url (can be added later)
+		string(fseJSON),                  // $24 dte_unsigned
+		signedDTE,                        // $25 dte_signed
+		response.Estado,                  // $26 hacienda_estado
+		response.SelloRecibido,           // $27 hacienda_sello_recibido
+		response.FhProcesamiento,         // $28 hacienda_fh_procesamiento
+		response.CodigoMsg,               // $29 hacienda_codigo_msg
+		response.DescripcionMsg,          // $30 hacienda_descripcion_msg
+		observaciones,                    // $31 hacienda_observaciones (array)
+		string(responseJSON),             // $32 hacienda_response_full
 	)
 
 	if err != nil {

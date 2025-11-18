@@ -160,8 +160,7 @@ class FSETester:
         {
             "name": "Pedro Flores - Carpintero",
             "description": "Informal carpenter for furniture repairs",
-            "document_type": "13",  # DUI
-            "document_number": "04567890-1",
+            "document_type": "37",  # DUI
             "activity_code": "43320",  # Instalación de carpintería
             "activity_desc": "Instalación de carpintería",
             "department": "06",
@@ -182,7 +181,7 @@ class FSETester:
             "name": "Luisa Martínez - Vendedora de Flores",
             "description": "Flower vendor at street corner",
             "document_type": "37",
-            "activity_code": "47761",  # Venta al por menor de flores
+            "activity_code": "46295",  # Venta al por menor de flores
             "activity_desc": "Venta al por menor de flores, plantas y semillas",
             "department": "06",
             "municipality": "14",
