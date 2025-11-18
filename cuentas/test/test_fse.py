@@ -161,7 +161,7 @@ class FSETester:
             "name": "Pedro Flores - Carpintero",
             "description": "Informal carpenter for furniture repairs",
             "document_type": "37",  # DUI
-            "activity_code": "43320",  # Instalación de carpintería
+            "activity_code": "16220",  # Instalación de carpintería
             "activity_desc": "Instalación de carpintería",
             "department": "06",
             "municipality": "14",
