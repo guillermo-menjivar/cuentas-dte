@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 )
 
 // ============================================
@@ -206,9 +207,11 @@ func (s *DTEService) logFSEToCommitLog(
 	}
 
 	// Extract observaciones array if present
-	var observaciones []string
+	var observaciones interface{}
 	if len(response.Observaciones) > 0 {
-		observaciones = response.Observaciones
+		observaciones = pq.Array(response.Observaciones)
+	} else {
+		observaciones = pq.Array([]string{}) // Empty array
 	}
 
 	// Parse fecha_emision from string "YYYY-MM-DD"
