@@ -1,3 +1,4 @@
+// internal/dte/service_fse.go
 package dte
 
 import (
@@ -220,6 +221,19 @@ func (s *DTEService) logFSEToCommitLog(
 		return fmt.Errorf("failed to parse fecha_emision: %w", err)
 	}
 
+	// Parse Hacienda's FhProcesamiento timestamp
+	// Format: "17/11/2025 19:21:25" → needs to be converted to time.Time
+	var fhProcesamiento *time.Time
+	if response.FhProcesamiento != "" {
+		// Parse Hacienda's format: "DD/MM/YYYY HH:MM:SS"
+		t, err := time.Parse("02/01/2006 15:04:05", response.FhProcesamiento)
+		if err != nil {
+			log.Printf("[logFSEToCommitLog] Warning: failed to parse FhProcesamiento '%s': %v", response.FhProcesamiento, err)
+		} else {
+			fhProcesamiento = &t
+		}
+	}
+
 	query := `
         INSERT INTO dte_commit_log (
             codigo_generacion,
@@ -264,10 +278,10 @@ func (s *DTEService) logFSEToCommitLog(
     `
 
 	_, err = s.db.ExecContext(ctx, query,
-		fse.Identificacion.CodigoGeneracion, // $1
-		purchase.ID,                         // $2
+		fse.Identificacion.CodigoGeneracion, // $1 codigo_generacion
+		purchase.ID,                         // $2 purchase_id (NOT NULL)
 		nil,                                 // $3 invoice_id (NULL for purchases)
-		"",                                  // $4 invoice_number (empty for purchases)
+		nil,                                 // $4 invoice_number (NULL for purchases)
 		purchase.CompanyID,                  // $5
 		nil,                                 // $6 client_id (NULL for FSE - informal supplier)
 		purchase.EstablishmentID,            // $7
@@ -296,7 +310,7 @@ func (s *DTEService) logFSEToCommitLog(
 		signedDTE,                        // $25 dte_signed
 		response.Estado,                  // $26 hacienda_estado
 		response.SelloRecibido,           // $27 hacienda_sello_recibido
-		response.FhProcesamiento,         // $28 hacienda_fh_procesamiento
+		fhProcesamiento,                  // $28 hacienda_fh_procesamiento (parsed timestamp)
 		response.CodigoMsg,               // $29 hacienda_codigo_msg
 		response.DescripcionMsg,          // $30 hacienda_descripcion_msg
 		observaciones,                    // $31 hacienda_observaciones (array)
