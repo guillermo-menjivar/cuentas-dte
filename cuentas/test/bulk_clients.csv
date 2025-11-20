@@ -1,0 +1,26 @@
+ncr,nit,dui,business_name,legal_business_name,giro,tipo_contribuyente,tipo_persona,full_address,country_code,department_code,municipality_code,cod_actividad,correo,telefono
+12345-6,0614-123456-001-2,,Innovatech Solutions,Innovatech Solutions S.A. de C.V.,Desarrollo de Software,1,2,Calle Principal #123 Col. Escalón,SV,06,01,62010,contacto@innovatech.com.sv,2234-5678
+23456-7,0614-234567-002-3,,Distribuidora El Salvador,Distribuidora El Salvador S.A. de C.V.,Distribución de Alimentos,1,2,Avenida Norte #456 Col. San Benito,SV,06,01,46310,ventas@distrisv.com,2245-6789
+,,12345678-9,María Elena Rodríguez,María Elena Rodríguez García,Consultoría Financiera,2,1,Boulevard Los Próceres #789,SV,06,14,,,maria.rodriguez@email.com,7890-1234
+34567-8,0614-345678-003-4,,Constructora Nacional,Constructora Nacional Ltda.,Construcción Civil,1,2,Calle Reforma #321 Col. Roma,SV,06,01,41000,info@construnacional.com,2256-7890
+,,23456789-0,José Antonio López,José Antonio López Martínez,Diseño Gráfico,2,1,Avenida España #654,SV,06,14,,,jose.lopez@design.com,7801-2345
+45678-9,0614-456789-004-5,,Farmacia San Rafael,Farmacia San Rafael S.A. de C.V.,Venta de Medicamentos,1,2,Calle Arce #987 Col. Centro,SV,06,01,47730,farmaciasanrafael@gmail.com,2267-8901
+56789-0,0614-567890-005-6,,Supermercado La Economía,Supermercado La Economía S.A.,Comercio al por Menor,1,2,Boulevard Venezuela #147 Col. Libertad,SV,06,01,47110,contacto@laeconomia.com.sv,2278-9012
+,,34567890-1,Carlos Alberto Mejía,Carlos Alberto Mejía Santos,Asesoría Legal,2,1,Calle San Antonio #258,SV,06,01,,,carlos.mejia@abogados.com,7812-3456
+67890-1,0614-678901-006-7,,Textiles Modernos,Textiles Modernos S.A. de C.V.,Fabricación Textil,1,2,Carretera Panamericana Km 5.5,SV,11,01,13100,ventas@textilesmodernos.com,2289-0123
+78901-2,0614-789012-007-8,,Restaurante El Buen Sabor,Restaurante El Buen Sabor S.A.,Servicios de Restaurante,1,2,Paseo General Escalón #369,SV,06,01,56101,reservas@elbuensabor.com.sv,2290-1234
+,,45678901-2,Ana Patricia Flores,Ana Patricia Flores de García,Repostería Artesanal,2,1,Colonia Miramonte Casa #147,SV,06,14,,,ana.flores@reposteria.com,7823-4567
+89012-3,0614-890123-008-9,,Electrodomésticos García,Electrodomésticos García S.A. de C.V.,Venta de Electrodomésticos,1,2,Calle Rubén Darío #753,SV,06,01,47540,ventas@electrogarcia.com,2201-2345
+90123-4,0614-901234-009-0,,Transportes Unidos,Transportes Unidos S.A. de C.V.,Transporte de Carga,1,2,Boulevard del Ejército #951 Col. Zacamil,SV,06,01,49410,transportesunidos@hotmail.com,2212-3456
+,,56789012-3,Roberto Carlos Hernández,Roberto Carlos Hernández Díaz,Fotografía Profesional,2,1,Avenida Las Camelias #852,SV,06,14,,,roberto.foto@gmail.com,7834-5678
+01234-5,0614-012345-010-1,,Mueblería El Roble,Mueblería El Roble S.A. de C.V.,Fabricación de Muebles,1,2,Calle a Planes de Renderos Km 3.2,SV,06,17,31010,muebleria@elroble.com.sv,2223-4567
+11111-1,0614-111111-011-2,,Laboratorio Clínico Santa Lucía,Laboratorio Clínico Santa Lucía S.A.,Servicios de Laboratorio,1,2,Alameda Roosevelt #1234 Col. Flor Blanca,SV,06,01,86902,laboratorio@santalucia.com,2234-5670
+,,67890123-4,Sofía Gabriela Morales,Sofía Gabriela Morales Vásquez,Terapia Psicológica,2,1,Colonia Maquilishuat #456,SV,06,14,,,sofia.morales@psicologia.com,7845-6789
+22222-2,0614-222222-012-3,,Ferretería Industrial,Ferretería Industrial S.A. de C.V.,Venta de Herramientas,1,2,Carretera a Santa Tecla Km 7.8,SV,11,01,46730,ferreteria@industrial.com.sv,2245-6701
+33333-3,0614-333333-013-4,,Panadería La Estrella,Panadería La Estrella S.A.,Elaboración de Pan,1,2,Avenida Cuscatlán #789 Col. La Rabida,SV,06,01,10710,panaderia@laestrella.com,2256-7012
+,,78901234-5,Miguel Ángel Castro,Miguel Ángel Castro Ramírez,Servicios de Plomería,2,1,Colonia San Francisco #321,SV,06,14,,,miguel.castro@plomeria.com,7856-7890
+44444-4,0614-444444-014-5,,Clínica Dental Sonrisa,Clínica Dental Sonrisa S.A. de C.V.,Servicios Odontológicos,1,2,Boulevard Los Héroes #456 Centro Comercial,SV,06,01,86230,clinica@sonrisa.com.sv,2267-8123
+55555-5,0614-555555-015-6,,Librería Universitaria,Librería Universitaria S.A. de C.V.,Venta de Libros,1,2,Calle Arce #147 frente a Plaza Libertad,SV,06,01,47610,libros@universitaria.com,2278-9234
+,,89012345-6,Laura Beatriz Ramírez,Laura Beatriz Ramírez González,Clases de Música,2,1,Colonia Miralvalle #789,SV,06,14,,,laura.ramirez@musica.com,7867-8901
+66666-6,0614-666666-016-7,,Imprenta Digital,Imprenta Digital S.A. de C.V.,Servicios de Impresión,1,2,Avenida Manuel Gallardo #258 Col. Santa Elena,SV,11,01,18120,ventas@imprentadigital.com.sv,2289-0345
+77777-7,0614-777777-017-8,,Tecnología Empresarial,Tecnología Empresarial S.A. de C.V.,Soporte Técnico IT,1,2,Centro Comercial Multiplaza Local 205,SV,06,01,62020,soporte@tecempresarial.com,2290-1456
