@@ -572,12 +572,3 @@ type CompanyRetentionConfig struct {
 	RetentionRate    float64
 	DTEAmbiente      string
 }
-
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
-
-// round rounds a float to 2 decimal places
-func round(value float64) float64 {
-	return float64(int(value*100+0.5)) / 100
-}
