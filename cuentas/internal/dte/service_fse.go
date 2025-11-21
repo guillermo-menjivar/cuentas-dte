@@ -132,8 +132,11 @@ func (s *DTEService) ProcessFSE(ctx context.Context, purchase *models.Purchase) 
 		} else {
 			log.Println("[ProcessFSE] ✅ Hacienda response saved to purchase")
 		}
-		UploadDTEToS3Async(fseJSON, false, "14", purchase.CompanyID, strings.ToUpper(fse.Identificacion.CodigoGeneracion))
-		UploadDTEToS3Async([]byte(signedDTE), true, "14", purchase.CompanyID, strings.ToUpper(fse.Identificacion.CodigoGeneracion))
+		UploadDTEToS3Async(fseJSON, "unsigned", "14", purchase.CompanyID, strings.ToUpper(fse.Identificacion.CodigoGeneracion))
+		UploadDTEToS3Async([]byte(signedDTE), "signed", "14", purchase.CompanyID, strings.ToUpper(fse.Identificacion.CodigoGeneracion))
+		haciendaResponseJSON, _ := json.MarshalIndent(response, "", "  ")
+		UploadDTEToS3Async([]byte(signedDTE), "hacienda_response", "14", purchase.CompanyID, strings.ToUpper(fse.Identificacion.CodigoGeneracion))
+
 	}
 
 	// Step 8: Log to commit log
