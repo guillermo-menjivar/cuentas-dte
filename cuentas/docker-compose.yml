@@ -114,6 +114,8 @@ services:
       CUENTAS_HACIENDA_RETRY_MAX: "3"
       CUENTAS_HACIENDA_RETRY_WAIT_MIN: "2s"
       CUENTAS_HACIENDA_RETRY_WAIT_MAX: "10s"
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
     volumes:
       - ./config.yaml:/app/config.yaml
       - vault_data:/vault/data
