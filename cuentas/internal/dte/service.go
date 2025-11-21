@@ -166,8 +166,10 @@ func (s *DTEService) ProcessInvoice(ctx context.Context, invoice *models.Invoice
 		} else {
 			fmt.Println("✅ Hacienda response saved to invoice")
 		}
-		UploadDTEToS3Async(dteJSON, false, factura.Identificacion.TipoDte, invoice.CompanyID, factura.Identificacion.CodigoGeneracion)
-		UploadDTEToS3Async([]byte(signedDTE), true, factura.Identificacion.TipoDte, invoice.CompanyID, factura.Identificacion.CodigoGeneracion)
+		UploadDTEToS3Async(dteJSON, "unsigned", factura.Identificacion.TipoDte, invoice.CompanyID, factura.Identificacion.CodigoGeneracion)
+		UploadDTEToS3Async([]byte(signedDTE), "signed", factura.Identificacion.TipoDte, invoice.CompanyID, factura.Identificacion.CodigoGeneracion)
+		haciendaResponseJSON, _ := json.MarshalIndent(response, "", "  ")
+		UploadDTEToS3Async([]byte(signedDTE), "hacienda_response", "14", purchase.CompanyID, strings.ToUpper(fse.Identificacion.CodigoGeneracion))
 	}
 	// Step 7 submit commitlog
 	err = s.logToCommitLog(ctx, invoice, factura, signedDTE, response)
