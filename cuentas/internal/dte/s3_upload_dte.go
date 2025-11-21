@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -19,47 +18,43 @@ import (
 // UploadDTEToS3 uploads a DTE to S3 - SIMPLE, GENERIC, WORKS FOR ALL TYPES
 //
 // Parameters:
-//   - dteBytes: The DTE content (JSON or signed JWT)
-//   - signed: true if this is signed JWT, false if unsigned JSON
+//   - dteBytes: The DTE content (JSON, request JSON, or response JSON)
+//   - fileType: "unsigned", "hacienda_request", "hacienda_response"
 //   - tipoDte: "01", "03", "04", "05", "06", "11", "14"
 //   - companyID: UUID of the company
 //   - codigoGeneracion: UUID of the DTE
 func UploadDTEToS3(
 	ctx context.Context,
 	dteBytes []byte,
-	signed bool,
+	fileType string,
 	tipoDte string,
 	companyID string,
 	codigoGeneracion string,
 ) error {
-	// Get bucket from env
-	bucket := os.Getenv("S3_BUCKET")
-	if bucket == "" {
-		bucket = "cuentas-dtes-prod"
-	}
-
-	region := os.Getenv("S3_REGION")
-	if region == "" {
-		region = "us-east-1"
-	}
+	// Hardcoded bucket and region
+	bucket := "cuentas"
+	region := "us-east-2"
 
 	// Build S3 path
 	now := time.Now()
 	var filename string
-	if signed {
-		filename = "signed.jwt"
-	} else {
+	switch fileType {
+	case "hacienda_request":
+		filename = "hacienda_request.json"
+	case "hacienda_response":
+		filename = "hacienda_response.json"
+	default:
 		filename = "unsigned.json"
 	}
 
 	s3Key := fmt.Sprintf(
-		"dtes/%s/%s/%s/%04d/%02d/%02d/%s",
+		"dtes/%s/%s/%04d/%02d/%02d/%s/%s",
 		companyID,
 		tipoDte,
-		codigoGeneracion,
 		now.Year(),
 		now.Month(),
 		now.Day(),
+		codigoGeneracion,
 		filename,
 	)
 
@@ -87,7 +82,7 @@ func UploadDTEToS3(
 			"company-id":        companyID,
 			"codigo-generacion": codigoGeneracion,
 			"tipo-dte":          tipoDte,
-			"signed":            fmt.Sprintf("%v", signed),
+			"file-type":         fileType,
 			"checksum-sha256":   checksum,
 			"uploaded-at":       now.Format(time.RFC3339),
 		},
@@ -106,7 +101,7 @@ func UploadDTEToS3(
 // UploadDTEToS3Async - non-blocking version
 func UploadDTEToS3Async(
 	dteBytes []byte,
-	signed bool,
+	fileType string,
 	tipoDte string,
 	companyID string,
 	codigoGeneracion string,
@@ -115,7 +110,7 @@ func UploadDTEToS3Async(
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		err := UploadDTEToS3(ctx, dteBytes, signed, tipoDte, companyID, codigoGeneracion)
+		err := UploadDTEToS3(ctx, dteBytes, fileType, tipoDte, companyID, codigoGeneracion)
 		if err != nil {
 			log.Printf("[S3] ⚠️  Upload failed: %v", err)
 		}
