@@ -166,6 +166,8 @@ func (s *DTEService) ProcessInvoice(ctx context.Context, invoice *models.Invoice
 		} else {
 			fmt.Println("✅ Hacienda response saved to invoice")
 		}
+		UploadDTEToS3Async(dteJSON, false, factura.Identificacion.TipoDte, invoice.CompanyID, factura.Identificacion.CodigoGeneracion)
+		UploadDTEToS3Async([]byte(signedDTE), true, factura.Identificacion.TipoDte, invoice.CompanyID, factura.Identificacion.CodigoGeneracion)
 	}
 	// Step 7 submit commitlog
 	err = s.logToCommitLog(ctx, invoice, factura, signedDTE, response)
@@ -464,6 +466,8 @@ func (s *DTEService) ProcessExportInvoice(ctx context.Context, invoice *models.I
 		} else {
 			fmt.Println("✅ Hacienda response saved to invoice")
 		}
+		UploadDTEToS3Async(dteJSON, false, "11", invoice.CompanyID, exportDTE.Identificacion.CodigoGeneracion)
+		UploadDTEToS3Async([]byte(signedDTE), true, "11", invoice.CompanyID, exportDTE.Identificacion.CodigoGeneracion)
 	}
 
 	// Step 8: Log to commit log
