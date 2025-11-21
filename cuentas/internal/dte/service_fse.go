@@ -135,7 +135,7 @@ func (s *DTEService) ProcessFSE(ctx context.Context, purchase *models.Purchase) 
 		UploadDTEToS3Async(fseJSON, "unsigned", "14", purchase.CompanyID, strings.ToUpper(fse.Identificacion.CodigoGeneracion))
 		UploadDTEToS3Async([]byte(signedDTE), "signed", "14", purchase.CompanyID, strings.ToUpper(fse.Identificacion.CodigoGeneracion))
 		haciendaResponseJSON, _ := json.MarshalIndent(response, "", "  ")
-		UploadDTEToS3Async([]byte(signedDTE), "hacienda_response", "14", purchase.CompanyID, strings.ToUpper(fse.Identificacion.CodigoGeneracion))
+		UploadDTEToS3Async(haciendaResponseJSON, "hacienda_response", "14", purchase.CompanyID, strings.ToUpper(fse.Identificacion.CodigoGeneracion))
 
 	}
 
