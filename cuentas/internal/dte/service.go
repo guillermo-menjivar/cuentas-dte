@@ -468,8 +468,10 @@ func (s *DTEService) ProcessExportInvoice(ctx context.Context, invoice *models.I
 		} else {
 			fmt.Println("✅ Hacienda response saved to invoice")
 		}
-		UploadDTEToS3Async(dteJSON, false, "11", invoice.CompanyID, exportDTE.Identificacion.CodigoGeneracion)
-		UploadDTEToS3Async([]byte(signedDTE), true, "11", invoice.CompanyID, exportDTE.Identificacion.CodigoGeneracion)
+		UploadDTEToS3Async(dteJSON, "unsigned", "11", invoice.CompanyID, exportDTE.Identificacion.CodigoGeneracion)
+		UploadDTEToS3Async([]byte(signedDTE), "signed", "11", invoice.CompanyID, exportDTE.Identificacion.CodigoGeneracion)
+		haciendaResponseJSON, _ := json.MarshalIndent(response, "", "  ")
+		UploadDTEToS3Async([]byte(signedDTE), "hacienda_response", "11", purchase.CompanyID, strings.ToUpper(exportDTE.Identificacion.CodigoGeneracion))
 	}
 
 	// Step 8: Log to commit log
