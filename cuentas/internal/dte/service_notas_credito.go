@@ -117,8 +117,10 @@ func (s *DTEService) ProcessNotaCredito(ctx context.Context, nota *models.NotaCr
 		} else {
 			fmt.Println("✅ Hacienda response saved to nota")
 		}
-		UploadDTEToS3Async(dteJSON, false, codigos.DocTypeNotaCredito, nota.CompanyID, strings.ToUpper(nota.ID))
-		UploadDTEToS3Async([]byte(signedDTE), true, codigos.DocTypeNotaCredito, nota.CompanyID, strings.ToUpper(nota.ID))
+		UploadDTEToS3Async(dteJSON, "unsigned", codigos.DocTypeNotaCredito, nota.CompanyID, strings.ToUpper(nota.ID))
+		UploadDTEToS3Async([]byte(signedDTE), "signed", codigos.DocTypeNotaCredito, nota.CompanyID, strings.ToUpper(nota.ID))
+		haciendaResponseJSON, _ := json.MarshalIndent(response, "", "  ")
+		UploadDTEToS3Async(haciendaResponseJSON, "hacienda_response", codigos.DocTypeNotaCredito, nota.CompanyID, strings.ToUpper(nota.ID))
 	}
 
 	// Step 8: Log to commit log

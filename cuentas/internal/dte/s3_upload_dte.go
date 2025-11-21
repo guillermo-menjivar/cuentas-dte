@@ -40,11 +40,11 @@ func UploadDTEToS3(
 	var filename string
 	switch fileType {
 	case "hacienda_request":
-		filename = "hacienda_request.json"
+		filename = fmt.Sprintf("%s_hacienda_request.json")
 	case "hacienda_response":
-		filename = "hacienda_response.json"
+		filename = fmt.Sprintf("%s_hacienda_response.json")
 	default:
-		filename = "unsigned.json"
+		filename = fmt.Sprintf("%s_unsigned.json")
 	}
 
 	s3Key := fmt.Sprintf(
