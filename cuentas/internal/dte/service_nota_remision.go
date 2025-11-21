@@ -136,8 +136,10 @@ func (s *DTEService) ProcessRemision(ctx context.Context, remision *models.Invoi
 		} else {
 			fmt.Println("✅ Hacienda response saved to remision")
 		}
-		UploadDTEToS3Async(dteJSON, false, "04", remision.CompanyID, strings.ToUpper(remisionDTE.Identificacion.CodigoGeneracion))
-		UploadDTEToS3Async([]byte(signedDTE), true, "04", remision.CompanyID, strings.ToUpper(remisionDTE.Identificacion.CodigoGeneracion))
+		UploadDTEToS3Async(dteJSON, "unsigned", "04", remision.CompanyID, strings.ToUpper(remisionDTE.Identificacion.CodigoGeneracion))
+		UploadDTEToS3Async([]byte(signedDTE), "signed", "04", remision.CompanyID, strings.ToUpper(remisionDTE.Identificacion.CodigoGeneracion))
+		haciendaResponseJSON, _ := json.MarshalIndent(response, "", "  ")
+		UploadDTEToS3Async(haciendaResponseJSON, "hacienda_response", "04", purchase.CompanyID, strings.ToUpper(remisionDTE.Identificacion.CodigoGeneracion))
 	}
 
 	// Step 8: Log to commit log
