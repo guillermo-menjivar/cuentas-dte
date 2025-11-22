@@ -3,7 +3,7 @@ CREATE TABLE dte_contingency_queue (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     
     -- What failed
-    invoice_id UUID REFERENCES invoices(id),
+    invoice_id VARCHAR(36) REFERENCES invoices(id),  -- ✅ FIXED: VARCHAR not UUID
     purchase_id UUID REFERENCES purchases(id),
     tipo_dte VARCHAR(2) NOT NULL,
     codigo_generacion VARCHAR(36) NOT NULL UNIQUE,
@@ -156,7 +156,7 @@ CREATE INDEX idx_contingency_batches_status ON dte_contingency_batches(status);
 CREATE INDEX idx_contingency_batches_retry ON dte_contingency_batches(next_retry_at) 
     WHERE status IN ('pending', 'failed');
 
--- Update triggers
+-- Update trigger
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
