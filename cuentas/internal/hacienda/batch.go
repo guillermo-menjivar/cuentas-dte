@@ -1,3 +1,4 @@
+// internal/hacienda/batch.go
 package hacienda
 
 import (
@@ -5,10 +6,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/hashicorp/go-retryablehttp"
 )
 
 type BatchSubmitRequest struct {
@@ -74,7 +75,8 @@ func (c *Client) SubmitBatch(
 		return nil, fmt.Errorf("failed to marshal payload: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payloadJSON))
+	// Use retryablehttp.NewRequestWithContext instead of http.NewRequestWithContext
+	req, err := retryablehttp.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(payloadJSON))
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +95,7 @@ func (c *Client) SubmitBatch(
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != 200 {
 		return &response, fmt.Errorf("batch submission failed: %s", response.DescripcionMsg)
 	}
 
@@ -109,7 +111,8 @@ func (c *Client) QueryBatchStatus(
 
 	url := fmt.Sprintf("%s/fesv/recepcion/consultadtelote/%s", c.baseURL, codigoLote)
 
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	// Use retryablehttp.NewRequestWithContext instead of http.NewRequestWithContext
+	req, err := retryablehttp.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -131,6 +134,5 @@ func (c *Client) QueryBatchStatus(
 }
 
 func generateUUID() string {
-	// Use your UUID library
 	return strings.ToUpper(uuid.New().String())
 }
