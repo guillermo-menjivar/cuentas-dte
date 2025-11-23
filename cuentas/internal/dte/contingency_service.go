@@ -9,7 +9,39 @@ import (
 
 	"cuentas/internal/hacienda"
 	"cuentas/internal/models"
+	"cuentas/internal/services"
 )
+
+type Firmador interface {
+	Sign(ctx context.Context, nit, password string, document interface{}) (string, error)
+}
+
+type HaciendaClient interface {
+	SubmitContingencyEvent(ctx context.Context, token, nit, signedEvent string) (*hacienda.ContingencyEventResponse, error)
+	SubmitBatch(ctx context.Context, token, ambiente, nitEmisor string, documentos []string) (*hacienda.BatchSubmitResponse, error)
+	QueryBatchStatus(ctx context.Context, token, codigoLote string) (*hacienda.BatchQueryResponse, error)
+}
+
+type ContingencyService struct {
+	db              *sql.DB
+	firmador        Firmador
+	hacienda        HaciendaClient
+	haciendaService *services.HaciendaService
+}
+
+func NewContingencyService(
+	db *sql.DB,
+	firmador Firmador,
+	haciendaClient HaciendaClient,
+	haciendaService *services.HaciendaService,
+) *ContingencyService {
+	return &ContingencyService{
+		db:              db,
+		firmador:        firmador,
+		hacienda:        haciendaClient,
+		haciendaService: haciendaService,
+	}
+}
 
 type ContingencyService struct {
 	db              *sql.DB
