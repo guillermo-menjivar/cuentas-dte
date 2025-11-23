@@ -1,8 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"cuentas/internal/database"
@@ -23,11 +27,12 @@ import (
 )
 
 var (
-	vaultService    *services.VaultService
-	haciendaService *services.HaciendaService
-	firmadorClient  *firmador.Client
-	haciendaClient  *hacienda.Client
-	dteService      *dte.DTEService
+	vaultService       *services.VaultService
+	haciendaService    *services.HaciendaService
+	firmadorClient     *firmador.Client
+	haciendaClient     *hacienda.Client
+	dteService         *dte.DTEService
+	contingencyService *dte.ContingencyService // ⭐ NEW
 )
 
 // ServeCmd represents the serve command
@@ -70,9 +75,14 @@ var ServeCmd = &cobra.Command{
 			log.Fatalf("Failed to initialize Hacienda: %v", err)
 		}
 
-		// Initialize Hacienda service (authentication & token caching) ⭐ Add this!
+		// Initialize Hacienda service (authentication & token caching)
 		if err := initializeHaciendaService(); err != nil {
 			log.Fatalf("Failed to initialize Hacienda service: %v", err)
+		}
+
+		// ⭐ Initialize Contingency service
+		if err := initializeContingencyService(); err != nil {
+			log.Fatalf("Failed to initialize Contingency service: %v", err)
 		}
 
 		// Initialize DTE service
@@ -80,10 +90,20 @@ var ServeCmd = &cobra.Command{
 			log.Fatalf("Failed to initialize DTE service: %v", err)
 		}
 
-		// Initialize DTE Schema Validator ⭐ ADD THIS
+		// Initialize DTE Schema Validator
 		if err := initializeDTEValidator(); err != nil {
 			log.Fatalf("Failed to initialize DTE validator: %v", err)
 		}
+
+		// ⭐ Create context for background workers
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// ⭐ Start contingency background workers
+		contingencyService.StartContingencyWorkers(ctx)
+
+		// ⭐ Handle graceful shutdown
+		go handleGracefulShutdown(cancel)
 
 		fmt.Printf("Server running on port: %s\n", GlobalConfig.Port)
 		startServer()
@@ -104,7 +124,6 @@ func initializeDTEValidator() error {
 func initializeHacienda() error {
 	fmt.Println("Initializing Hacienda client...")
 
-	// Temporary fix - explicitly set the URL
 	cfg := &hacienda.Config{
 		BaseURL:      "https://apitest.dtes.mh.gob.sv/fesv/recepciondte",
 		Timeout:      60 * time.Second,
@@ -119,11 +138,9 @@ func initializeHacienda() error {
 	return nil
 }
 
-// ⭐ Add this function!
 func initializeHaciendaService() error {
 	fmt.Println("Initializing Hacienda service...")
 
-	// Create hacienda service (handles authentication & token caching)
 	hs, err := services.NewHaciendaService(
 		database.DB,
 		vaultService,
@@ -138,6 +155,21 @@ func initializeHaciendaService() error {
 	return nil
 }
 
+// ⭐ NEW: Initialize Contingency Service
+func initializeContingencyService() error {
+	fmt.Println("Initializing Contingency service...")
+
+	contingencyService = dte.NewContingencyService(
+		database.DB,
+		firmadorClient,
+		haciendaClient,
+		haciendaService,
+	)
+
+	fmt.Println("✅ Contingency service initialized")
+	return nil
+}
+
 func initializeDTEService() error {
 	fmt.Println("Initializing DTE service...")
 
@@ -147,7 +179,8 @@ func initializeDTEService() error {
 		firmadorClient,
 		vaultService,
 		haciendaClient,
-		haciendaService, // ⭐ Pass it here!
+		haciendaService,
+		contingencyService, // ⭐ Pass contingency service to DTE service
 	)
 
 	fmt.Println("DTE service initialized")
@@ -204,7 +237,6 @@ func initializeVault() error {
 func initializeFirmador() error {
 	fmt.Println("Initializing Firmador client...")
 
-	// Create firmador client from viper config
 	firmadorClient = firmador.NewClientFromViper()
 
 	fmt.Printf("Firmador client initialized (URL: %s)\n", firmadorClient.GetBaseURL())
@@ -240,6 +272,24 @@ func runDatabaseMigrations() error {
 	return nil
 }
 
+// ⭐ NEW: Handle graceful shutdown
+func handleGracefulShutdown(cancel context.CancelFunc) {
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	sig := <-sigChan
+	log.Printf("Received signal: %v. Shutting down gracefully...", sig)
+
+	// Cancel context to stop workers
+	cancel()
+
+	// Give workers time to finish
+	time.Sleep(2 * time.Second)
+
+	log.Println("Shutdown complete")
+	os.Exit(0)
+}
+
 func startServer() {
 	// Set Gin mode
 	gin.SetMode(gin.ReleaseMode)
@@ -249,11 +299,12 @@ func startServer() {
 
 	// Add middleware to inject database, Redis, and Vault service
 	r.Use(func(c *gin.Context) {
-		c.Set("db", database.DB)             // Inject database connection
-		c.Set("redis", database.RedisClient) // Inject Redis client
-		c.Set("vaultService", vaultService)  // Inject Vault service
+		c.Set("db", database.DB)
+		c.Set("redis", database.RedisClient)
+		c.Set("vaultService", vaultService)
 		c.Set("firmador", firmadorClient)
 		c.Set("dteService", dteService)
+		c.Set("contingencyService", contingencyService) // ⭐ Inject contingency service
 		c.Next()
 	})
 
@@ -297,8 +348,8 @@ func startServer() {
 		v1.GET("/inventory/items/:id/cost-history", inventoryHandler.GetCostHistoryHandler)
 		v1.GET("/inventory/items/:id/legal-register", inventoryHandler.GetLegalInventoryRegisterHandler)
 
-		v1.GET("/inventory/events", inventoryHandler.GetAllEventsHandler)             // All events across all items
-		v1.GET("/inventory/valuation", inventoryHandler.GetInventoryValuationHandler) // Point-in-time valuation
+		v1.GET("/inventory/events", inventoryHandler.GetAllEventsHandler)
+		v1.GET("/inventory/valuation", inventoryHandler.GetInventoryValuationHandler)
 
 		// Invoice routes
 		invoiceService := services.NewInvoiceService(inventorySvc)
@@ -332,6 +383,7 @@ func startServer() {
 		v1.PATCH("/pos/:id", establishmentHandler.UpdatePointOfSale)
 		v1.PATCH("/pos/:id/location", establishmentHandler.UpdatePOSLocation)
 		v1.DELETE("/pos/:id", establishmentHandler.DeactivatePointOfSale)
+
 		// commitlog
 		v1.GET("/dte/commit-log", handlers.ListDTECommitLogHandler)
 		v1.GET("/dte/commit-log/:codigo_generacion", handlers.GetDTECommitLogEntryHandler)
@@ -349,7 +401,6 @@ func startServer() {
 		}
 
 		// notas
-
 		notaService := services.NewNotaService()
 		notaCreditoService := services.NewNotaCreditoService()
 		notasHandler := handlers.NewNotaHandler(notaService, notaCreditoService, invoiceService)
@@ -365,11 +416,6 @@ func startServer() {
 			notas.POST("/credito", notasHandler.CreateNotaCredito)
 			notas.GET("/credito/:id", notasHandler.GetNotaCredito)
 			notas.POST("/credito/:id/finalize", notasHandler.FinalizeNotaCredito)
-
-			// Common operations
-			//notas.GET("/:id", notaHandler.GetNota)
-			//notas.GET("", notaHandler.ListNotas)
-			//notas.DELETE("/:id", notaHandler.DeleteNota)
 		}
 
 		purchaseService := services.NewPurchaseService()
@@ -388,6 +434,18 @@ func startServer() {
 
 		v1.GET("/dte/reconciliation", reconciliationHandler.ReconcileDTEs)
 		v1.GET("/dte/reconciliation/:codigo_generacion", reconciliationHandler.ReconcileSingleDTE)
+
+		// ⭐ NEW: Contingency routes
+		contingencyHandler := handlers.NewContingencyHandler(contingencyService)
+		contingency := v1.Group("/contingency")
+		{
+			contingency.GET("/queue", contingencyHandler.ListPendingDTEs)
+			contingency.GET("/events", contingencyHandler.ListEvents)
+			contingency.GET("/events/:id", contingencyHandler.GetEvent)
+			contingency.GET("/batches", contingencyHandler.ListBatches)
+			contingency.GET("/batches/:id", contingencyHandler.GetBatch)
+			contingency.POST("/retry/:id", contingencyHandler.RetryDTE)
+		}
 	}
 
 	// Start server
