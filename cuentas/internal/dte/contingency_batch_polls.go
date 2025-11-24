@@ -9,10 +9,8 @@ import (
 	"cuentas/internal/models"
 )
 
-// PollBatches - STEP 3 of contingency process
-// Polls all submitted batches for results
+// NEW: PollBatches - STEP 3 of contingency process
 func (s *ContingencyService) PollBatches(ctx context.Context) error {
-	// Get all batches that are submitted but not complete
 	batches, err := s.getProcessingBatches(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get processing batches: %w", err)
@@ -22,8 +20,6 @@ func (s *ContingencyService) PollBatches(ctx context.Context) error {
 		log.Printf("[BatchPolling] No batches to poll")
 		return nil
 	}
-
-	log.Printf("[BatchPolling] Polling %d batches", len(batches))
 
 	for _, batch := range batches {
 		err := s.pollBatch(ctx, batch)
@@ -41,15 +37,11 @@ func (s *ContingencyService) pollBatch(ctx context.Context, batch *models.Contin
 		return fmt.Errorf("batch has no codigo_lote")
 	}
 
-	log.Printf("[BatchPolling] Checking batch %s (lote: %s)", batch.ID, batch.CodigoLote.String)
-
-	// Authenticate
 	authResponse, err := s.haciendaService.AuthenticateCompany(ctx, batch.CompanyID)
 	if err != nil {
 		return fmt.Errorf("failed to authenticate: %w", err)
 	}
 
-	// Query batch status from Hacienda
 	response, err := s.hacienda.QueryBatchStatus(
 		ctx,
 		authResponse.Body.Token,
@@ -60,7 +52,6 @@ func (s *ContingencyService) pollBatch(ctx context.Context, batch *models.Contin
 		return fmt.Errorf("failed to query batch: %w", err)
 	}
 
-	// Check if batch is complete
 	totalProcessed := len(response.Procesados) + len(response.Rechazados)
 
 	if totalProcessed == 0 {
@@ -68,25 +59,19 @@ func (s *ContingencyService) pollBatch(ctx context.Context, batch *models.Contin
 		return nil
 	}
 
-	log.Printf("[BatchPolling] ✅ Batch %s complete: %d processed, %d rejected",
-		batch.ID, len(response.Procesados), len(response.Rechazados))
-
-	// Update DTEs with results
+	// Process successful DTEs
 	for _, resultado := range response.Procesados {
 		err := s.UpdateDTEWithSello(ctx, resultado.CodigoGeneracion, resultado.SelloRecibido, resultado)
 		if err != nil {
 			log.Printf("[BatchPolling] ⚠️  Failed to update DTE %s: %v", resultado.CodigoGeneracion, err)
-		} else {
-			log.Printf("[BatchPolling] ✅ DTE %s processed successfully", resultado.CodigoGeneracion)
 		}
 	}
 
+	// Process rejected DTEs
 	for _, resultado := range response.Rechazados {
 		err := s.MarkDTEFailed(ctx, resultado.CodigoGeneracion, resultado.DescripcionMsg)
 		if err != nil {
 			log.Printf("[BatchPolling] ⚠️  Failed to mark DTE %s as failed: %v", resultado.CodigoGeneracion, err)
-		} else {
-			log.Printf("[BatchPolling] ❌ DTE %s rejected: %s", resultado.CodigoGeneracion, resultado.DescripcionMsg)
 		}
 	}
 
@@ -110,15 +95,10 @@ func (s *ContingencyService) pollBatch(ctx context.Context, batch *models.Contin
 		batch.ID,
 	)
 
-	if err != nil {
-		return fmt.Errorf("failed to update batch: %w", err)
-	}
-
-	log.Printf("[BatchPolling] ✅ Batch %s marked as complete", batch.ID)
-
-	return nil
+	return err
 }
 
+// NEW: getProcessingBatches
 func (s *ContingencyService) getProcessingBatches(ctx context.Context) ([]*models.ContingencyBatch, error) {
 	query := `
         SELECT id, contingency_event_id, codigo_lote, company_id, ambiente,
