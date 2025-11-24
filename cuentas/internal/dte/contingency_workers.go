@@ -2,172 +2,135 @@ package dte
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"log"
-
-	"cuentas/internal/models"
-
-	"github.com/google/uuid"
+	"time"
 )
 
-// CreateAndSubmitContingencyEvent - STEP 1 of contingency process
-func (s *ContingencyService) CreateAndSubmitContingencyEvent(
-	ctx context.Context,
-	companyID string,
-	dtes []*models.ContingencyQueueItem,
-) (*models.ContingencyEvent, error) {
+// StartContingencyWorkers starts all background workers for contingency processing
+func (s *ContingencyService) StartContingencyWorkers(ctx context.Context) {
+	log.Println("[Contingency] 🚀 Starting background workers...")
 
-	if len(dtes) == 0 {
-		return nil, fmt.Errorf("no DTEs to create event")
-	}
+	go s.eventCreatorWorker(ctx)
+	go s.batchSubmitterWorker(ctx)
+	go s.batchPollerWorker(ctx)
 
-	ambiente := dtes[0].Ambiente
-
-	log.Printf("[Contingency] STEP 1: Creating event for %d DTEs (company: %s)", len(dtes), companyID)
-
-	// Build contingency event JSON
-	eventJSON, codigoGeneracion, err := s.BuildContingencyEvent(
-		ctx,
-		companyID,
-		ambiente,
-		dtes,
-		1, // tipoContingencia
-		"",
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to build event: %w", err)
-	}
-
-	companyUUID, _ := uuid.Parse(companyID)
-	creds, err := s.loadCredentials(ctx, companyUUID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load credentials: %w", err)
-	}
-
-	// Sign event
-	var eventForSigning interface{}
-	json.Unmarshal(eventJSON, &eventForSigning)
-
-	signedEvent, err := s.firmador.Sign(ctx, creds.NIT, creds.Password, eventForSigning)
-	if err != nil {
-		return nil, fmt.Errorf("failed to sign event: %w", err)
-	}
-
-	// Authenticate with Hacienda
-	authResponse, err := s.haciendaService.AuthenticateCompany(ctx, companyID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to authenticate: %w", err)
-	}
-
-	// Submit to Hacienda
-	response, err := s.hacienda.SubmitContingencyEvent(
-		ctx,
-		authResponse.Body.Token,
-		creds.NIT,
-		signedEvent,
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to submit event: %w", err)
-	}
-
-	if response.Estado != "RECIBIDO" {
-		return nil, fmt.Errorf("event rejected: %s - %s", response.Estado, response.Mensaje) // FIXED: was DescripcionMsg
-	}
-
-	// Store event in database
-	eventID := uuid.New().String()
-	responseJSON, _ := json.Marshal(response)
-
-	insertQuery := `
-		INSERT INTO dte_contingency_events (
-			id, codigo_generacion, company_id, ambiente,
-			status, dte_count, event_unsigned, event_signed,
-			hacienda_response, sello_recibido, accepted_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
-	`
-
-	_, err = s.db.ExecContext(ctx, insertQuery,
-		eventID,
-		codigoGeneracion,
-		companyID,
-		ambiente,
-		"accepted",
-		len(dtes),
-		eventJSON,
-		signedEvent,
-		responseJSON,
-		response.SelloRecibido,
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to store event: %w", err)
-	}
-
-	// Link all DTEs to this event
-	for _, dte := range dtes {
-		s.LinkDTEToEvent(ctx, dte.ID, eventID)
-	}
-
-	return &models.ContingencyEvent{
-		ID:               eventID,
-		CodigoGeneracion: codigoGeneracion,
-		CompanyID:        companyID,
-		Ambiente:         ambiente,
-		Status:           "accepted",
-		DTECount:         len(dtes),
-	}, nil
+	log.Println("[Contingency] ✅ All workers started")
 }
 
-// getEventsReadyForBatch returns events that are accepted but don't have batches yet
-func (s *ContingencyService) getEventsReadyForBatch(ctx context.Context) ([]*EventInfo, error) {
-	query := `
-        SELECT e.id, e.codigo_generacion, e.company_id, e.ambiente
-        FROM dte_contingency_events e
-        WHERE e.status = 'accepted'
-        AND NOT EXISTS (
-            SELECT 1 FROM dte_contingency_batches b
-            WHERE b.contingency_event_id = e.id
-        )
-        ORDER BY e.accepted_at ASC
-    `
+// eventCreatorWorker - creates contingency events for pending DTEs
+func (s *ContingencyService) eventCreatorWorker(ctx context.Context) {
+	ticker := time.NewTicker(10 * time.Minute)
+	defer ticker.Stop()
 
-	rows, err := s.db.QueryContext(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+	s.processContingencyEvents(ctx)
 
-	var events []*EventInfo
-	for rows.Next() {
-		var event EventInfo
-		err := rows.Scan(&event.ID, &event.CodigoGeneracion, &event.CompanyID, &event.Ambiente)
-		if err != nil {
-			return nil, err
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("[EventCreator] Shutting down...")
+			return
+		case <-ticker.C:
+			s.processContingencyEvents(ctx)
 		}
-		events = append(events, &event)
+	}
+}
+
+func (s *ContingencyService) processContingencyEvents(ctx context.Context) {
+	log.Println("[EventCreator] Processing contingency events...")
+
+	companies, err := s.GetCompaniesWithPendingDTEs(ctx)
+	if err != nil {
+		log.Printf("[EventCreator] ❌ Error getting companies: %v", err)
+		return
 	}
 
-	return events, nil
+	if len(companies) == 0 {
+		log.Println("[EventCreator] No pending DTEs found")
+		return
+	}
+
+	for _, companyID := range companies {
+		dtes, err := s.GetPendingDTEsByCompany(ctx, companyID)
+		if err != nil {
+			log.Printf("[EventCreator] ❌ Error getting DTEs for company %s: %v", companyID, err)
+			continue
+		}
+
+		if len(dtes) == 0 {
+			continue
+		}
+
+		event, err := s.CreateAndSubmitContingencyEvent(ctx, companyID, dtes)
+		if err != nil {
+			log.Printf("[EventCreator] ❌ Failed to create event for company %s: %v", companyID, err)
+			for _, dte := range dtes {
+				s.incrementDTERetryCount(ctx, dte.ID)
+			}
+			continue
+		}
+
+		log.Printf("[EventCreator] ✅ Event created: %s", event.ID)
+	}
 }
 
-type EventInfo struct {
-	ID               string
-	CodigoGeneracion string
-	CompanyID        string
-	Ambiente         string
+// batchSubmitterWorker - submits batches for accepted events
+func (s *ContingencyService) batchSubmitterWorker(ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+
+	time.Sleep(30 * time.Second)
+	s.processBatchSubmissions(ctx)
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("[BatchSubmitter] Shutting down...")
+			return
+		case <-ticker.C:
+			s.processBatchSubmissions(ctx)
+		}
+	}
 }
 
-// incrementDTERetryCount increments the retry count for a DTE
-func (s *ContingencyService) incrementDTERetryCount(ctx context.Context, dteID string) error {
-	query := `
-        UPDATE dte_contingency_queue
-        SET retry_count = retry_count + 1,
-            updated_at = NOW()
-        WHERE id = $1
-    `
-	_, err := s.db.ExecContext(ctx, query, dteID)
-	return err
+func (s *ContingencyService) processBatchSubmissions(ctx context.Context) {
+	log.Println("[BatchSubmitter] Processing batch submissions...")
+
+	events, err := s.getEventsReadyForBatch(ctx)
+	if err != nil {
+		log.Printf("[BatchSubmitter] ❌ Error getting events: %v", err)
+		return
+	}
+
+	if len(events) == 0 {
+		log.Println("[BatchSubmitter] No events ready for batch")
+		return
+	}
+
+	for _, event := range events {
+		batch, err := s.CreateAndSubmitBatch(ctx, event.ID)
+		if err != nil {
+			log.Printf("[BatchSubmitter] ❌ Failed batch for event %s: %v", event.ID, err)
+			continue
+		}
+
+		log.Printf("[BatchSubmitter] ✅ Batch submitted: %s", batch.ID)
+	}
+}
+
+// batchPollerWorker - polls for batch results
+func (s *ContingencyService) batchPollerWorker(ctx context.Context) {
+	ticker := time.NewTicker(2 * time.Minute)
+	defer ticker.Stop()
+
+	time.Sleep(2 * time.Minute)
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("[BatchPoller] Shutting down...")
+			return
+		case <-ticker.C:
+			s.PollBatches(ctx)
+		}
+	}
 }
