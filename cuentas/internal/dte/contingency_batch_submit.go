@@ -4,20 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"cuentas/internal/models"
 
 	"github.com/google/uuid"
 )
 
-// CreateAndSubmitBatch - STEP 2 of contingency process
+// NEW: CreateAndSubmitBatch - STEP 2 of contingency process
 func (s *ContingencyService) CreateAndSubmitBatch(
 	ctx context.Context,
 	eventID string,
 ) (*models.ContingencyBatch, error) {
 
-	// Get event details
 	event, err := s.getEvent(ctx, eventID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get event: %w", err)
@@ -27,9 +25,6 @@ func (s *ContingencyService) CreateAndSubmitBatch(
 		return nil, fmt.Errorf("event not accepted, cannot submit batch (status: %s)", event.Status)
 	}
 
-	log.Printf("[Contingency] Creating batch for event %s", eventID)
-
-	// Get all DTEs linked to this event
 	dtes, err := s.getDTEsByEvent(ctx, eventID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get DTEs: %w", err)
@@ -39,27 +34,19 @@ func (s *ContingencyService) CreateAndSubmitBatch(
 		return nil, fmt.Errorf("no DTEs found for event")
 	}
 
-	log.Printf("[Contingency] Found %d DTEs to submit in batch", len(dtes))
-
-	// Check if any DTEs are not signed yet
-	unsignedCount := 0
+	// Check all DTEs are signed
 	for _, dte := range dtes {
 		if !dte.DTESigned.Valid || dte.DTESigned.String == "" {
-			unsignedCount++
+			return nil, fmt.Errorf("DTE not signed: %s", dte.ID)
 		}
 	}
 
-	if unsignedCount > 0 {
-		return nil, fmt.Errorf("%d DTEs are not signed yet, cannot submit batch", unsignedCount)
-	}
-
-	// Prepare batch - collect all signed DTEs
+	// Prepare batch
 	documentos := make([]string, len(dtes))
 	for i, dte := range dtes {
 		documentos[i] = dte.DTESigned.String
 	}
 
-	// Create batch record
 	batchID := uuid.New().String()
 
 	insertQuery := `
@@ -82,26 +69,19 @@ func (s *ContingencyService) CreateAndSubmitBatch(
 		return nil, fmt.Errorf("failed to create batch: %w", err)
 	}
 
-	log.Printf("[Contingency] Batch created: %s", batchID)
-
-	// Link all DTEs to batch
+	// Link DTEs to batch
 	for _, dte := range dtes {
-		err = s.LinkDTEToBatch(ctx, dte.ID, batchID)
-		if err != nil {
-			log.Printf("[Contingency] ⚠️  Warning: failed to link DTE %s to batch: %v", dte.ID, err)
-		}
+		s.LinkDTEToBatch(ctx, dte.ID, batchID)
 	}
 
 	// Authenticate
-	log.Printf("[Contingency] Authenticating with Hacienda...")
-
 	authResponse, err := s.haciendaService.AuthenticateCompany(ctx, event.CompanyID)
 	if err != nil {
 		s.updateBatchStatus(ctx, batchID, "failed")
 		return nil, fmt.Errorf("failed to authenticate: %w", err)
 	}
 
-	// Get credentials for NIT
+	// Get credentials
 	companyUUID, _ := uuid.Parse(event.CompanyID)
 	creds, err := s.loadCredentials(ctx, companyUUID)
 	if err != nil {
@@ -109,9 +89,7 @@ func (s *ContingencyService) CreateAndSubmitBatch(
 		return nil, fmt.Errorf("failed to load credentials: %w", err)
 	}
 
-	// Submit batch to Hacienda
-	log.Printf("[Contingency] Submitting batch with %d DTEs to Hacienda...", len(documentos))
-
+	// Submit batch
 	response, err := s.hacienda.SubmitBatch(
 		ctx,
 		authResponse.Body.Token,
@@ -127,11 +105,8 @@ func (s *ContingencyService) CreateAndSubmitBatch(
 
 	if response.Estado != "RECIBIDO" {
 		s.updateBatchStatus(ctx, batchID, "failed")
-		return nil, fmt.Errorf("batch rejected: %s - %s", response.Estado, response.DescripcionMsg)
+		return nil, fmt.Errorf("batch rejected: %s", response.DescripcionMsg)
 	}
-
-	log.Printf("[Contingency] ✅ Batch accepted by Hacienda")
-	log.Printf("[Contingency] Codigo Lote: %s", response.CodigoLote)
 
 	// Update batch with response
 	responseJSON, _ := json.Marshal(response)
@@ -155,12 +130,10 @@ func (s *ContingencyService) CreateAndSubmitBatch(
 		return nil, fmt.Errorf("failed to update batch: %w", err)
 	}
 
-	// Update all DTEs status
+	// Update DTEs status
 	for _, dte := range dtes {
 		s.UpdateDTEStatus(ctx, dte.ID, "batch_submitted")
 	}
-
-	log.Printf("[Contingency] ✅ Batch submission complete")
 
 	batch := &models.ContingencyBatch{
 		ID:                 batchID,
@@ -179,6 +152,7 @@ func (s *ContingencyService) CreateAndSubmitBatch(
 	return batch, nil
 }
 
+// NEW: getEvent
 func (s *ContingencyService) getEvent(ctx context.Context, eventID string) (*models.ContingencyEvent, error) {
 	query := `
         SELECT id, codigo_generacion, company_id, ambiente, status, dte_count
@@ -196,13 +170,10 @@ func (s *ContingencyService) getEvent(ctx context.Context, eventID string) (*mod
 		&event.DTECount,
 	)
 
-	if err != nil {
-		return nil, err
-	}
-
-	return &event, nil
+	return &event, err
 }
 
+// NEW: getDTEsByEvent
 func (s *ContingencyService) getDTEsByEvent(ctx context.Context, eventID string) ([]*models.ContingencyQueueItem, error) {
 	query := `
         SELECT id, invoice_id, purchase_id, tipo_dte, codigo_generacion,
@@ -242,13 +213,13 @@ func (s *ContingencyService) getDTEsByEvent(ctx context.Context, eventID string)
 	return dtes, nil
 }
 
+// NEW: updateBatchStatus
 func (s *ContingencyService) updateBatchStatus(ctx context.Context, batchID, status string) error {
 	query := `
         UPDATE dte_contingency_batches
         SET status = $1
         WHERE id = $2
     `
-
 	_, err := s.db.ExecContext(ctx, query, status, batchID)
 	return err
 }

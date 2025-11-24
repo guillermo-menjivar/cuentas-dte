@@ -5,237 +5,169 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strings"
 
-	"cuentas/internal/hacienda"
 	"cuentas/internal/models"
 
 	"github.com/google/uuid"
 )
 
-// ProcessInvoiceWithContingency - Enhanced ProcessInvoice with automatic contingency fallback
-// This implements the retry logic and automatic queuing for failed DTEs
-func (s *DTEService) ProcessInvoiceWithContingency(
+// CreateAndSubmitContingencyEvent - STEP 1 of contingency process
+func (s *ContingencyService) CreateAndSubmitContingencyEvent(
 	ctx context.Context,
-	invoice *models.Invoice,
-) (*hacienda.ReceptionResponse, error) {
+	companyID string,
+	dtes []*models.ContingencyQueueItem,
+) (*models.ContingencyEvent, error) {
 
-	log.Printf("[ProcessInvoice] Starting process for invoice: %s", invoice.InvoiceNumber)
+	if len(dtes) == 0 {
+		return nil, fmt.Errorf("no DTEs to create event")
+	}
 
-	// ===========================
-	// STEP 1: BUILD DTE (LOCAL)
-	// ===========================
-	log.Println("[ProcessInvoice] Step 1: Building DTE...")
-	dteJSON, err := s.builder.BuildInvoice(ctx, invoice)
+	ambiente := dtes[0].Ambiente
+
+	log.Printf("[Contingency] STEP 1: Creating event for %d DTEs (company: %s)", len(dtes), companyID)
+
+	// Build contingency event JSON
+	eventJSON, codigoGeneracion, err := s.BuildContingencyEvent(
+		ctx,
+		companyID,
+		ambiente,
+		dtes,
+		1, // tipoContingencia
+		"",
+	)
+
 	if err != nil {
-		// This is a programming error, not external - don't queue
-		return nil, fmt.Errorf("failed to build DTE: %w", err)
+		return nil, fmt.Errorf("failed to build event: %w", err)
 	}
 
-	// Parse for codigo generacion and ambiente
-	var invoiceDTE struct {
-		Identificacion struct {
-			CodigoGeneracion string `json:"codigoGeneracion"`
-			Ambiente         string `json:"ambiente"`
-			TipoDte          string `json:"tipoDte"`
-		} `json:"identificacion"`
-	}
-	json.Unmarshal(dteJSON, &invoiceDTE)
-	codigoGeneracion := strings.ToUpper(invoiceDTE.Identificacion.CodigoGeneracion)
-	ambiente := invoiceDTE.Identificacion.Ambiente
-	tipoDte := invoiceDTE.Identificacion.TipoDte
-
-	log.Printf("[ProcessInvoice] ✅ DTE built: %s (tipo: %s)", codigoGeneracion, tipoDte)
-
-	// ===========================
-	// STEP 2: SIGN DTE (EXTERNAL)
-	// ===========================
-	log.Println("[ProcessInvoice] Step 2: Signing DTE...")
-	companyID, _ := uuid.Parse(invoice.CompanyID)
-	creds, err := s.LoadCredentials(ctx, companyID)
+	companyUUID, _ := uuid.Parse(companyID)
+	creds, err := s.loadCredentials(ctx, companyUUID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load credentials: %w", err)
 	}
 
-	var dteForSigning interface{}
-	json.Unmarshal(dteJSON, &dteForSigning)
+	// Sign event
+	var eventForSigning interface{}
+	json.Unmarshal(eventJSON, &eventForSigning)
 
-	signedDTE, err := s.firmador.Sign(ctx, creds.NIT, creds.Password, dteForSigning)
+	signedEvent, err := s.firmador.Sign(ctx, creds.NIT, creds.Password, eventForSigning)
 	if err != nil {
-		// ❌ FIRMADOR FAILED - Add to contingency queue
-		log.Printf("[ProcessInvoice] ❌ Firmador failed: %v", err)
-
-		queueErr := s.contingencyService.AddToQueue(ctx, AddToQueueParams{
-			InvoiceID:        &invoice.ID,
-			PurchaseID:       nil,
-			TipoDte:          tipoDte,
-			CodigoGeneracion: codigoGeneracion,
-			Ambiente:         ambiente,
-			FailureStage:     "signing",
-			FailureReason:    err.Error(),
-			DTEUnsigned:      dteJSON,
-			DTESigned:        nil,
-			CompanyID:        invoice.CompanyID,
-			CreatedBy:        invoice.CreatedBy,
-		})
-
-		if queueErr != nil {
-			log.Printf("[ProcessInvoice] ⚠️  Failed to add to queue: %v", queueErr)
-		} else {
-			log.Println("[ProcessInvoice] ✅ Added to contingency queue")
-		}
-
-		return nil, fmt.Errorf("firmador unavailable, added to contingency queue: %w", err)
+		return nil, fmt.Errorf("failed to sign event: %w", err)
 	}
 
-	log.Println("[ProcessInvoice] ✅ DTE signed successfully")
-
-	// ===========================
-	// STEP 3: AUTHENTICATE (EXTERNAL)
-	// ===========================
-	log.Println("[ProcessInvoice] Step 3: Authenticating with Hacienda...")
-	authResponse, err := s.haciendaService.AuthenticateCompany(ctx, companyID.String())
+	// Authenticate with Hacienda
+	authResponse, err := s.haciendaService.AuthenticateCompany(ctx, companyID)
 	if err != nil {
-		// ❌ HACIENDA AUTH FAILED - Add to contingency queue
-		log.Printf("[ProcessInvoice] ❌ Hacienda auth failed: %v", err)
-
-		queueErr := s.contingencyService.AddToQueue(ctx, AddToQueueParams{
-			InvoiceID:        &invoice.ID,
-			PurchaseID:       nil,
-			TipoDte:          tipoDte,
-			CodigoGeneracion: codigoGeneracion,
-			Ambiente:         ambiente,
-			FailureStage:     "authentication",
-			FailureReason:    err.Error(),
-			DTEUnsigned:      dteJSON,
-			DTESigned:        &signedDTE,
-			CompanyID:        invoice.CompanyID,
-			CreatedBy:        invoice.CreatedBy,
-		})
-
-		if queueErr != nil {
-			log.Printf("[ProcessInvoice] ⚠️  Failed to add to queue: %v", queueErr)
-		} else {
-			log.Println("[ProcessInvoice] ✅ Added to contingency queue")
-		}
-
-		return nil, fmt.Errorf("hacienda auth failed, added to contingency queue: %w", err)
+		return nil, fmt.Errorf("failed to authenticate: %w", err)
 	}
 
-	log.Println("[ProcessInvoice] ✅ Authenticated with Hacienda")
-
-	// ===========================
-	// STEP 4: SUBMIT TO HACIENDA (EXTERNAL)
-	// ===========================
-	log.Println("[ProcessInvoice] Step 4: Submitting to Hacienda...")
-	response, request, err := s.hacienda.SubmitDTE(
+	// Submit to Hacienda
+	response, err := s.hacienda.SubmitContingencyEvent(
 		ctx,
 		authResponse.Body.Token,
-		ambiente,
-		tipoDte,
-		codigoGeneracion,
-		signedDTE,
+		creds.NIT,
+		signedEvent,
 	)
 
 	if err != nil {
-		// Check if it's a rejection (permanent) or network error (retry)
-		if hacErr, ok := err.(*hacienda.HaciendaError); ok && hacErr.Type == "rejection" {
-			// ❌ REJECTED - Don't queue, it's a data problem
-			log.Printf("[ProcessInvoice] ❌ DTE rejected by Hacienda: %v", err)
-
-			if response != nil {
-				log.Printf("[ProcessInvoice] Rejection code: %s", response.CodigoMsg)
-				log.Printf("[ProcessInvoice] Rejection message: %s", response.DescripcionMsg)
-			}
-
-			// Still upload to S3 for audit
-			haciendaReqJSON, _ := json.Marshal(request)
-			haciendaRespJSON, _ := json.Marshal(response)
-			go func() {
-				s.UploadDTEToS3Async(dteJSON, "unsigned", tipoDte, invoice.CompanyID, codigoGeneracion)
-				s.UploadDTEToS3Async(haciendaReqJSON, "hacienda_request", tipoDte, invoice.CompanyID, codigoGeneracion)
-				s.UploadDTEToS3Async(haciendaRespJSON, "hacienda_response", tipoDte, invoice.CompanyID, codigoGeneracion)
-			}()
-
-			return response, err // Return rejection, don't queue
-		}
-
-		// ❌ NETWORK/TIMEOUT ERROR - Add to contingency queue
-		log.Printf("[ProcessInvoice] ❌ Hacienda submission failed (network/timeout): %v", err)
-
-		queueErr := s.contingencyService.AddToQueue(ctx, AddToQueueParams{
-			InvoiceID:        &invoice.ID,
-			PurchaseID:       nil,
-			TipoDte:          tipoDte,
-			CodigoGeneracion: codigoGeneracion,
-			Ambiente:         ambiente,
-			FailureStage:     "submission",
-			FailureReason:    err.Error(),
-			DTEUnsigned:      dteJSON,
-			DTESigned:        &signedDTE,
-			CompanyID:        invoice.CompanyID,
-			CreatedBy:        invoice.CreatedBy,
-		})
-
-		if queueErr != nil {
-			log.Printf("[ProcessInvoice] ⚠️  Failed to add to queue: %v", queueErr)
-		} else {
-			log.Println("[ProcessInvoice] ✅ Added to contingency queue")
-		}
-
-		return nil, fmt.Errorf("hacienda submission failed, added to contingency queue: %w", err)
+		return nil, fmt.Errorf("failed to submit event: %w", err)
 	}
 
-	// ===========================
-	// ✅ SUCCESS!
-	// ===========================
-	log.Println("[ProcessInvoice] ✅ SUCCESS! DTE accepted by Hacienda")
-	log.Printf("[ProcessInvoice] Estado: %s", response.Estado)
-	log.Printf("[ProcessInvoice] Sello: %s", response.SelloRecibido)
+	if response.Estado != "RECIBIDO" {
+		return nil, fmt.Errorf("event rejected: %s - %s", response.Estado, response.Mensaje) // FIXED: was DescripcionMsg
+	}
 
-	if response.Estado == "PROCESADO" {
-		// Save sello to invoice immediately
-		err = s.saveHaciendaResponse(ctx, invoice.ID, response)
+	// Store event in database
+	eventID := uuid.New().String()
+	responseJSON, _ := json.Marshal(response)
+
+	insertQuery := `
+		INSERT INTO dte_contingency_events (
+			id, codigo_generacion, company_id, ambiente,
+			status, dte_count, event_unsigned, event_signed,
+			hacienda_response, sello_recibido, accepted_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+	`
+
+	_, err = s.db.ExecContext(ctx, insertQuery,
+		eventID,
+		codigoGeneracion,
+		companyID,
+		ambiente,
+		"accepted",
+		len(dtes),
+		eventJSON,
+		signedEvent,
+		responseJSON,
+		response.SelloRecibido,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to store event: %w", err)
+	}
+
+	// Link all DTEs to this event
+	for _, dte := range dtes {
+		s.LinkDTEToEvent(ctx, dte.ID, eventID)
+	}
+
+	return &models.ContingencyEvent{
+		ID:               eventID,
+		CodigoGeneracion: codigoGeneracion,
+		CompanyID:        companyID,
+		Ambiente:         ambiente,
+		Status:           "accepted",
+		DTECount:         len(dtes),
+	}, nil
+}
+
+// getEventsReadyForBatch returns events that are accepted but don't have batches yet
+func (s *ContingencyService) getEventsReadyForBatch(ctx context.Context) ([]*EventInfo, error) {
+	query := `
+        SELECT e.id, e.codigo_generacion, e.company_id, e.ambiente
+        FROM dte_contingency_events e
+        WHERE e.status = 'accepted'
+        AND NOT EXISTS (
+            SELECT 1 FROM dte_contingency_batches b
+            WHERE b.contingency_event_id = e.id
+        )
+        ORDER BY e.accepted_at ASC
+    `
+
+	rows, err := s.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var events []*EventInfo
+	for rows.Next() {
+		var event EventInfo
+		err := rows.Scan(&event.ID, &event.CodigoGeneracion, &event.CompanyID, &event.Ambiente)
 		if err != nil {
-			log.Printf("[ProcessInvoice] ⚠️  Warning: failed to save Hacienda response: %v", err)
-		} else {
-			log.Println("[ProcessInvoice] ✅ Hacienda response saved to invoice")
+			return nil, err
 		}
-
-		// Upload to S3 async for audit trail
-		haciendaReqJSON, _ := json.Marshal(request)
-		haciendaRespJSON, _ := json.Marshal(response)
-		go func() {
-			s.UploadDTEToS3Async(dteJSON, "unsigned", tipoDte, invoice.CompanyID, codigoGeneracion)
-			s.UploadDTEToS3Async(haciendaReqJSON, "hacienda_request", tipoDte, invoice.CompanyID, codigoGeneracion)
-			s.UploadDTEToS3Async(haciendaRespJSON, "hacienda_response", tipoDte, invoice.CompanyID, codigoGeneracion)
-		}()
-
-		// Log to commit log
-		s.logToCommitLog(ctx, invoice, response)
+		events = append(events, &event)
 	}
 
-	return response, nil
+	return events, nil
 }
 
-// ProcessPurchaseWithContingency - Same logic for purchases/expense documents
-func (s *DTEService) ProcessPurchaseWithContingency(
-	ctx context.Context,
-	purchase *models.Purchase,
-	tipoDte string, // "03", "05", "06", etc.
-) (*hacienda.ReceptionResponse, error) {
-
-	log.Printf("[ProcessPurchase] Starting process for purchase: %s (tipo: %s)", purchase.ID, tipoDte)
-
-	// Build, sign, authenticate, submit with same contingency fallback logic
-	// Similar to ProcessInvoiceWithContingency but for purchases
-	// Implementation details similar to above...
-
-	return nil, fmt.Errorf("not yet implemented")
+type EventInfo struct {
+	ID               string
+	CodigoGeneracion string
+	CompanyID        string
+	Ambiente         string
 }
 
-// Helper functions (assumed to exist in DTEService)
-// - saveHaciendaResponse
-// - logToCommitLog
-// - UploadDTEToS3Async
-// - LoadCredentials
+// incrementDTERetryCount increments the retry count for a DTE
+func (s *ContingencyService) incrementDTERetryCount(ctx context.Context, dteID string) error {
+	query := `
+        UPDATE dte_contingency_queue
+        SET retry_count = retry_count + 1,
+            updated_at = NOW()
+        WHERE id = $1
+    `
+	_, err := s.db.ExecContext(ctx, query, dteID)
+	return err
+}
