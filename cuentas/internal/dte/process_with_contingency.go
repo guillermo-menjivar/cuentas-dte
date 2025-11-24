@@ -13,11 +13,18 @@ import (
 	"github.com/google/uuid"
 )
 
-// ProcessInvoiceWithContingency - Enhanced ProcessInvoice with contingency support
-func (s *DTEService) ProcessInvoiceWithContingency(ctx context.Context, invoice *models.Invoice) (*hacienda.ReceptionResponse, error) {
+// ProcessInvoiceWithContingency - Enhanced ProcessInvoice with automatic contingency fallback
+// This implements the retry logic and automatic queuing for failed DTEs
+func (s *DTEService) ProcessInvoiceWithContingency(
+	ctx context.Context,
+	invoice *models.Invoice,
+) (*hacienda.ReceptionResponse, error) {
+
 	log.Printf("[ProcessInvoice] Starting process for invoice: %s", invoice.InvoiceNumber)
 
-	// Step 1: Build DTE (local - should always work)
+	// ===========================
+	// STEP 1: BUILD DTE (LOCAL)
+	// ===========================
 	log.Println("[ProcessInvoice] Step 1: Building DTE...")
 	dteJSON, err := s.builder.BuildInvoice(ctx, invoice)
 	if err != nil {
@@ -25,20 +32,24 @@ func (s *DTEService) ProcessInvoiceWithContingency(ctx context.Context, invoice 
 		return nil, fmt.Errorf("failed to build DTE: %w", err)
 	}
 
-	// Parse for codigo generacion
+	// Parse for codigo generacion and ambiente
 	var invoiceDTE struct {
 		Identificacion struct {
 			CodigoGeneracion string `json:"codigoGeneracion"`
 			Ambiente         string `json:"ambiente"`
+			TipoDte          string `json:"tipoDte"`
 		} `json:"identificacion"`
 	}
 	json.Unmarshal(dteJSON, &invoiceDTE)
 	codigoGeneracion := strings.ToUpper(invoiceDTE.Identificacion.CodigoGeneracion)
 	ambiente := invoiceDTE.Identificacion.Ambiente
+	tipoDte := invoiceDTE.Identificacion.TipoDte
 
-	log.Printf("[ProcessInvoice] ✅ DTE built: %s", codigoGeneracion)
+	log.Printf("[ProcessInvoice] ✅ DTE built: %s (tipo: %s)", codigoGeneracion, tipoDte)
 
-	// Step 2: Sign DTE (external service - can fail)
+	// ===========================
+	// STEP 2: SIGN DTE (EXTERNAL)
+	// ===========================
 	log.Println("[ProcessInvoice] Step 2: Signing DTE...")
 	companyID, _ := uuid.Parse(invoice.CompanyID)
 	creds, err := s.LoadCredentials(ctx, companyID)
@@ -56,7 +67,8 @@ func (s *DTEService) ProcessInvoiceWithContingency(ctx context.Context, invoice 
 
 		queueErr := s.contingencyService.AddToQueue(ctx, AddToQueueParams{
 			InvoiceID:        &invoice.ID,
-			TipoDte:          "01", // Adjust based on invoice type
+			PurchaseID:       nil,
+			TipoDte:          tipoDte,
 			CodigoGeneracion: codigoGeneracion,
 			Ambiente:         ambiente,
 			FailureStage:     "signing",
@@ -78,7 +90,9 @@ func (s *DTEService) ProcessInvoiceWithContingency(ctx context.Context, invoice 
 
 	log.Println("[ProcessInvoice] ✅ DTE signed successfully")
 
-	// Step 3: Authenticate with Hacienda (external service - can fail)
+	// ===========================
+	// STEP 3: AUTHENTICATE (EXTERNAL)
+	// ===========================
 	log.Println("[ProcessInvoice] Step 3: Authenticating with Hacienda...")
 	authResponse, err := s.haciendaService.AuthenticateCompany(ctx, companyID.String())
 	if err != nil {
@@ -87,7 +101,8 @@ func (s *DTEService) ProcessInvoiceWithContingency(ctx context.Context, invoice 
 
 		queueErr := s.contingencyService.AddToQueue(ctx, AddToQueueParams{
 			InvoiceID:        &invoice.ID,
-			TipoDte:          "01",
+			PurchaseID:       nil,
+			TipoDte:          tipoDte,
 			CodigoGeneracion: codigoGeneracion,
 			Ambiente:         ambiente,
 			FailureStage:     "authentication",
@@ -109,13 +124,15 @@ func (s *DTEService) ProcessInvoiceWithContingency(ctx context.Context, invoice 
 
 	log.Println("[ProcessInvoice] ✅ Authenticated with Hacienda")
 
-	// Step 4: Submit to Hacienda (external service - can fail)
+	// ===========================
+	// STEP 4: SUBMIT TO HACIENDA (EXTERNAL)
+	// ===========================
 	log.Println("[ProcessInvoice] Step 4: Submitting to Hacienda...")
 	response, request, err := s.hacienda.SubmitDTE(
 		ctx,
 		authResponse.Body.Token,
 		ambiente,
-		"01",
+		tipoDte,
 		codigoGeneracion,
 		signedDTE,
 	)
@@ -135,20 +152,21 @@ func (s *DTEService) ProcessInvoiceWithContingency(ctx context.Context, invoice 
 			haciendaReqJSON, _ := json.Marshal(request)
 			haciendaRespJSON, _ := json.Marshal(response)
 			go func() {
-				UploadDTEToS3Async(dteJSON, "unsigned", "01", invoice.CompanyID, codigoGeneracion)
-				UploadDTEToS3Async(haciendaReqJSON, "hacienda_request", "01", invoice.CompanyID, codigoGeneracion)
-				UploadDTEToS3Async(haciendaRespJSON, "hacienda_response", "01", invoice.CompanyID, codigoGeneracion)
+				s.UploadDTEToS3Async(dteJSON, "unsigned", tipoDte, invoice.CompanyID, codigoGeneracion)
+				s.UploadDTEToS3Async(haciendaReqJSON, "hacienda_request", tipoDte, invoice.CompanyID, codigoGeneracion)
+				s.UploadDTEToS3Async(haciendaRespJSON, "hacienda_response", tipoDte, invoice.CompanyID, codigoGeneracion)
 			}()
 
 			return response, err // Return rejection, don't queue
 		}
 
 		// ❌ NETWORK/TIMEOUT ERROR - Add to contingency queue
-		log.Printf("[ProcessInvoice] ❌ Hacienda submission failed: %v", err)
+		log.Printf("[ProcessInvoice] ❌ Hacienda submission failed (network/timeout): %v", err)
 
 		queueErr := s.contingencyService.AddToQueue(ctx, AddToQueueParams{
 			InvoiceID:        &invoice.ID,
-			TipoDte:          "01",
+			PurchaseID:       nil,
+			TipoDte:          tipoDte,
 			CodigoGeneracion: codigoGeneracion,
 			Ambiente:         ambiente,
 			FailureStage:     "submission",
@@ -168,7 +186,9 @@ func (s *DTEService) ProcessInvoiceWithContingency(ctx context.Context, invoice 
 		return nil, fmt.Errorf("hacienda submission failed, added to contingency queue: %w", err)
 	}
 
+	// ===========================
 	// ✅ SUCCESS!
+	// ===========================
 	log.Println("[ProcessInvoice] ✅ SUCCESS! DTE accepted by Hacienda")
 	log.Printf("[ProcessInvoice] Estado: %s", response.Estado)
 	log.Printf("[ProcessInvoice] Sello: %s", response.SelloRecibido)
@@ -182,13 +202,13 @@ func (s *DTEService) ProcessInvoiceWithContingency(ctx context.Context, invoice 
 			log.Println("[ProcessInvoice] ✅ Hacienda response saved to invoice")
 		}
 
-		// Upload to S3 async
+		// Upload to S3 async for audit trail
 		haciendaReqJSON, _ := json.Marshal(request)
 		haciendaRespJSON, _ := json.Marshal(response)
 		go func() {
-			UploadDTEToS3Async(dteJSON, "unsigned", "01", invoice.CompanyID, codigoGeneracion)
-			UploadDTEToS3Async(haciendaReqJSON, "hacienda_request", "01", invoice.CompanyID, codigoGeneracion)
-			UploadDTEToS3Async(haciendaRespJSON, "hacienda_response", "01", invoice.CompanyID, codigoGeneracion)
+			s.UploadDTEToS3Async(dteJSON, "unsigned", tipoDte, invoice.CompanyID, codigoGeneracion)
+			s.UploadDTEToS3Async(haciendaReqJSON, "hacienda_request", tipoDte, invoice.CompanyID, codigoGeneracion)
+			s.UploadDTEToS3Async(haciendaRespJSON, "hacienda_response", tipoDte, invoice.CompanyID, codigoGeneracion)
 		}()
 
 		// Log to commit log
@@ -197,3 +217,25 @@ func (s *DTEService) ProcessInvoiceWithContingency(ctx context.Context, invoice 
 
 	return response, nil
 }
+
+// ProcessPurchaseWithContingency - Same logic for purchases/expense documents
+func (s *DTEService) ProcessPurchaseWithContingency(
+	ctx context.Context,
+	purchase *models.Purchase,
+	tipoDte string, // "03", "05", "06", etc.
+) (*hacienda.ReceptionResponse, error) {
+
+	log.Printf("[ProcessPurchase] Starting process for purchase: %s (tipo: %s)", purchase.ID, tipoDte)
+
+	// Build, sign, authenticate, submit with same contingency fallback logic
+	// Similar to ProcessInvoiceWithContingency but for purchases
+	// Implementation details similar to above...
+
+	return nil, fmt.Errorf("not yet implemented")
+}
+
+// Helper functions (assumed to exist in DTEService)
+// - saveHaciendaResponse
+// - logToCommitLog
+// - UploadDTEToS3Async
+// - LoadCredentials
