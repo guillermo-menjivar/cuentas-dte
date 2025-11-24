@@ -7,28 +7,41 @@ import (
 )
 
 // StartContingencyWorkers starts all background workers for contingency processing
+// These workers implement the 3-step process required by Ministerio de Hacienda:
+// 1. Create and submit contingency events
+// 2. Submit batches of DTEs for accepted events
+// 3. Poll for batch processing results
 func (s *ContingencyService) StartContingencyWorkers(ctx context.Context) {
-	log.Println("[Contingency] Starting background workers...")
+	log.Println("[Contingency] 🚀 Starting background workers...")
 
 	// Worker 1: Event Creator - runs every 10 minutes
-	// Groups pending DTEs and creates contingency events
+	// Groups pending DTEs by company and creates contingency events
 	go s.eventCreatorWorker(ctx)
 
 	// Worker 2: Batch Submitter - runs every 5 minutes
-	// Submits batches for accepted events
+	// Submits batches of DTEs for accepted events
 	go s.batchSubmitterWorker(ctx)
 
 	// Worker 3: Batch Poller - runs every 2 minutes
-	// Polls Hacienda for batch results
+	// Polls Hacienda for batch processing results
 	go s.batchPollerWorker(ctx)
 
-	log.Println("[Contingency] ✅ All workers started")
+	log.Println("[Contingency] ✅ All workers started successfully")
+	log.Println("[Contingency] Event Creator: every 10 minutes")
+	log.Println("[Contingency] Batch Submitter: every 5 minutes")
+	log.Println("[Contingency] Batch Poller: every 2 minutes")
 }
 
-// eventCreatorWorker - Creates contingency events for pending DTEs
+// ===========================
+// WORKER 1: EVENT CREATOR
+// ===========================
+
+// eventCreatorWorker creates contingency events for pending DTEs
 func (s *ContingencyService) eventCreatorWorker(ctx context.Context) {
 	ticker := time.NewTicker(10 * time.Minute)
 	defer ticker.Stop()
+
+	log.Println("[EventCreator] Worker started")
 
 	// Run immediately on start
 	s.processContingencyEvents(ctx)
@@ -45,7 +58,8 @@ func (s *ContingencyService) eventCreatorWorker(ctx context.Context) {
 }
 
 func (s *ContingencyService) processContingencyEvents(ctx context.Context) {
-	log.Println("[EventCreator] Processing contingency events...")
+	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	log.Println("[EventCreator] 🔄 Processing contingency events...")
 
 	// Get all companies with pending DTEs
 	companies, err := s.GetCompaniesWithPendingDTEs(ctx)
@@ -55,11 +69,14 @@ func (s *ContingencyService) processContingencyEvents(ctx context.Context) {
 	}
 
 	if len(companies) == 0 {
-		log.Println("[EventCreator] No pending DTEs found")
+		log.Println("[EventCreator] ℹ️  No pending DTEs found")
 		return
 	}
 
 	log.Printf("[EventCreator] Found %d companies with pending DTEs", len(companies))
+
+	successCount := 0
+	errorCount := 0
 
 	// Process each company
 	for _, companyID := range companies {
@@ -69,6 +86,7 @@ func (s *ContingencyService) processContingencyEvents(ctx context.Context) {
 		dtes, err := s.GetPendingDTEsByCompany(ctx, companyID)
 		if err != nil {
 			log.Printf("[EventCreator] ❌ Error getting DTEs for company %s: %v", companyID, err)
+			errorCount++
 			continue
 		}
 
@@ -78,31 +96,43 @@ func (s *ContingencyService) processContingencyEvents(ctx context.Context) {
 
 		log.Printf("[EventCreator] Found %d pending DTEs for company %s", len(dtes), companyID)
 
-		// Create and submit contingency event
+		// Create and submit contingency event (STEP 1)
 		event, err := s.CreateAndSubmitContingencyEvent(ctx, companyID, dtes)
 		if err != nil {
 			log.Printf("[EventCreator] ❌ Failed to create event for company %s: %v", companyID, err)
 
 			// Increment retry count for DTEs
 			for _, dte := range dtes {
-				s.incrementDTERetryCount(ctx, dte.ID)
+				if retryErr := s.incrementDTERetryCount(ctx, dte.ID); retryErr != nil {
+					log.Printf("[EventCreator] ⚠️  Failed to increment retry for DTE %s: %v", dte.ID, retryErr)
+				}
 			}
 
+			errorCount++
 			continue
 		}
 
 		log.Printf("[EventCreator] ✅ Event created for company %s: %s", companyID, event.ID)
+		successCount++
 	}
 
-	log.Println("[EventCreator] ✅ Processing complete")
+	log.Printf("[EventCreator] ✅ Processing complete: %d succeeded, %d errors", successCount, errorCount)
+	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 }
 
-// batchSubmitterWorker - Submits batches for accepted events
+// ===========================
+// WORKER 2: BATCH SUBMITTER
+// ===========================
+
+// batchSubmitterWorker submits batches for accepted events
 func (s *ContingencyService) batchSubmitterWorker(ctx context.Context) {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 
-	// Run immediately on start
+	log.Println("[BatchSubmitter] Worker started")
+
+	// Run immediately on start (after 30 second delay to allow events to be created)
+	time.Sleep(30 * time.Second)
 	s.processBatchSubmissions(ctx)
 
 	for {
@@ -117,7 +147,8 @@ func (s *ContingencyService) batchSubmitterWorker(ctx context.Context) {
 }
 
 func (s *ContingencyService) processBatchSubmissions(ctx context.Context) {
-	log.Println("[BatchSubmitter] Processing batch submissions...")
+	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	log.Println("[BatchSubmitter] 🔄 Processing batch submissions...")
 
 	// Get all accepted events without batches
 	events, err := s.getEventsReadyForBatch(ctx)
@@ -127,33 +158,47 @@ func (s *ContingencyService) processBatchSubmissions(ctx context.Context) {
 	}
 
 	if len(events) == 0 {
-		log.Println("[BatchSubmitter] No events ready for batch submission")
+		log.Println("[BatchSubmitter] ℹ️  No events ready for batch submission")
 		return
 	}
 
 	log.Printf("[BatchSubmitter] Found %d events ready for batch", len(events))
 
+	successCount := 0
+	errorCount := 0
+
 	for _, event := range events {
 		log.Printf("[BatchSubmitter] Creating batch for event: %s", event.ID)
 
+		// Create and submit batch (STEP 2)
 		batch, err := s.CreateAndSubmitBatch(ctx, event.ID)
 		if err != nil {
 			log.Printf("[BatchSubmitter] ❌ Failed to submit batch for event %s: %v", event.ID, err)
+			errorCount++
 			continue
 		}
 
 		log.Printf("[BatchSubmitter] ✅ Batch submitted: %s (lote: %s)", batch.ID, batch.CodigoLote.String)
+		successCount++
 	}
 
-	log.Println("[BatchSubmitter] ✅ Processing complete")
+	log.Printf("[BatchSubmitter] ✅ Processing complete: %d succeeded, %d errors", successCount, errorCount)
+	log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 }
 
-// batchPollerWorker - Polls for batch results
+// ===========================
+// WORKER 3: BATCH POLLER
+// ===========================
+
+// batchPollerWorker polls for batch results
 func (s *ContingencyService) batchPollerWorker(ctx context.Context) {
 	ticker := time.NewTicker(2 * time.Minute)
 	defer ticker.Stop()
 
+	log.Println("[BatchPoller] Worker started")
+
 	// Wait 2 minutes before first run (give batches time to process)
+	// According to manual: 2-3 minutes for test, 1-3 minutes for production
 	time.Sleep(2 * time.Minute)
 
 	for {
@@ -162,67 +207,15 @@ func (s *ContingencyService) batchPollerWorker(ctx context.Context) {
 			log.Println("[BatchPoller] Shutting down...")
 			return
 		case <-ticker.C:
+			log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+			log.Println("[BatchPoller] 🔄 Polling batches...")
+
 			err := s.PollBatches(ctx)
 			if err != nil {
 				log.Printf("[BatchPoller] ❌ Error: %v", err)
 			}
+
+			log.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 		}
 	}
-}
-
-// Helper methods
-
-func (s *ContingencyService) incrementDTERetryCount(ctx context.Context, dteID string) error {
-	query := `
-        UPDATE dte_contingency_queue
-        SET retry_count = retry_count + 1,
-            updated_at = NOW()
-        WHERE id = $1
-    `
-
-	_, err := s.db.ExecContext(ctx, query, dteID)
-	return err
-}
-
-func (s *ContingencyService) getEventsReadyForBatch(ctx context.Context) ([]*EventInfo, error) {
-	query := `
-        SELECT e.id, e.codigo_generacion, e.company_id, e.ambiente
-        FROM dte_contingency_events e
-        WHERE e.status = 'accepted'
-        AND NOT EXISTS (
-            SELECT 1 FROM dte_contingency_batches b
-            WHERE b.contingency_event_id = e.id
-        )
-        ORDER BY e.accepted_at ASC
-    `
-
-	rows, err := s.db.QueryContext(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var events []*EventInfo
-	for rows.Next() {
-		var event EventInfo
-		err := rows.Scan(
-			&event.ID,
-			&event.CodigoGeneracion,
-			&event.CompanyID,
-			&event.Ambiente,
-		)
-		if err != nil {
-			return nil, err
-		}
-		events = append(events, &event)
-	}
-
-	return events, nil
-}
-
-type EventInfo struct {
-	ID               string
-	CodigoGeneracion string
-	CompanyID        string
-	Ambiente         string
 }
