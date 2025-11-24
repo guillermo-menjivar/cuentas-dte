@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// ContingencyEventJSON represents the complete structure of Evento de Contingencia
 type ContingencyEventJSON struct {
 	Identificacion IdentificacionContingencia `json:"identificacion"`
 	Emisor         EmisorContingencia         `json:"emisor"`
@@ -56,7 +55,6 @@ type MotivoContingencia struct {
 	MotivoContingencia *string `json:"motivoContingencia,omitempty"`
 }
 
-// BuildContingencyEvent creates the JSON for Evento de Contingencia (schema v3)
 func (s *ContingencyService) BuildContingencyEvent(
 	ctx context.Context,
 	companyID string,
@@ -74,16 +72,13 @@ func (s *ContingencyService) BuildContingencyEvent(
 		return nil, "", fmt.Errorf("too many DTEs: max 1000, got %d", len(dtes))
 	}
 
-	// Get company info
 	company, err := s.getCompany(ctx, companyID)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to get company: %w", err)
 	}
 
-	// Generate event codigo
 	codigoGeneracion := strings.ToUpper(uuid.New().String())
 
-	// Get El Salvador timezone
 	loc, _ := time.LoadLocation("America/El_Salvador")
 	if loc == nil {
 		loc = time.FixedZone("CST", -6*60*60)
@@ -91,7 +86,6 @@ func (s *ContingencyService) BuildContingencyEvent(
 
 	now := time.Now().In(loc)
 
-	// Find date/time range from DTEs
 	var fechaInicio, fechaFin time.Time
 
 	for i, dte := range dtes {
@@ -110,7 +104,10 @@ func (s *ContingencyService) BuildContingencyEvent(
 		}
 	}
 
-	// Build detalleDTE array
+	// NEW: Database stores hora_inicio/hora_fin as TIMESTAMPTZ (full timestamps)
+	// but we only use the time portion in the JSON sent to Hacienda
+	// Format extracts just the time: "15:04:05"
+
 	detalleDTE := make([]DetalleDTEContingencia, len(dtes))
 	for i, dte := range dtes {
 		detalleDTE[i] = DetalleDTEContingencia{
@@ -120,7 +117,6 @@ func (s *ContingencyService) BuildContingencyEvent(
 		}
 	}
 
-	// Build emisor
 	emisor := EmisorContingencia{
 		NIT:                  company.NIT,
 		Nombre:               company.LegalName,
@@ -132,7 +128,6 @@ func (s *ContingencyService) BuildContingencyEvent(
 		Correo:               company.Email,
 	}
 
-	// Add optional fields
 	if company.EstablishmentCodeMH != "" {
 		emisor.CodEstableMH = &company.EstablishmentCodeMH
 	}
@@ -141,7 +136,6 @@ func (s *ContingencyService) BuildContingencyEvent(
 		emisor.CodPuntoVenta = &company.PointOfSaleCode
 	}
 
-	// Build motivo
 	var motivoPtr *string
 	if motivoContingencia != "" {
 		motivoPtr = &motivoContingencia
@@ -156,7 +150,6 @@ func (s *ContingencyService) BuildContingencyEvent(
 		MotivoContingencia: motivoPtr,
 	}
 
-	// Build complete event
 	event := ContingencyEventJSON{
 		Identificacion: IdentificacionContingencia{
 			Version:          3,

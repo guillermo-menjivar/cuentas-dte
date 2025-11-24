@@ -1,3 +1,4 @@
+// internal/dte/contingency_service.go
 package dte
 
 import (
@@ -10,6 +11,8 @@ import (
 	"cuentas/internal/hacienda"
 	"cuentas/internal/models"
 	"cuentas/internal/services"
+
+	"github.com/google/uuid"
 )
 
 type Firmador interface {
@@ -34,27 +37,6 @@ func NewContingencyService(
 	firmador Firmador,
 	haciendaClient HaciendaClient,
 	haciendaService *services.HaciendaService,
-) *ContingencyService {
-	return &ContingencyService{
-		db:              db,
-		firmador:        firmador,
-		hacienda:        haciendaClient,
-		haciendaService: haciendaService,
-	}
-}
-
-type ContingencyService struct {
-	db              *sql.DB
-	firmador        Firmador
-	hacienda        HaciendaClient
-	haciendaService *hacienda.Service
-}
-
-func NewContingencyService(
-	db *sql.DB,
-	firmador Firmador,
-	haciendaClient HaciendaClient,
-	haciendaService *hacienda.Service,
 ) *ContingencyService {
 	return &ContingencyService{
 		db:              db,
@@ -102,8 +84,8 @@ func (s *ContingencyService) AddToQueue(ctx context.Context, params AddToQueuePa
 }
 
 type AddToQueueParams struct {
-	InvoiceID        *string // VARCHAR(36) - can be nil
-	PurchaseID       *string // UUID - can be nil
+	InvoiceID        *string
+	PurchaseID       *string
 	TipoDte          string
 	CodigoGeneracion string
 	Ambiente         string
@@ -309,4 +291,28 @@ func (s *ContingencyService) MarkDTEFailed(ctx context.Context, codigoGeneracion
 
 	_, err := s.db.ExecContext(ctx, query, reason, codigoGeneracion)
 	return err
+}
+
+// loadCredentials loads company credentials from vault/database
+func (s *ContingencyService) loadCredentials(ctx context.Context, companyID uuid.UUID) (*Credentials, error) {
+	// TODO: Implement based on your existing credentials loading logic
+	// This should match how you load credentials in your DTEService
+	query := `
+        SELECT nit, firmador_password
+        FROM companies
+        WHERE id = $1
+    `
+
+	var creds Credentials
+	err := s.db.QueryRowContext(ctx, query, companyID).Scan(&creds.NIT, &creds.Password)
+	if err != nil {
+		return nil, err
+	}
+
+	return &creds, nil
+}
+
+type Credentials struct {
+	NIT      string
+	Password string
 }
