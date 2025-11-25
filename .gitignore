@@ -2,3 +2,4 @@ artifacts/dte-firmador/
 cuentas/cuentas
 cuentas/bin
 .company_id
+cuentas/.env
