@@ -1,9 +1,8 @@
 -- ============================================================================
--- Migration 004: Create Triggers for Contingency
--- Description: Database triggers for data consistency
+-- Triggers for Contingency
 -- ============================================================================
 
--- Updated_at trigger function
+-- Reuse existing function or create if not exists
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -12,13 +11,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Apply updated_at to periods
+-- Apply to new tables
 CREATE TRIGGER update_contingency_periods_updated_at
     BEFORE UPDATE ON contingency_periods
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- Apply updated_at to lotes
 CREATE TRIGGER update_lotes_updated_at
     BEFORE UPDATE ON lotes
     FOR EACH ROW
@@ -41,7 +39,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Apply ambiente check to invoices
 CREATE TRIGGER check_invoice_ambiente
     BEFORE INSERT OR UPDATE ON invoices
     FOR EACH ROW
