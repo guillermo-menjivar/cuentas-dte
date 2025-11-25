@@ -89,13 +89,6 @@ var ServeCmd = &cobra.Command{
 			log.Fatalf("Failed to initialize DTE validator: %v", err)
 		}
 
-		// ⭐ Create context for background workers
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		// ⭐ Handle graceful shutdown
-		go handleGracefulShutdown(cancel)
-
 		fmt.Printf("Server running on port: %s\n", GlobalConfig.Port)
 		startServer()
 	},
