@@ -27,12 +27,11 @@ import (
 )
 
 var (
-	vaultService       *services.VaultService
-	haciendaService    *services.HaciendaService
-	firmadorClient     *firmador.Client
-	haciendaClient     *hacienda.Client
-	dteService         *dte.DTEService
-	contingencyService *dte.ContingencyService // ⭐ NEW
+	vaultService    *services.VaultService
+	haciendaService *services.HaciendaService
+	firmadorClient  *firmador.Client
+	haciendaClient  *hacienda.Client
+	dteService      *dte.DTEService
 )
 
 // ServeCmd represents the serve command
@@ -80,11 +79,6 @@ var ServeCmd = &cobra.Command{
 			log.Fatalf("Failed to initialize Hacienda service: %v", err)
 		}
 
-		// ⭐ Initialize Contingency service
-		if err := initializeContingencyService(); err != nil {
-			log.Fatalf("Failed to initialize Contingency service: %v", err)
-		}
-
 		// Initialize DTE service
 		if err := initializeDTEService(); err != nil {
 			log.Fatalf("Failed to initialize DTE service: %v", err)
@@ -98,9 +92,6 @@ var ServeCmd = &cobra.Command{
 		// ⭐ Create context for background workers
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-
-		// ⭐ Start contingency background workers
-		contingencyService.StartContingencyWorkers(ctx)
 
 		// ⭐ Handle graceful shutdown
 		go handleGracefulShutdown(cancel)
@@ -155,21 +146,6 @@ func initializeHaciendaService() error {
 	return nil
 }
 
-// ⭐ NEW: Initialize Contingency Service
-func initializeContingencyService() error {
-	fmt.Println("Initializing Contingency service...")
-
-	contingencyService = dte.NewContingencyService(
-		database.DB,
-		firmadorClient,
-		haciendaClient,
-		haciendaService,
-	)
-
-	fmt.Println("✅ Contingency service initialized")
-	return nil
-}
-
 func initializeDTEService() error {
 	fmt.Println("Initializing DTE service...")
 
@@ -180,7 +156,6 @@ func initializeDTEService() error {
 		vaultService,
 		haciendaClient,
 		haciendaService,
-		contingencyService, // ⭐ Pass contingency service to DTE service
 	)
 
 	fmt.Println("DTE service initialized")
@@ -304,7 +279,6 @@ func startServer() {
 		c.Set("vaultService", vaultService)
 		c.Set("firmador", firmadorClient)
 		c.Set("dteService", dteService)
-		c.Set("contingencyService", contingencyService) // ⭐ Inject contingency service
 		c.Next()
 	})
 
@@ -435,17 +409,6 @@ func startServer() {
 		v1.GET("/dte/reconciliation", reconciliationHandler.ReconcileDTEs)
 		v1.GET("/dte/reconciliation/:codigo_generacion", reconciliationHandler.ReconcileSingleDTE)
 
-		// ⭐ NEW: Contingency routes
-		contingencyHandler := handlers.NewContingencyHandler(contingencyService)
-		contingency := v1.Group("/contingency")
-		{
-			contingency.GET("/queue", contingencyHandler.ListPendingDTEs)
-			contingency.GET("/events", contingencyHandler.ListEvents)
-			contingency.GET("/events/:id", contingencyHandler.GetEvent)
-			contingency.GET("/batches", contingencyHandler.ListBatches)
-			contingency.GET("/batches/:id", contingencyHandler.GetBatch)
-			contingency.POST("/retry/:id", contingencyHandler.RetryDTE)
-		}
 	}
 
 	// Start server
