@@ -1,6 +1,5 @@
 -- ============================================================================
 -- Migration 0054: Contingency System - New Design
--- Description: Creates contingency tracking for POS offline and service failures
 -- ============================================================================
 
 -- 1. Create contingency_periods (no dependencies)
@@ -76,7 +75,7 @@ CREATE TABLE lotes (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 4. Modify invoices table
+-- 4. Modify invoices table (SKIP columns that already exist)
 ALTER TABLE invoices ADD COLUMN contingency_period_id UUID REFERENCES contingency_periods(id) ON DELETE SET NULL;
 ALTER TABLE invoices ADD COLUMN contingency_event_id UUID REFERENCES contingency_events(id) ON DELETE SET NULL;
 ALTER TABLE invoices ADD COLUMN lote_id UUID REFERENCES lotes(id) ON DELETE SET NULL;
@@ -89,16 +88,15 @@ ALTER TABLE invoices ADD COLUMN dte_transmission_status VARCHAR(20) DEFAULT 'pen
 
 ALTER TABLE invoices ADD COLUMN dte_unsigned JSONB;
 ALTER TABLE invoices ADD COLUMN dte_signed TEXT;
-ALTER TABLE invoices ADD COLUMN dte_sello_recibido TEXT;
+-- SKIP: dte_sello_recibido already exists
 ALTER TABLE invoices ADD COLUMN hacienda_observaciones TEXT[];
 ALTER TABLE invoices ADD COLUMN signature_retry_count INT DEFAULT 0;
 
 -- 5. Create indexes
-CREATE UNIQUE INDEX idx_invoices_codigo_generacion ON invoices(codigo_generacion);
 CREATE INDEX idx_invoices_contingency_period ON invoices(contingency_period_id) WHERE contingency_period_id IS NOT NULL;
 CREATE INDEX idx_invoices_contingency_event ON invoices(contingency_event_id) WHERE contingency_event_id IS NOT NULL;
 CREATE INDEX idx_invoices_lote ON invoices(lote_id) WHERE lote_id IS NOT NULL;
-CREATE INDEX idx_invoices_status ON invoices(dte_transmission_status);
+CREATE INDEX idx_invoices_dte_status ON invoices(dte_transmission_status);
 CREATE INDEX idx_invoices_pending_sig ON invoices(contingency_period_id, signature_retry_count) 
     WHERE dte_transmission_status = 'pending_signature';
 
@@ -170,8 +168,3 @@ CREATE TRIGGER check_invoice_ambiente
 COMMENT ON TABLE contingency_periods IS 'Tracks contingency periods (outage episodes) per POS';
 COMMENT ON TABLE contingency_events IS 'Eventos de Contingencia submitted to Hacienda';
 COMMENT ON TABLE lotes IS 'Batches of DTEs submitted during contingency recovery';
-
-COMMENT ON COLUMN contingency_periods.f_fin IS 'End date - represents when period was closed (first event created), may be slightly after actual outage end';
-COMMENT ON COLUMN contingency_periods.h_fin IS 'End time - represents when period was closed (first event created), may be slightly after actual outage end';
-COMMENT ON COLUMN contingency_periods.processing IS 'Concurrency control flag - prevents duplicate processing by workers';
-COMMENT ON COLUMN lotes.processing IS 'Concurrency control flag - prevents duplicate processing by workers';
