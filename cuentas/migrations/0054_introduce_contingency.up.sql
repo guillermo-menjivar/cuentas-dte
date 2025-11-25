@@ -5,20 +5,16 @@
 -- 1. Create contingency_periods (no dependencies)
 CREATE TABLE contingency_periods (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    
     company_id UUID NOT NULL,
     establishment_id UUID NOT NULL,
     point_of_sale_id UUID NOT NULL,
     ambiente VARCHAR(2) NOT NULL CHECK (ambiente IN ('00', '01')),
-    
     f_inicio DATE NOT NULL,
     h_inicio TIME NOT NULL,
     f_fin DATE,
     h_fin TIME,
-    
     tipo_contingencia INT NOT NULL CHECK (tipo_contingencia BETWEEN 1 AND 5),
     motivo_contingencia TEXT,
-    
     status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'reporting', 'completed')),
     processing BOOLEAN DEFAULT false,
     
@@ -147,8 +143,8 @@ RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.contingency_period_id IS NOT NULL THEN
         IF NOT EXISTS (
-            SELECT 1 FROM contingency_periods 
-            WHERE id = NEW.contingency_period_id 
+            SELECT 1 FROM contingency_periods
+            WHERE id = NEW.contingency_period_id
             AND ambiente = NEW.ambiente
         ) THEN
             RAISE EXCEPTION 'Invoice ambiente (%) does not match period ambiente', NEW.ambiente;
