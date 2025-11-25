@@ -61,6 +61,16 @@ type Invoice struct {
 	BalanceDue    float64    `json:"balance_due"`
 	DueDate       *time.Time `json:"due_date,omitempty"`
 
+	// Contingency tracking
+	ContingencyPeriodID   *string  `json:"contingency_period_id,omitempty"`
+	ContingencyEventID    *string  `json:"contingency_event_id,omitempty"`
+	LoteID                *string  `json:"lote_id,omitempty"`
+	DteTransmissionStatus string   `json:"dte_transmission_status"`
+	DteUnsigned           []byte   `json:"dte_unsigned,omitempty" gorm:"type:jsonb"`
+	DteSigned             *string  `json:"dte_signed,omitempty"`
+	HaciendaObservaciones []string `json:"hacienda_observaciones,omitempty" gorm:"type:text[]"`
+	SignatureRetryCount   int      `json:"signature_retry_count"`
+
 	// Status
 	Status string `json:"status"`
 
