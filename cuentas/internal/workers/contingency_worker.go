@@ -627,6 +627,7 @@ func (w *ContingencyWorker) pollLote(ctx context.Context, lote *models.Lote) {
 		log.Printf("[LotePollWorker] Failed to get ambiente: %v", err)
 		return
 	}
+	fmt.Println("this is the ambiente = but we are not using it...", ambiente)
 
 	// Authenticate
 	authResponse, err := w.haciendaService.AuthenticateCompany(ctx, lote.CompanyID)
@@ -722,7 +723,7 @@ func (w *ContingencyWorker) loadCredentials(ctx context.Context, companyID strin
 	}
 
 	// Load password from Vault
-	password, err := w.vaultService.GetCompanyPassword(ctx, firmadorPasswordRef)
+	password, err := w.vaultService.GetCompanyPassword(firmadorPasswordRef)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load firmador password: %w", err)
 	}
