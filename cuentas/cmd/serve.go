@@ -27,11 +27,12 @@ import (
 )
 
 var (
-	vaultService    *services.VaultService
-	haciendaService *services.HaciendaService
-	firmadorClient  *firmador.Client
-	haciendaClient  *hacienda.Client
-	dteService      *dte.DTEService
+	vaultService       *services.VaultService
+	haciendaService    *services.HaciendaService
+	firmadorClient     *firmador.Client
+	haciendaClient     *hacienda.Client
+	dteService         *dte.DTEService
+	contingencyService *services.ContingencyService
 )
 
 // ServeCmd represents the serve command
@@ -79,6 +80,11 @@ var ServeCmd = &cobra.Command{
 			log.Fatalf("Failed to initialize Hacienda service: %v", err)
 		}
 
+		// Initialize Contingency service
+		if err := initializeContingencyService(); err != nil {
+			log.Fatalf("Failed to initialize Contingency service: %v", err)
+		}
+
 		// Initialize DTE service
 		if err := initializeDTEService(); err != nil {
 			log.Fatalf("Failed to initialize DTE service: %v", err)
@@ -92,6 +98,15 @@ var ServeCmd = &cobra.Command{
 		fmt.Printf("Server running on port: %s\n", GlobalConfig.Port)
 		startServer()
 	},
+}
+
+func initializeContingencyService() error {
+	fmt.Println("Initializing Contingency service...")
+
+	contingencyService = services.NewContingencyService(database.DB)
+
+	fmt.Println("Contingency service initialized")
+	return nil
 }
 
 func initializeDTEValidator() error {
@@ -149,6 +164,7 @@ func initializeDTEService() error {
 		vaultService,
 		haciendaClient,
 		haciendaService,
+		contingencyService,
 	)
 
 	fmt.Println("DTE service initialized")
