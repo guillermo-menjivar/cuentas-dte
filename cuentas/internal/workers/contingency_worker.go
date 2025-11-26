@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"cuentas/internal/hacienda"
@@ -14,7 +13,6 @@ import (
 	"cuentas/internal/services"
 	"cuentas/internal/services/firmador"
 
-	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -548,14 +546,12 @@ func (w *ContingencyWorker) submitLote(ctx context.Context, lote *models.Lote) {
 	}
 
 	// Build lote payload
-	idEnvio := strings.ToUpper(uuid.New().String())
 
 	// Submit batch
 	batchResponse, err := w.haciendaClient.SubmitBatch(
 		ctx,
 		authResponse.Body.Token,
 		ambiente,
-		idEnvio,
 		nit,
 		signedDTEs,
 	)
@@ -643,7 +639,6 @@ func (w *ContingencyWorker) pollLote(ctx context.Context, lote *models.Lote) {
 	queryResponse, err := w.haciendaClient.QueryBatchStatus(
 		ctx,
 		authResponse.Body.Token,
-		ambiente,
 		*lote.CodigoLote,
 	)
 
@@ -727,7 +722,7 @@ func (w *ContingencyWorker) loadCredentials(ctx context.Context, companyID strin
 	}
 
 	// Load password from Vault
-	password, err := w.vaultService.GetSecret(ctx, firmadorPasswordRef)
+	password, err := w.vaultService.GetCompanyPassword(ctx, firmadorPasswordRef)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load firmador password: %w", err)
 	}
