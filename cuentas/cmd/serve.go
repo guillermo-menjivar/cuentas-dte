@@ -17,6 +17,7 @@ import (
 	"cuentas/internal/middleware"
 	"cuentas/internal/services"
 	"cuentas/internal/services/firmador"
+	"cuentas/internal/workers"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-migrate/migrate/v4"
@@ -33,6 +34,7 @@ var (
 	haciendaClient     *hacienda.Client
 	dteService         *dte.DTEService
 	contingencyService *services.ContingencyService
+	contingencyWorker  *workers.ContingencyWorker
 )
 
 // ServeCmd represents the serve command
@@ -95,6 +97,11 @@ var ServeCmd = &cobra.Command{
 			log.Fatalf("Failed to initialize DTE validator: %v", err)
 		}
 
+		// Initialize Contingency worker
+		if err := initializeContingencyWorker(); err != nil {
+			log.Fatalf("Failed to initialize Contingency worker: %v", err)
+		}
+
 		fmt.Printf("Server running on port: %s\n", GlobalConfig.Port)
 		startServer()
 	},
@@ -106,6 +113,24 @@ func initializeContingencyService() error {
 	contingencyService = services.NewContingencyService(database.DB)
 
 	fmt.Println("Contingency service initialized")
+	return nil
+}
+
+func initializeContingencyWorker() error {
+	fmt.Println("Initializing Contingency worker...")
+
+	contingencyWorker = workers.NewContingencyWorker(
+		database.DB,
+		database.RedisClient,
+		contingencyService,
+		firmadorClient,
+		haciendaClient,
+		haciendaService,
+		vaultService,
+		nil, // Use default config
+	)
+
+	fmt.Println("✅ Contingency worker initialized")
 	return nil
 }
 
