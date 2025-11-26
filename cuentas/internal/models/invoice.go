@@ -71,6 +71,8 @@ type Invoice struct {
 	HaciendaObservaciones []string `json:"hacienda_observaciones,omitempty" gorm:"type:text[]"`
 	SignatureRetryCount   int      `json:"signature_retry_count"`
 
+	DteCodigoGeneracion *string `json:"dte_codigo_generacion,omitempty" gorm:"column:dte_codigo_generacion"`
+
 	// Status
 	Status string `json:"status"`
 

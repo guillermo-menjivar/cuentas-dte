@@ -236,6 +236,7 @@ func (s *ContingencyService) GetPeriodByID(ctx context.Context, periodID string)
 }
 
 // GetInvoicesForPeriod retrieves all invoices in a contingency period
+// GetInvoicesForPeriod retrieves all invoices in a contingency period
 func (s *ContingencyService) GetInvoicesForPeriod(ctx context.Context, periodID string) ([]models.Invoice, error) {
 	query := `
 		SELECT id, company_id, establishment_id, point_of_sale_id,

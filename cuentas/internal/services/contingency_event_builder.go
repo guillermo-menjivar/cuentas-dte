@@ -142,8 +142,8 @@ func (b *ContingencyEventBuilder) BuildEvent(
 
 		// Get codigo_generacion - try dte_codigo_generacion first
 		var codigoGen string
-		if inv.DteCodigoGeneracion != "" {
-			codigoGen = strings.ToUpper(inv.DteCodigoGeneracion)
+		if inv.DteCodigoGeneracion != nil && *inv.DteCodigoGeneracion != "" {
+			codigoGen = strings.ToUpper(*inv.DteCodigoGeneracion)
 		} else {
 			// Parse from dte_unsigned if available
 			codigoGen, _ = b.extractCodigoFromUnsigned(inv.DteUnsigned)
