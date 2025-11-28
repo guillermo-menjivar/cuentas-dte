@@ -789,3 +789,65 @@ func (s *ContingencyService) CheckPeriodCompletion(ctx context.Context, periodID
 
 	return remaining == 0, nil
 }
+
+// QueuePurchaseForContingency queues a failed purchase for contingency processing
+func (s *ContingencyService) QueuePurchaseForContingency(
+	ctx context.Context,
+	purchase *models.Purchase,
+	failureType string,
+	dteUnsigned []byte,
+	dteSigned *string,
+	ambiente string,
+) error {
+	log.Printf("[Contingency] Queueing purchase %s for contingency (failure: %s)", purchase.ID, failureType)
+
+	// Determine tipo_contingencia based on failure
+	tipoContingencia, motivoContingencia := s.determineContingencyType(failureType)
+
+	// Find or create contingency period for this POS
+	period, err := s.findOrCreatePeriod(
+		ctx,
+		purchase.CompanyID,
+		purchase.EstablishmentID,
+		purchase.PointOfSaleID,
+		ambiente,
+		tipoContingencia,
+		motivoContingencia,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to find/create contingency period: %w", err)
+	}
+
+	// Determine status based on whether we have a signature
+	var status string
+	if dteSigned != nil && *dteSigned != "" {
+		status = models.DTEStatusFailedRetry // Signed but Hacienda failed
+	} else {
+		status = models.DTEStatusPendingSignature // Unsigned, firmador failed
+	}
+
+	// Update purchase with contingency info
+	query := `
+		UPDATE purchases
+		SET contingency_period_id = $1,
+			dte_transmission_status = $2,
+			dte_unsigned = $3,
+			dte_signed = $4,
+			signature_retry_count = COALESCE(signature_retry_count, 0)
+		WHERE id = $5
+	`
+
+	_, err = s.db.ExecContext(ctx, query,
+		period.ID,
+		status,
+		dteUnsigned,
+		dteSigned,
+		purchase.ID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update purchase for contingency: %w", err)
+	}
+
+	log.Printf("[Contingency] ✅ Purchase %s queued in period %s (status: %s)", purchase.ID, period.ID, status)
+	return nil
+}
