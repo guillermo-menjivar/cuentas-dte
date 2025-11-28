@@ -50,6 +50,181 @@ func (s *DTEService) ProcessNotaCredito(ctx context.Context, nota *models.NotaCr
 	var dteForSigning interface{}
 	json.Unmarshal(dteJSON, &dteForSigning)
 
+	// === CONTINGENCY: Handle signing failure ===
+	signedDTE, err := s.firmador.Sign(ctx, creds.NIT, creds.Password, dteForSigning)
+	if err != nil {
+		fmt.Printf("⚠️  Firmador failed: %v\n", err)
+
+		if s.contingencyHelperNota != nil {
+			if queueErr := s.contingencyHelperNota.HandleNotaCreditoSigningFailure(
+				ctx,
+				nota,
+				dteForSigning,
+				"00",
+			); queueErr != nil {
+				return nil, fmt.Errorf("firmador failed and contingency queue failed: %w", queueErr)
+			}
+			fmt.Println("📋 Nota Crédito queued for contingency (firmador unavailable)")
+			return nil, fmt.Errorf("nota credito queued for contingency: firmador unavailable")
+		}
+
+		return nil, fmt.Errorf("failed to sign DTE: %w", err)
+	}
+
+	fmt.Println("\nStep 3: DTE Signed Successfully!")
+	fmt.Printf("Signed DTE length: %d characters\n", len(signedDTE))
+
+	// Step 4: Authenticate with Hacienda
+	fmt.Println("\nStep 4: Authenticating with Hacienda...")
+	authResponse, err := s.haciendaService.AuthenticateCompany(ctx, nota.CompanyID)
+	if err != nil {
+		fmt.Printf("⚠️  Hacienda auth failed: %v\n", err)
+
+		// === CONTINGENCY: Handle auth failure ===
+		if s.contingencyHelperNota != nil {
+			if queueErr := s.contingencyHelperNota.HandleNotaCreditoAuthFailure(
+				ctx,
+				nota,
+				dteForSigning,
+				signedDTE,
+				"00",
+			); queueErr != nil {
+				return nil, fmt.Errorf("auth failed and contingency queue failed: %w", queueErr)
+			}
+			fmt.Println("📋 Nota Crédito queued for contingency (Hacienda auth unavailable)")
+			return nil, fmt.Errorf("nota credito queued for contingency: Hacienda auth unavailable")
+		}
+
+		return nil, fmt.Errorf("failed to authenticate with Hacienda: %w", err)
+	}
+
+	fmt.Printf("✅ Authenticated! Token: %s...\n", authResponse.Body.Token[:50])
+
+	// Step 5: Submit to Hacienda
+	fmt.Println("\nStep 5: Submitting Nota de Crédito to Ministerio de Hacienda...")
+
+	response, err := s.hacienda.SubmitDTE(
+		ctx,
+		authResponse.Body.Token,
+		"00",
+		"05", // tipo DTE - Nota de Crédito
+		strings.ToUpper(nota.ID),
+		signedDTE,
+	)
+
+	if err != nil {
+		// Check if it's a rejection
+		if hacErr, ok := err.(*hacienda.HaciendaError); ok && hacErr.Type == "rejection" {
+			fmt.Printf("\n❌ Nota de Crédito REJECTED by Hacienda!\n")
+			if response != nil {
+				fmt.Printf("Code: %s\n", response.CodigoMsg)
+				fmt.Printf("Message: %s\n", response.DescripcionMsg)
+				if len(response.Observaciones) > 0 {
+					fmt.Println("Observations:")
+					for _, obs := range response.Observaciones {
+						fmt.Printf("  - %s\n", obs)
+					}
+				}
+			}
+			return response, err
+		}
+
+		// === CONTINGENCY: Handle submission failure ===
+		fmt.Printf("⚠️  Hacienda submission failed: %v\n", err)
+		if s.contingencyHelperNota != nil {
+			if queueErr := s.contingencyHelperNota.HandleNotaCreditoSubmissionFailure(
+				ctx,
+				nota,
+				dteForSigning,
+				signedDTE,
+				"00",
+			); queueErr != nil {
+				return nil, fmt.Errorf("submission failed and contingency queue failed: %w", queueErr)
+			}
+			fmt.Println("📋 Nota Crédito queued for contingency (Hacienda unavailable)")
+			return nil, fmt.Errorf("nota credito queued for contingency: Hacienda unavailable")
+		}
+
+		return nil, fmt.Errorf("failed to submit to Hacienda: %w", err)
+	}
+
+	if response == nil {
+		return nil, fmt.Errorf("no response received from Hacienda")
+	}
+
+	// Step 6: Success!
+	fmt.Println("\n✅ SUCCESS! NOTA DE CRÉDITO ACCEPTED BY HACIENDA!")
+	fmt.Printf("Estado: %s\n", response.Estado)
+	fmt.Printf("Código de Generación: %s\n", response.CodigoGeneracion)
+	fmt.Printf("Sello Recibido: %s\n", response.SelloRecibido)
+	fmt.Printf("Fecha Procesamiento: %s\n", response.FhProcesamiento)
+
+	// Step 7: Save response to database
+	if response.Estado == "PROCESADO" {
+		err = s.saveNotaCreditoHaciendaResponse(ctx, nota.ID, response)
+		if err != nil {
+			fmt.Printf("⚠️  Warning: failed to save Hacienda response: %v\n", err)
+		} else {
+			fmt.Println("✅ Hacienda response saved to nota")
+		}
+		UploadDTEToS3Async(dteJSON, "unsigned", codigos.DocTypeNotaCredito, nota.CompanyID, strings.ToUpper(nota.ID))
+		UploadDTEToS3Async([]byte(signedDTE), "signed", codigos.DocTypeNotaCredito, nota.CompanyID, strings.ToUpper(nota.ID))
+		haciendaResponseJSON, _ := json.MarshalIndent(response, "", "  ")
+		UploadDTEToS3Async(haciendaResponseJSON, "hacienda_response", codigos.DocTypeNotaCredito, nota.CompanyID, strings.ToUpper(nota.ID))
+	}
+
+	// Step 8: Log to commit log
+	err = s.logNotaCreditoToCommitLog(
+		ctx,
+		nota,
+		codigos.DocTypeNotaCredito,
+		codigos.MODE_PRUEBA,
+		dteJSON,
+		signedDTE,
+		response,
+	)
+	if err != nil {
+		fmt.Printf("⚠️  Warning: failed to log to commit log: %v\n", err)
+	} else {
+		fmt.Println("✅ Nota submission logged to commit log")
+	}
+
+	return response, nil
+}
+
+func (s *DTEService) _ProcessNotaCredito(ctx context.Context, nota *models.NotaCredito) (*hacienda.ReceptionResponse, error) {
+	// Step 1: Build DTE from nota
+	fmt.Printf("\n🔄 Processing Nota de Crédito: %s\n", nota.NotaNumber)
+	fmt.Println("Step 1: Building DTE from nota de crédito...")
+
+	dteJSON, err := s.builder.BuildNotaCredito(ctx, nota)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build DTE: %w", err)
+	}
+
+	// Pretty print for debugging
+	var dtePretty interface{}
+	json.Unmarshal(dteJSON, &dtePretty)
+	prettyJSON, _ := json.MarshalIndent(dtePretty, "", "  ")
+	fmt.Println("DTE Generated:")
+	fmt.Println(string(prettyJSON))
+
+	// Step 2: Load credentials and sign
+	fmt.Println("\nStep 2: Loading credentials and signing DTE...")
+	companyID, err := uuid.Parse(nota.CompanyID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid company ID: %w", err)
+	}
+
+	creds, err := s.LoadCredentials(ctx, companyID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load credentials: %w", err)
+	}
+
+	// Unmarshal to get codigo generacion for signing
+	var dteForSigning interface{}
+	json.Unmarshal(dteJSON, &dteForSigning)
+
 	signedDTE, err := s.firmador.Sign(ctx, creds.NIT, creds.Password, dteForSigning)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign DTE: %w", err)
