@@ -15,8 +15,203 @@ import (
 
 // ProcessRemision processes a remision (Type 04) - builds, signs, and submits to Hacienda
 // Add this method to internal/dte/service.go in the DTEService struct
-
 func (s *DTEService) ProcessRemision(ctx context.Context, remision *models.Invoice) (*hacienda.ReceptionResponse, error) {
+	// Step 1: Build DTE from remision
+	fmt.Printf("\n🔄 Processing Remision (Type 04): %s\n", remision.InvoiceNumber)
+	fmt.Println("Step 1: Building remision DTE...")
+
+	dteJSON, err := s.builder.BuildNotaRemision(ctx, remision)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build remision DTE: %w", err)
+	}
+
+	// Pretty print for debugging
+	var dtePretty interface{}
+	json.Unmarshal(dteJSON, &dtePretty)
+	prettyJSON, _ := json.MarshalIndent(dtePretty, "", "  ")
+	fmt.Println("Remision DTE Generated:")
+	fmt.Println(string(prettyJSON))
+
+	fmt.Println("\n✅ Schema validation already passed in builder")
+
+	// Parse identificacion from JSON
+	var remisionDTE struct {
+		Identificacion struct {
+			TipoDte          string `json:"tipoDte"`
+			Ambiente         string `json:"ambiente"`
+			NumeroControl    string `json:"numeroControl"`
+			CodigoGeneracion string `json:"codigoGeneracion"`
+		} `json:"identificacion"`
+	}
+	if err := json.Unmarshal(dteJSON, &remisionDTE); err != nil {
+		return nil, fmt.Errorf("failed to parse remision DTE: %w", err)
+	}
+
+	// Step 2: Load credentials and sign
+	fmt.Println("\nStep 2: Loading credentials and signing remision DTE...")
+	companyID, err := uuid.Parse(remision.CompanyID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid company ID: %w", err)
+	}
+
+	creds, err := s.LoadCredentials(ctx, companyID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load credentials: %w", err)
+	}
+
+	// Unmarshal for signing
+	var dteForSigning interface{}
+	json.Unmarshal(dteJSON, &dteForSigning)
+
+	// === CONTINGENCY: Handle signing failure ===
+	signedDTE, err := s.firmador.Sign(ctx, creds.NIT, creds.Password, dteForSigning)
+	if err != nil {
+		fmt.Printf("⚠️  Firmador failed: %v\n", err)
+
+		if s.contingencyHelper != nil {
+			if queueErr := s.contingencyHelper.HandleSigningFailure(
+				ctx,
+				remision,
+				dteForSigning,
+				remisionDTE.Identificacion.Ambiente,
+			); queueErr != nil {
+				return nil, fmt.Errorf("firmador failed and contingency queue failed: %w", queueErr)
+			}
+			fmt.Println("📋 Remision queued for contingency (firmador unavailable)")
+			return nil, fmt.Errorf("remision queued for contingency: firmador unavailable")
+		}
+
+		return nil, fmt.Errorf("failed to sign remision DTE: %w", err)
+	}
+
+	fmt.Println("\nStep 3: Remision DTE Signed Successfully!")
+	fmt.Printf("Signed DTE length: %d characters\n", len(signedDTE))
+
+	// Step 4: Authenticate with Hacienda
+	fmt.Println("\nStep 4: Authenticating with Hacienda...")
+	authResponse, err := s.haciendaService.AuthenticateCompany(ctx, companyID.String())
+	if err != nil {
+		fmt.Printf("⚠️  Hacienda auth failed: %v\n", err)
+
+		// === CONTINGENCY: Handle auth failure ===
+		if s.contingencyHelper != nil {
+			if queueErr := s.contingencyHelper.HandleAuthFailure(
+				ctx,
+				remision,
+				dteForSigning,
+				signedDTE,
+				remisionDTE.Identificacion.Ambiente,
+			); queueErr != nil {
+				return nil, fmt.Errorf("auth failed and contingency queue failed: %w", queueErr)
+			}
+			fmt.Println("📋 Remision queued for contingency (Hacienda auth unavailable)")
+			return nil, fmt.Errorf("remision queued for contingency: Hacienda auth unavailable")
+		}
+
+		return nil, fmt.Errorf("failed to authenticate with Hacienda: %w", err)
+	}
+
+	fmt.Printf("✅ Authenticated! Token: %s...\n", authResponse.Body.Token[:50])
+
+	// Step 5: Submit to Hacienda
+	fmt.Println("\nStep 5: Submitting Remision (Type 04) to Ministerio de Hacienda...")
+	fmt.Printf("📋 Código: %s | Ambiente: %s\n",
+		strings.ToUpper(remisionDTE.Identificacion.CodigoGeneracion),
+		remisionDTE.Identificacion.Ambiente)
+
+	response, err := s.hacienda.SubmitDTE(
+		ctx,
+		authResponse.Body.Token,
+		remisionDTE.Identificacion.Ambiente,
+		"04", // Type 04 - Nota de Remisión
+		strings.ToUpper(remisionDTE.Identificacion.CodigoGeneracion),
+		signedDTE,
+	)
+
+	if err != nil {
+		// Check if it's a rejection
+		if hacErr, ok := err.(*hacienda.HaciendaError); ok && hacErr.Type == "rejection" {
+			fmt.Printf("\n❌ Remision REJECTED by Hacienda!\n")
+			if response != nil {
+				fmt.Printf("Code: %s\n", response.CodigoMsg)
+				fmt.Printf("Message: %s\n", response.DescripcionMsg)
+				if len(response.Observaciones) > 0 {
+					fmt.Println("Observations:")
+					for _, obs := range response.Observaciones {
+						fmt.Printf("  - %s\n", obs)
+					}
+				}
+			}
+			// Rejections are permanent - don't queue for contingency
+			return response, err
+		}
+
+		// === CONTINGENCY: Handle submission failure (timeout, network) ===
+		fmt.Printf("⚠️  Hacienda submission failed: %v\n", err)
+		if s.contingencyHelper != nil {
+			if queueErr := s.contingencyHelper.HandleSubmissionFailure(
+				ctx,
+				remision,
+				dteForSigning,
+				signedDTE,
+				remisionDTE.Identificacion.Ambiente,
+			); queueErr != nil {
+				return nil, fmt.Errorf("submission failed and contingency queue failed: %w", queueErr)
+			}
+			fmt.Println("📋 Remision queued for contingency (Hacienda unavailable)")
+			return nil, fmt.Errorf("remision queued for contingency: Hacienda unavailable")
+		}
+
+		return nil, fmt.Errorf("failed to submit to Hacienda: %w", err)
+	}
+
+	if response == nil {
+		return nil, fmt.Errorf("no response received from Hacienda")
+	}
+
+	// Step 6: Success!
+	fmt.Println("\n✅ SUCCESS! REMISION ACCEPTED BY HACIENDA!")
+	fmt.Printf("Estado: %s\n", response.Estado)
+	fmt.Printf("Código de Generación: %s\n", response.CodigoGeneracion)
+	fmt.Printf("Sello Recibido: %s\n", response.SelloRecibido)
+	fmt.Printf("Fecha Procesamiento: %s\n", response.FhProcesamiento)
+
+	// Step 7: Save response
+	if response.Estado == "PROCESADO" {
+		err = s.saveHaciendaResponse(ctx, remision.ID, response)
+		if err != nil {
+			fmt.Printf("⚠️  Warning: failed to save Hacienda response: %v\n", err)
+		} else {
+			fmt.Println("✅ Hacienda response saved to remision")
+		}
+		UploadDTEToS3Async(dteJSON, "unsigned", "04", remision.CompanyID, strings.ToUpper(remisionDTE.Identificacion.CodigoGeneracion))
+		UploadDTEToS3Async([]byte(signedDTE), "signed", "04", remision.CompanyID, strings.ToUpper(remisionDTE.Identificacion.CodigoGeneracion))
+		haciendaResponseJSON, _ := json.MarshalIndent(response, "", "  ")
+		UploadDTEToS3Async(haciendaResponseJSON, "hacienda_response", "04", remision.CompanyID, strings.ToUpper(remisionDTE.Identificacion.CodigoGeneracion))
+	}
+
+	// Step 8: Log to commit log
+	err = s.logRemisionToCommitLog(
+		ctx,
+		remision,
+		remisionDTE.Identificacion.TipoDte,
+		remisionDTE.Identificacion.Ambiente,
+		remisionDTE.Identificacion.NumeroControl,
+		strings.ToUpper(remisionDTE.Identificacion.CodigoGeneracion),
+		dteJSON,
+		signedDTE,
+		response,
+	)
+	if err != nil {
+		fmt.Printf("⚠️  Warning: failed to log to commit log: %v\n", err)
+	} else {
+		fmt.Println("✅ Remision submission logged to commit log")
+	}
+
+	return response, nil
+}
+
+func (s *DTEService) _ProcessRemision(ctx context.Context, remision *models.Invoice) (*hacienda.ReceptionResponse, error) {
 	// Step 1: Build DTE from remision
 	fmt.Printf("\n🔄 Processing Remision (Type 04): %s\n", remision.InvoiceNumber)
 	fmt.Println("Step 1: Building remision DTE...")
