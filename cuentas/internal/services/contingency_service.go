@@ -851,3 +851,119 @@ func (s *ContingencyService) QueuePurchaseForContingency(
 	log.Printf("[Contingency] ✅ Purchase %s queued in period %s (status: %s)", purchase.ID, period.ID, status)
 	return nil
 }
+
+// QueueNotaDebitoForContingency queues a failed nota debito for contingency processing
+func (s *ContingencyService) QueueNotaDebitoForContingency(
+	ctx context.Context,
+	nota *models.NotaDebito,
+	failureType string,
+	dteUnsigned []byte,
+	dteSigned *string,
+	ambiente string,
+) error {
+	log.Printf("[Contingency] Queueing nota debito %s for contingency (failure: %s)", nota.ID, failureType)
+
+	tipoContingencia, motivoContingencia := s.determineContingencyType(failureType)
+
+	period, err := s.findOrCreatePeriod(
+		ctx,
+		nota.CompanyID,
+		nota.EstablishmentID,
+		nota.PointOfSaleID,
+		ambiente,
+		tipoContingencia,
+		motivoContingencia,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to find/create contingency period: %w", err)
+	}
+
+	var status string
+	if dteSigned != nil && *dteSigned != "" {
+		status = models.DTEStatusFailedRetry
+	} else {
+		status = models.DTEStatusPendingSignature
+	}
+
+	query := `
+		UPDATE notas_debito
+		SET contingency_period_id = $1,
+			dte_transmission_status = $2,
+			dte_unsigned = $3,
+			dte_signed = $4,
+			signature_retry_count = COALESCE(signature_retry_count, 0)
+		WHERE id = $5
+	`
+
+	_, err = s.db.ExecContext(ctx, query,
+		period.ID,
+		status,
+		dteUnsigned,
+		dteSigned,
+		nota.ID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update nota debito for contingency: %w", err)
+	}
+
+	log.Printf("[Contingency] ✅ Nota Debito %s queued in period %s (status: %s)", nota.ID, period.ID, status)
+	return nil
+}
+
+// QueueNotaCreditoForContingency queues a failed nota credito for contingency processing
+func (s *ContingencyService) QueueNotaCreditoForContingency(
+	ctx context.Context,
+	nota *models.NotaCredito,
+	failureType string,
+	dteUnsigned []byte,
+	dteSigned *string,
+	ambiente string,
+) error {
+	log.Printf("[Contingency] Queueing nota credito %s for contingency (failure: %s)", nota.ID, failureType)
+
+	tipoContingencia, motivoContingencia := s.determineContingencyType(failureType)
+
+	period, err := s.findOrCreatePeriod(
+		ctx,
+		nota.CompanyID,
+		nota.EstablishmentID,
+		nota.PointOfSaleID,
+		ambiente,
+		tipoContingencia,
+		motivoContingencia,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to find/create contingency period: %w", err)
+	}
+
+	var status string
+	if dteSigned != nil && *dteSigned != "" {
+		status = models.DTEStatusFailedRetry
+	} else {
+		status = models.DTEStatusPendingSignature
+	}
+
+	query := `
+		UPDATE notas_credito
+		SET contingency_period_id = $1,
+			dte_transmission_status = $2,
+			dte_unsigned = $3,
+			dte_signed = $4,
+			signature_retry_count = COALESCE(signature_retry_count, 0)
+		WHERE id = $5
+	`
+
+	_, err = s.db.ExecContext(ctx, query,
+		period.ID,
+		status,
+		dteUnsigned,
+		dteSigned,
+		nota.ID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update nota credito for contingency: %w", err)
+	}
+
+	log.Printf("[Contingency] ✅ Nota Credito %s queued in period %s (status: %s)", nota.ID, period.ID, status)
+	return nil
+}
