@@ -56,8 +56,24 @@ func (s *DTEService) ProcessFSE(ctx context.Context, purchase *models.Purchase) 
 	// Ensure codigo generacion is uppercase
 	fse.Identificacion.CodigoGeneracion = strings.ToUpper(fse.Identificacion.CodigoGeneracion)
 
+	// === CONTINGENCY: Handle signing failure ===
 	signedDTE, err := s.firmador.Sign(ctx, creds.NIT, creds.Password, fse)
 	if err != nil {
+		log.Printf("[ProcessFSE] ⚠️  Firmador failed: %v", err)
+
+		if s.contingencyHelperPurchase != nil {
+			if queueErr := s.contingencyHelperPurchase.HandleSigningFailure(
+				ctx,
+				purchase,
+				fse,
+				fse.Identificacion.Ambiente,
+			); queueErr != nil {
+				return nil, fmt.Errorf("firmador failed and contingency queue failed: %w", queueErr)
+			}
+			log.Println("[ProcessFSE] 📋 Purchase queued for contingency (firmador unavailable)")
+			return nil, fmt.Errorf("purchase queued for contingency: firmador unavailable")
+		}
+
 		return nil, fmt.Errorf("failed to sign FSE: %w", err)
 	}
 
@@ -72,6 +88,23 @@ func (s *DTEService) ProcessFSE(ctx context.Context, purchase *models.Purchase) 
 	log.Println("[ProcessFSE] Step 4: Authenticating with Hacienda...")
 	authResponse, err := s.haciendaService.AuthenticateCompany(ctx, companyID.String())
 	if err != nil {
+		log.Printf("[ProcessFSE] ⚠️  Hacienda auth failed: %v", err)
+
+		// === CONTINGENCY: Handle auth failure ===
+		if s.contingencyHelperPurchase != nil {
+			if queueErr := s.contingencyHelperPurchase.HandleAuthFailure(
+				ctx,
+				purchase,
+				fse,
+				signedDTE,
+				fse.Identificacion.Ambiente,
+			); queueErr != nil {
+				return nil, fmt.Errorf("auth failed and contingency queue failed: %w", queueErr)
+			}
+			log.Println("[ProcessFSE] 📋 Purchase queued for contingency (Hacienda auth unavailable)")
+			return nil, fmt.Errorf("purchase queued for contingency: Hacienda auth unavailable")
+		}
+
 		return nil, fmt.Errorf("failed to authenticate with Hacienda: %w", err)
 	}
 
@@ -103,8 +136,26 @@ func (s *DTEService) ProcessFSE(ctx context.Context, purchase *models.Purchase) 
 					}
 				}
 			}
+			// Rejections are permanent - don't queue for contingency
 			return response, err
 		}
+
+		// === CONTINGENCY: Handle submission failure (timeout, network) ===
+		log.Printf("[ProcessFSE] ⚠️  Hacienda submission failed: %v", err)
+		if s.contingencyHelperPurchase != nil {
+			if queueErr := s.contingencyHelperPurchase.HandleSubmissionFailure(
+				ctx,
+				purchase,
+				fse,
+				signedDTE,
+				fse.Identificacion.Ambiente,
+			); queueErr != nil {
+				return nil, fmt.Errorf("submission failed and contingency queue failed: %w", queueErr)
+			}
+			log.Println("[ProcessFSE] 📋 Purchase queued for contingency (Hacienda unavailable)")
+			return nil, fmt.Errorf("purchase queued for contingency: Hacienda unavailable")
+		}
+
 		return nil, fmt.Errorf("failed to submit to Hacienda: %w", err)
 	}
 
