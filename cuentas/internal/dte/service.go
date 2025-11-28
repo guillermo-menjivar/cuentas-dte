@@ -21,15 +21,16 @@ import (
 
 // DTEService handles DTE signing and submission
 type DTEService struct {
-	db                *sql.DB
-	redis             *redis.Client
-	firmador          *firmador.Client
-	vault             *services.VaultService
-	credCache         *CredentialCache
-	hacienda          *hacienda.Client
-	haciendaService   *services.HaciendaService
-	builder           *Builder
-	contingencyHelper *ContingencyHelper
+	db                        *sql.DB
+	redis                     *redis.Client
+	firmador                  *firmador.Client
+	vault                     *services.VaultService
+	credCache                 *CredentialCache
+	hacienda                  *hacienda.Client
+	haciendaService           *services.HaciendaService
+	builder                   *Builder
+	contingencyHelper         *ContingencyHelper
+	contingencyHelperPurchase *ContingencyHelperPurchase
 }
 
 // NewDTEService creates a new DTE service (singleton)
@@ -43,15 +44,16 @@ func NewDTEService(
 	contingencyService *services.ContingencyService,
 ) *DTEService {
 	return &DTEService{
-		db:                db,
-		hacienda:          haciendaClient,
-		redis:             redis,
-		firmador:          firmador,
-		vault:             vault,
-		credCache:         NewCredentialCache(redis),
-		builder:           NewBuilder(db),
-		haciendaService:   haciendaService,
-		contingencyHelper: NewContingencyHelper(contingencyService),
+		db:                        db,
+		hacienda:                  haciendaClient,
+		redis:                     redis,
+		firmador:                  firmador,
+		vault:                     vault,
+		credCache:                 NewCredentialCache(redis),
+		builder:                   NewBuilder(db),
+		haciendaService:           haciendaService,
+		contingencyHelper:         NewContingencyHelper(contingencyService),
+		contingencyHelperPurchase: NewContingencyHelperPurchase(contingencyService),
 	}
 }
 
