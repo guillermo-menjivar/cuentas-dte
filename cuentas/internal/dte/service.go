@@ -31,6 +31,7 @@ type DTEService struct {
 	builder                   *Builder
 	contingencyHelper         *ContingencyHelper
 	contingencyHelperPurchase *ContingencyHelperPurchase
+	contingencyHelperNota     *ContingencyHelperNota
 }
 
 // NewDTEService creates a new DTE service (singleton)
@@ -54,6 +55,7 @@ func NewDTEService(
 		haciendaService:           haciendaService,
 		contingencyHelper:         NewContingencyHelper(contingencyService),
 		contingencyHelperPurchase: NewContingencyHelperPurchase(contingencyService),
+		contingencyHelperNota:     NewContingencyHelperNota(contingencyService),
 	}
 }
 
