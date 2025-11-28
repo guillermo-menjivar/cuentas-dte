@@ -443,6 +443,18 @@ func startServer() {
 		v1.GET("/dte/reconciliation", reconciliationHandler.ReconcileDTEs)
 		v1.GET("/dte/reconciliation/:codigo_generacion", reconciliationHandler.ReconcileSingleDTE)
 
+		contingencyHandler := handlers.NewContingencyHandler(contingencyService)
+		contingency := v1.Group("/contingency")
+		{
+			contingency.GET("/periods", contingencyHandler.ListPeriods)
+			contingency.GET("/periods/:id", contingencyHandler.GetPeriod)
+			contingency.GET("/periods/:id/invoices", contingencyHandler.GetPeriodInvoices)
+			contingency.POST("/periods/:id/close", contingencyHandler.ClosePeriod)
+			contingency.GET("/lotes", contingencyHandler.ListLotes)
+			contingency.GET("/lotes/:id", contingencyHandler.GetLote)
+			contingency.GET("/events", contingencyHandler.ListEvents)
+		}
+
 	}
 
 	// Start server
