@@ -588,6 +588,200 @@ func (s *DTEService) ProcessExportInvoice(ctx context.Context, invoice *models.I
 	var dteForSigning interface{}
 	json.Unmarshal(dteJSON, &dteForSigning)
 
+	// === CONTINGENCY: Handle signing failure ===
+	signedDTE, err := s.firmador.Sign(ctx, creds.NIT, creds.Password, dteForSigning)
+	if err != nil {
+		fmt.Printf("⚠️  Firmador failed: %v\n", err)
+
+		if s.contingencyHelper != nil {
+			if queueErr := s.contingencyHelper.HandleSigningFailure(
+				ctx,
+				invoice,
+				dteForSigning,
+				exportDTE.Identificacion.Ambiente,
+			); queueErr != nil {
+				return nil, fmt.Errorf("firmador failed and contingency queue failed: %w", queueErr)
+			}
+			fmt.Println("📋 Export Invoice queued for contingency (firmador unavailable)")
+			return nil, fmt.Errorf("export invoice queued for contingency: firmador unavailable")
+		}
+
+		return nil, fmt.Errorf("failed to sign export DTE: %w", err)
+	}
+
+	fmt.Println("\nStep 3: Export DTE Signed Successfully!")
+	fmt.Printf("Signed DTE length: %d characters\n", len(signedDTE))
+
+	// Step 4: Authenticate with Hacienda
+	fmt.Println("\nStep 4: Authenticating with Hacienda...")
+	authResponse, err := s.haciendaService.AuthenticateCompany(ctx, companyID.String())
+	if err != nil {
+		fmt.Printf("⚠️  Hacienda auth failed: %v\n", err)
+
+		// === CONTINGENCY: Handle auth failure ===
+		if s.contingencyHelper != nil {
+			if queueErr := s.contingencyHelper.HandleAuthFailure(
+				ctx,
+				invoice,
+				dteForSigning,
+				signedDTE,
+				exportDTE.Identificacion.Ambiente,
+			); queueErr != nil {
+				return nil, fmt.Errorf("auth failed and contingency queue failed: %w", queueErr)
+			}
+			fmt.Println("📋 Export Invoice queued for contingency (Hacienda auth unavailable)")
+			return nil, fmt.Errorf("export invoice queued for contingency: Hacienda auth unavailable")
+		}
+
+		return nil, fmt.Errorf("failed to authenticate with Hacienda: %w", err)
+	}
+
+	fmt.Printf("✅ Authenticated! Token: %s...\n", authResponse.Body.Token[:50])
+
+	// Step 5: Submit to Hacienda
+	fmt.Println("\nStep 5: Submitting Export Invoice (Type 11) to Ministerio de Hacienda...")
+	fmt.Printf("📋 Código: %s | Ambiente: %s\n",
+		strings.ToUpper(exportDTE.Identificacion.CodigoGeneracion),
+		exportDTE.Identificacion.Ambiente)
+
+	response, err := s.hacienda.SubmitDTE(
+		ctx,
+		authResponse.Body.Token,
+		exportDTE.Identificacion.Ambiente,
+		codigos.DocTypeFacturasExportacion, // Type 11 - Factura de Exportación
+		strings.ToUpper(exportDTE.Identificacion.CodigoGeneracion),
+		signedDTE,
+	)
+
+	if err != nil {
+		// Check if it's a rejection
+		if hacErr, ok := err.(*hacienda.HaciendaError); ok && hacErr.Type == "rejection" {
+			fmt.Printf("\n❌ Export Invoice REJECTED by Hacienda!\n")
+			if response != nil {
+				fmt.Printf("Code: %s\n", response.CodigoMsg)
+				fmt.Printf("Message: %s\n", response.DescripcionMsg)
+				if len(response.Observaciones) > 0 {
+					fmt.Println("Observations:")
+					for _, obs := range response.Observaciones {
+						fmt.Printf("  - %s\n", obs)
+					}
+				}
+			}
+			// Rejections are permanent - don't queue for contingency
+			return response, err
+		}
+
+		// === CONTINGENCY: Handle submission failure ===
+		fmt.Printf("⚠️  Hacienda submission failed: %v\n", err)
+		if s.contingencyHelper != nil {
+			if queueErr := s.contingencyHelper.HandleSubmissionFailure(
+				ctx,
+				invoice,
+				dteForSigning,
+				signedDTE,
+				exportDTE.Identificacion.Ambiente,
+			); queueErr != nil {
+				return nil, fmt.Errorf("submission failed and contingency queue failed: %w", queueErr)
+			}
+			fmt.Println("📋 Export Invoice queued for contingency (Hacienda unavailable)")
+			return nil, fmt.Errorf("export invoice queued for contingency: Hacienda unavailable")
+		}
+
+		return nil, fmt.Errorf("failed to submit to Hacienda: %w", err)
+	}
+
+	if response == nil {
+		return nil, fmt.Errorf("no response received from Hacienda")
+	}
+
+	// Step 6: Success!
+	fmt.Println("\n✅ SUCCESS! EXPORT INVOICE ACCEPTED BY HACIENDA!")
+	fmt.Printf("Estado: %s\n", response.Estado)
+	fmt.Printf("Código de Generación: %s\n", response.CodigoGeneracion)
+	fmt.Printf("Sello Recibido: %s\n", response.SelloRecibido)
+	fmt.Printf("Fecha Procesamiento: %s\n", response.FhProcesamiento)
+
+	// Step 7: Save response
+	if response.Estado == "PROCESADO" {
+		err = s.saveHaciendaResponse(ctx, invoice.ID, response)
+		if err != nil {
+			fmt.Printf("⚠️  Warning: failed to save Hacienda response: %v\n", err)
+		} else {
+			fmt.Println("✅ Hacienda response saved to invoice")
+		}
+		UploadDTEToS3Async(dteJSON, "unsigned", "11", invoice.CompanyID, exportDTE.Identificacion.CodigoGeneracion)
+		UploadDTEToS3Async([]byte(signedDTE), "signed", "11", invoice.CompanyID, exportDTE.Identificacion.CodigoGeneracion)
+		haciendaResponseJSON, _ := json.MarshalIndent(response, "", "  ")
+		UploadDTEToS3Async(haciendaResponseJSON, "hacienda_response", "11", invoice.CompanyID, strings.ToUpper(exportDTE.Identificacion.CodigoGeneracion))
+	}
+
+	// Step 8: Log to commit log
+	err = s.logExportToCommitLog(
+		ctx,
+		invoice,
+		exportDTE.Identificacion.TipoDte,
+		exportDTE.Identificacion.Ambiente,
+		exportDTE.Identificacion.NumeroControl,
+		strings.ToUpper(exportDTE.Identificacion.CodigoGeneracion),
+		dteJSON,
+		signedDTE,
+		response,
+	)
+	if err != nil {
+		fmt.Printf("⚠️  Warning: failed to log to commit log: %v\n", err)
+	} else {
+		fmt.Println("✅ Export invoice submission logged to commit log")
+	}
+
+	return response, nil
+}
+
+func (s *DTEService) _ProcessExportInvoice(ctx context.Context, invoice *models.Invoice) (*hacienda.ReceptionResponse, error) {
+	// Step 1: Build DTE from export invoice
+	fmt.Printf("\n🔄 Processing Export Invoice (Type 11): %s\n", invoice.InvoiceNumber)
+	fmt.Println("Step 1: Building export DTE...")
+
+	dteJSON, err := s.builder.BuildFacturaExportacion(ctx, invoice)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build export DTE: %w", err)
+	}
+
+	// Pretty print for debugging
+	var dtePretty interface{}
+	json.Unmarshal(dteJSON, &dtePretty)
+	prettyJSON, _ := json.MarshalIndent(dtePretty, "", "  ")
+	fmt.Println("Export DTE Generated:")
+	fmt.Println(string(prettyJSON))
+
+	// Parse identificacion from JSON
+	var exportDTE struct {
+		Identificacion struct {
+			TipoDte          string `json:"tipoDte"`
+			Ambiente         string `json:"ambiente"`
+			NumeroControl    string `json:"numeroControl"`
+			CodigoGeneracion string `json:"codigoGeneracion"`
+		} `json:"identificacion"`
+	}
+	if err := json.Unmarshal(dteJSON, &exportDTE); err != nil {
+		return nil, fmt.Errorf("failed to parse export DTE: %w", err)
+	}
+
+	// Step 2: Load credentials and sign
+	fmt.Println("\nStep 2: Loading credentials and signing export DTE...")
+	companyID, err := uuid.Parse(invoice.CompanyID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid company ID: %w", err)
+	}
+
+	creds, err := s.LoadCredentials(ctx, companyID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load credentials: %w", err)
+	}
+
+	// Unmarshal for signing
+	var dteForSigning interface{}
+	json.Unmarshal(dteJSON, &dteForSigning)
+
 	signedDTE, err := s.firmador.Sign(ctx, creds.NIT, creds.Password, dteForSigning)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign export DTE: %w", err)
