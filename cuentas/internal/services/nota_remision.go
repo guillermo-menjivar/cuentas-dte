@@ -649,7 +649,7 @@ func (s *InvoiceService) FinalizeRemision(ctx context.Context, companyID, remisi
 
 	// 3. Generate DTE identifiers for Type 04
 	log.Printf("[DEBUG] FinalizeRemision: Generating numero control")
-	numeroControl, err := s.generateNumeroControl(ctx, tx, remision.EstablishmentID, remision.PointOfSaleID, remision.PointOfSaleID, "04")
+	numeroControl, err := s.generateNumeroControl(ctx, tx, companyID, remision.EstablishmentID, remision.PointOfSaleID, remision.PointOfSaleID, "04")
 	if err != nil {
 		log.Printf("[ERROR] FinalizeRemision: Failed to generate numero control: %v", err)
 		return nil, fmt.Errorf("failed to generate numero control: %w", err)
