@@ -220,3 +220,32 @@ test_nota_remision:
 .PHONY: test_fse
 test_fse:
 	./test_fse.py $(COMPANY_ID)
+
+# Set mock firmador to FAIL mode
+firmador-fail:
+	@echo "❌ Setting firmador to FAIL mode..."
+	@curl -s -X POST http://localhost:8114/control/mode \
+		-H "Content-Type: application/json" \
+		-d '{"mode": "fail"}' | jq .
+
+# Set mock firmador to SUCCESS mode (proxy to real)
+firmador-success:
+	@echo "✅ Setting firmador to SUCCESS mode..."
+	@curl -s -X POST http://localhost:8114/control/mode \
+		-H "Content-Type: application/json" \
+		-d '{"mode": "success"}' | jq .
+
+# Check mock firmador status
+firmador-status:
+	@echo "📊 Firmador mock status:"
+	@curl -s http://localhost:8114/control/status | jq .
+
+# Reset mock firmador state
+firmador-reset:
+	@echo "🔄 Resetting firmador mock..."
+	@curl -s -X POST http://localhost:8114/control/reset | jq .
+
+# Run contingency E2E test
+test-contingency:
+	@echo "🧪 Running CCF contingency E2E test..."
+	python tests/test_ccf_contingency.py $(COMPANY_ID)
