@@ -1,0 +1,29 @@
+# docker-compose.test.yaml
+# Usage: docker-compose -f docker-compose.yaml -f docker-compose.test.yaml up -d
+
+services:
+  cuentas:
+    environment:
+      - CUENTAS_FIRMADOR_URL=http://firmador-mock:8113
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      vault-init:
+        condition: service_completed_successfully
+      firmador-mock:
+        condition: service_started
+
+  firmador-mock:
+    build:
+      context: ./tests/firmador-mock
+      dockerfile: Dockerfile
+    container_name: firmador-mock
+    restart: unless-stopped
+    networks:
+      - cuentas-network
+    ports:
+      - "8114:8113"
+    environment:
+      - TZ=America/El_Salvador
