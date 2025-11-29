@@ -248,4 +248,4 @@ firmador-reset:
 # Run contingency E2E test
 test-contingency: firmador-status
 	@echo "🧪 Running CCF contingency E2E test..."
-	python tests/test_ccf_contingency.py $(COMPANY_ID)
+	./test_contigency_ccf_bad_firmador.py $(COMPANY_ID)
