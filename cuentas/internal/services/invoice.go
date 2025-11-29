@@ -1174,7 +1174,7 @@ func (s *InvoiceService) FinalizeInvoice(ctx context.Context, companyID, invoice
 	}
 
 	// 4. Generate DTE identifiers
-	numeroControl, err := s.generateNumeroControl(ctx, tx, invoice.EstablishmentID, invoice.PointOfSaleID, invoice.PointOfSaleID, tipoDte)
+	numeroControl, err := s.generateNumeroControl(ctx, tx, companyID, invoice.EstablishmentID, invoice.PointOfSaleID, invoice.PointOfSaleID, tipoDte)
 	fmt.Println("this is the numerocontrol I build", numeroControl)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate numero control: %w", err)
