@@ -246,6 +246,6 @@ firmador-reset:
 	@curl -s -X POST http://localhost:8114/control/reset | jq .
 
 # Run contingency E2E test
-test-contingency:
+test-contingency: firmador-status
 	@echo "🧪 Running CCF contingency E2E test..."
 	python tests/test_ccf_contingency.py $(COMPANY_ID)
