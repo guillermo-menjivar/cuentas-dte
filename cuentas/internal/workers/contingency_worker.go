@@ -8,6 +8,7 @@ import (
 	"log"
 	"time"
 
+	"cuentas/internal/dte"
 	"cuentas/internal/hacienda"
 	"cuentas/internal/models"
 	"cuentas/internal/services"
@@ -21,7 +22,7 @@ type ContingencyWorker struct {
 	db                 *sql.DB
 	redis              *redis.Client
 	contingencyService *services.ContingencyService
-	eventBuilder       *services.ContingencyEventBuilder
+	eventBuilder       *dte.ContingencyEventBuilder
 	firmador           *firmador.Client
 	haciendaClient     *hacienda.Client
 	haciendaService    *services.HaciendaService
@@ -77,7 +78,7 @@ func NewContingencyWorker(
 		db:                     db,
 		redis:                  redisClient,
 		contingencyService:     contingencyService,
-		eventBuilder:           services.NewContingencyEventBuilder(db),
+		eventBuilder:           dte.NewContingencyEventBuilder(db),
 		firmador:               firmadorClient,
 		haciendaClient:         haciendaClient,
 		haciendaService:        haciendaService,
