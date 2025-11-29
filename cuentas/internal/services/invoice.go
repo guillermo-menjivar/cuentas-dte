@@ -931,7 +931,7 @@ func (s *InvoiceService) determineDTEType(tipoPersona string) string {
 }
 
 // generateNumeroControl generates the DTE numero control with strict validation
-func (s *InvoiceService) generateNumeroControl(ctx context.Context, tx *sql.Tx, establishmentID, pointOfSaleID, posID, tipoDte string) (string, error) {
+func (s *InvoiceService) generateNumeroControl(ctx context.Context, tx *sql.Tx, companyID, establishmentID, pointOfSaleID, posID, tipoDte string) (string, error) {
 	// Get establishment and POS codes (no COALESCE - must be set)
 	query := `
 		SELECT 
@@ -983,7 +983,7 @@ func (s *InvoiceService) generateNumeroControl(ctx context.Context, tx *sql.Tx, 
 	}
 
 	// Get next sequence for this POS and tipoDte
-	sequence, err := s.getAndIncrementDTESequence(ctx, tx, posID, tipoDte)
+	sequence, err := s.getAndIncrementDTESequence(ctx, tx, companyID, posID, tipoDte)
 	if err != nil {
 		return "", err
 	}
@@ -1008,7 +1008,46 @@ func (s *InvoiceService) isValidMHCode(code string) bool {
 	return true
 }
 
-func (s *InvoiceService) getAndIncrementDTESequence(ctx context.Context, tx *sql.Tx, posID, tipoDte string) (int64, error) {
+func (s *InvoiceService) getAndIncrementDTESequence(ctx context.Context, tx *sql.Tx, companyID, posID, tipoDte string) (int64, error) {
+	// Try to get existing sequence with row lock
+	var currentSeq int64
+	query := `
+		SELECT last_sequence
+		FROM dte_sequences
+		WHERE company_id = $1 AND point_of_sale_id = $2 AND tipo_dte = $3
+		FOR UPDATE
+	`
+	err := tx.QueryRowContext(ctx, query, companyID, posID, tipoDte).Scan(&currentSeq)
+	if err == sql.ErrNoRows {
+		// First time - insert new sequence starting at 1
+		insertQuery := `
+			INSERT INTO dte_sequences (company_id, point_of_sale_id, tipo_dte, last_sequence, updated_at)
+			VALUES ($1, $2, $3, 1, $4)
+		`
+		_, err = tx.ExecContext(ctx, insertQuery, companyID, posID, tipoDte, time.Now())
+		if err != nil {
+			return 0, fmt.Errorf("failed to initialize sequence: %w", err)
+		}
+		return 1, nil
+	}
+	if err != nil {
+		return 0, fmt.Errorf("failed to get sequence: %w", err)
+	}
+	// Increment sequence
+	newSeq := currentSeq + 1
+	updateQuery := `
+		UPDATE dte_sequences
+		SET last_sequence = $1, updated_at = $2
+		WHERE company_id = $3 AND point_of_sale_id = $4 AND tipo_dte = $5
+	`
+	_, err = tx.ExecContext(ctx, updateQuery, newSeq, time.Now(), companyID, posID, tipoDte)
+	if err != nil {
+		return 0, fmt.Errorf("failed to increment sequence: %w", err)
+	}
+	return newSeq, nil
+}
+
+func (s *InvoiceService) _getAndIncrementDTESequence(ctx context.Context, tx *sql.Tx, posID, tipoDte string) (int64, error) {
 	// Try to get existing sequence with row lock
 	var currentSeq int64
 	query := `
