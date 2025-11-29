@@ -110,3 +110,8 @@ vault-reinit:
 .PHONY: logs
 logs:
 	docker-compose logs -f cuentas
+
+.PHONY: dev-reset
+dev-reset:
+	@echo "🔄 Resetting to development environment..."
+	docker-compose up -d --force-recreate cuentas
